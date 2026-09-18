@@ -1,7 +1,7 @@
 {
   "name": "rosium-platform-server",
   "version": "1.0.0",
-  "description": "Rosium platform backend — CRM, operations and HRMS (Express + Prisma + PostgreSQL)",
+  "description": "Rosium platform backend \u2014 CRM, operations and HRMS (Express + Prisma + PostgreSQL)",
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
@@ -44,5 +44,8 @@
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"
+  },
+  "prisma": {
+    "seed": "ts-node --transpile-only prisma/seed.ts"
   }
 }

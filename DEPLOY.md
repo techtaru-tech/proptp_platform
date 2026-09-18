@@ -47,7 +47,7 @@ cp server/.env.example server/.env && nano server/.env   # DATABASE_URL + fresh 
 echo 'VITE_API_BASE_URL=https://rosium.techtaru.in/api' > .env.production
 
 ./deploy.sh                                # builds both halves and starts pm2
-cd server && npx prisma db seed && cd ..    # first time only — creates the admin user
+cd server && npm run prisma:seed && cd ..   # first time only — creates the admin user
 sudo certbot --nginx -d rosium.techtaru.in  # TLS
 pm2 startup                                 # run the line it prints, then:
 pm2 save
