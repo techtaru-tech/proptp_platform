@@ -1,0 +1,2165 @@
+// ShreeRam Platform — CRM backend (Leads + Meta Lead Ads integration)
+// Mirrors the shapes already used by the frontend mock layer (src/types/index.ts)
+// so migrating the frontend services from mock data to this API is a drop-in swap.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum LeadStatus {
+  new
+  contacted
+  qualified
+  won
+  lost
+}
+
+enum LeadPriority {
+  low
+  normal
+  high
+  urgent
+}
+
+/// Real system: source is a free-text column with a large curated set of common values —
+/// kept as a plain string here (not a Postgres enum) so a new platform never needs a migration.
+model Pipeline {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  isDefault   Boolean         @default(false)
+  stages      PipelineStage[]
+  leads       Lead[]
+  forms       LeadForm[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model PipelineStage {
+  id                   String     @id @default(cuid())
+  pipeline             Pipeline   @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  pipelineId           String
+  name                 String
+  color                String     @default("#6366f1")
+  sortOrder            Int        @default(0)
+  isWon                Boolean    @default(false)
+  isLost               Boolean    @default(false)
+  winProbability       Int?
+  expectedDurationDays Int?
+  leads                Lead[]
+  forms                LeadForm[]
+
+  @@index([pipelineId])
+}
+
+model LeadTag {
+  id    String          @id @default(cuid())
+  name  String
+  color String          @default("#3b82f6")
+  leads LeadTagOnLead[]
+}
+
+model LeadTagOnLead {
+  lead   Lead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId String
+  tag    LeadTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tagId  String
+
+  @@id([leadId, tagId])
+}
+
+/// One connected lead source per platform (Meta Lead Ads, Google Ads, Web Form, ...).
+/// Credentials (app secret, page access token) are stored encrypted-at-rest — never returned to the frontend.
+model LeadSourceConnection {
+  id                    String    @id @default(cuid())
+  source                String // 'meta' | 'google_ads' | 'web_form' | ...
+  name                  String
+  status                String    @default("disconnected") // connected | disconnected | error
+  active                Boolean   @default(true)
+  connectedAccountLabel String? // e.g. the connected Facebook Page name
+  lastReceivedAt        DateTime?
+  lastError             String?
+  webhookToken          String    @unique @default(cuid())
+  fieldMapping          Json?
+  /// Non-Meta connector credentials keyed by the connector's own field names (developer_token,
+  /// webhook_secret, ...), each VALUE encrypted at rest by the app layer. Meta keeps its
+  /// dedicated columns below because the Graph API flow reads them directly.
+  credentials           Json?
+
+  // Meta-specific (nullable — only populated for source = 'meta')
+  metaPageId          String?
+  metaPageAccessToken String? // encrypted at rest by the app layer before insert
+  metaAppId           String?
+  metaAppSecret       String? // encrypted at rest by the app layer before insert
+
+  leads    Lead[]
+  activity IntegrationActivity[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Lead {
+  id        String  @id @default(cuid())
+  firstName String
+  lastName  String  @default("")
+  email     String?
+  phone     String
+  city      String?
+  company   String?
+  jobTitle  String?
+  country   String? @default("India")
+
+  /// What the buyer is after. Free text rather than enums: the sales team renames these
+  /// faster than a migration can follow, and every one of them is a label on a dropdown.
+  purpose           String?
+  propertyType      String?
+  budgetRange       String?
+  /// Plural: a buyer will happily look at Tonk Road *and* Ajmer Road, and forcing one of them
+  /// only meant the agent typed the other into the notes.
+  preferredLocations String[]
+
+  source             String
+  otherSource        String?
+  externalLeadId     String? // Meta leadgen_id
+  sourceConnection   LeadSourceConnection? @relation(fields: [sourceConnectionId], references: [id])
+  sourceConnectionId String?
+
+  /// Which Meta ad produced this lead — campaign, ad set, ad and form, with their ids so a
+  /// row here can be found in Ads Manager. Only Meta leads have it, and only those ingested
+  /// after this was added: the Graph API returns it with the lead and nowhere else.
+  adDetail Json?
+
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  utmContent  String?
+  utmTerm     String?
+  landingPage String?
+  referrerUrl String?
+
+  status                       LeadStatus   @default(new)
+  priority                     LeadPriority @default(normal)
+  leadScore                    Int          @default(0)
+  isStarred                    Boolean      @default(false)
+  isDuplicate                  Boolean      @default(false)
+  /// True if this lead was created while Business Hours (Settings > Business Hours) marked the
+  /// office closed. Purely informational — a badge in the UI — it never blocks or delays creation.
+  receivedOutsideBusinessHours Boolean      @default(false)
+
+  pipeline        Pipeline?      @relation(fields: [pipelineId], references: [id])
+  pipelineId      String?
+  stage           PipelineStage? @relation(fields: [pipelineStageId], references: [id])
+  pipelineStageId String?
+  stageEnteredAt  DateTime?
+
+  dealValue         Int?
+  dealCurrency      String?
+  expectedCloseDate DateTime?
+  wonValue          Int?
+  wonAt             DateTime?
+  lostReason        String?
+  lostAt            DateTime?
+
+  assignedUserId String?
+  assignedTeamId String?
+  assignedTo     String?
+
+  tags LeadTagOnLead[]
+
+  notes          String?
+  contactedAt    DateTime?
+  nextFollowUpAt DateTime?
+
+  activities      LeadActivity[]
+  customValues    LeadCustomValue[]
+  leadNotes       LeadNote[]
+  followUps       LeadFollowUp[]
+  formSubmissions LeadFormSubmission[]
+  sdrEnrollments  AiSdrEnrollment[]
+  emailSequences  EmailSequenceEnrollment[]
+  calls           CallLog[]
+  whatsappThreads WhatsAppConversation[]
+  stageHistory    LeadStageHistoryEntry[]
+  assignHistory   LeadAssignmentHistoryEntry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sourceConnectionId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+/// A field the CRM does not ship with — "Budget", "Property type", whatever a lead form asks.
+/// Created from the Meta field-mapping screen when a form question has nowhere to land.
+model LeadCustomField {
+  id String @id @default(cuid())
+
+  /// Stable identifier used inside field mappings, e.g. `budget`. Never changes once set.
+  key     String @unique
+  label   String
+  /// text | number | date | dropdown | checkbox
+  type    String @default("text")
+  /// string[] — only meaningful for `dropdown`.
+  options Json?
+
+  sortOrder Int @default(0)
+
+  values LeadCustomValue[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// One answer, stored as a row rather than inside a JSON blob so leads stay filterable by it.
+model LeadCustomValue {
+  id      String          @id @default(cuid())
+  lead    Lead            @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId  String
+  field   LeadCustomField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  fieldId String
+  value   String
+
+  @@unique([leadId, fieldId])
+  @@index([fieldId, value])
+}
+
+model LeadActivity {
+  id          String   @id @default(cuid())
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId      String
+  type        String
+  description String
+  metadata    Json?
+  userId      String?
+  userName    String?
+  createdAt   DateTime @default(now())
+
+  @@index([leadId])
+}
+
+model LeadNote {
+  id        String   @id @default(cuid())
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId    String
+  userId    String
+  userName  String
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([leadId])
+}
+
+model LeadFollowUp {
+  id             String       @id @default(cuid())
+  lead           Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId         String
+  title          String
+  description    String?
+  dueAt          DateTime
+  /// When to nudge whoever owns this. Defaults to the due time; the form can set it earlier.
+  reminderAt     DateTime?
+  /// Stamped once the reminder has gone out, so a poller tick cannot send it twice.
+  reminderSentAt DateTime?
+  priority       LeadPriority @default(normal)
+  status         String       @default("pending") // pending | completed | missed | rescheduled
+  assignedUserId String?
+  completed      Boolean      @default(false)
+  completedAt    DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([leadId])
+  @@index([reminderSentAt, reminderAt])
+}
+
+model LeadStageHistoryEntry {
+  id            String   @id @default(cuid())
+  lead          Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId        String
+  fromStageName String?
+  toStageName   String
+  actorId       String?
+  actorName     String?
+  createdAt     DateTime @default(now())
+
+  @@index([leadId])
+}
+
+/// `fromUserId`/`toUserId` (not names) so round-robin automation can query "this user's last
+/// assignment" directly — display names are resolved by the frontend from its partner/user list,
+/// the same way `Lead.assignedUserId` itself is already resolved everywhere else in the CRM.
+model LeadAssignmentHistoryEntry {
+  id         String   @id @default(cuid())
+  lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId     String
+  fromUserId String?
+  toUserId   String?
+  actorId    String?
+  actorName  String?
+  createdAt  DateTime @default(now())
+
+  @@index([leadId])
+  @@index([toUserId])
+}
+
+/// Assignment-rule engine — mirrors the real generic Automation engine's `assign_lead` action
+/// (conditions + specific/round-robin/team assignment). `assignUserIds`/`assignTeamId` are plain
+/// string(s) referencing partner/team records, which — like `Lead.assignedUserId` — are not a
+/// hard foreign key here since Partners/Teams haven't been migrated off the mock layer.
+/// A trigger + an ordered list of steps (condition / action / delay), executed top-to-bottom
+/// for the lead that fired the trigger. `conditions`/`assignMode`/`assignUserIds`/`assignTeamId`/
+/// `overwrite` used to live directly on this model (single-purpose: assignment rules only) — they
+/// are now `AutomationStep` rows instead, which is what lets an automation mix conditions, any
+/// action (not just assignment), and delays in one ordered sequence.
+model Automation {
+  id                   String           @id @default(cuid())
+  name                 String
+  description          String?
+  enabled              Boolean          @default(true)
+  /// Skips firing this automation while Settings > Business Hours marks the office closed.
+  respectBusinessHours Boolean          @default(false)
+  triggerType          String // lead_created | lead_stage_changed | lead_assigned | lead_score_threshold | tag_added | form_submitted | no_activity | manual
+  /// Trigger-specific filter, shape depends on triggerType:
+  ///  lead_stage_changed: { fromStageId?, toStageId? } (either blank = "any stage")
+  ///  lead_score_threshold: { scoreGt }
+  ///  tag_added: { tagId? } (blank = any tag)
+  ///  form_submitted: { formId? } (blank = any form)
+  ///  no_activity: { days }
+  triggerConfig        Json?
+  steps                AutomationStep[]
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  runs                 AutomationRun[]
+  assignmentCursors    AutomationAssignmentCursor[]
+}
+
+model AutomationStep {
+  id           String     @id @default(cuid())
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  automationId String
+  type         String // condition | action | delay
+  sortOrder    Int        @default(0)
+  /// condition: { conditionType, fieldName?, value? } — conditionType matches AutomationConditionType
+  /// action: { action, ...action-specific fields } — action one of assign_lead | add_tag | remove_tag
+  ///   | change_stage | update_field | create_followup | send_email | enroll_in_sdr_agent
+  ///   | enroll_in_sequence
+  /// delay: { amount, unit } — unit one of minutes | hours | days
+  config       Json
+
+  @@index([automationId])
+}
+
+/// Where a sequential distribution has got to.
+///
+/// Round-robin by "who was assigned longest ago" needs no memory, but dealing ten leads each
+/// in a fixed order does: the rota has to remember whose turn it is and how far through their
+/// batch it is. One row per step, because two steps may each deal to a different rota.
+model AutomationAssignmentCursor {
+  id String @id @default(cuid())
+
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  automationId String
+  /// The step's position in the automation, not its id: saving an automation deletes and
+  /// recreates every step, so a cursor keyed on the id would restart the rota at the top each
+  /// time somebody edited the name.
+  stepIndex    Int
+
+  /// Index into the step's configured sequence.
+  position Int @default(0)
+  /// How many leads the person at `position` has already been dealt in this turn.
+  dealt    Int @default(0)
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([automationId, stepIndex])
+}
+
+model AutomationRun {
+  id             String     @id @default(cuid())
+  automation     Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  automationId   String
+  automationName String
+  leadId         String
+  status         String // success | failed | skipped | waiting
+  message        String?
+  /// Set together, only while `status = 'waiting'` — a delay step is paused here until the
+  /// background resumer (server/src/services/automationEngine.ts) picks it back up.
+  nextStepIndex  Int?
+  resumeAt       DateTime?
+  ranAt          DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([automationId])
+  @@index([status, resumeAt])
+}
+
+/// Mirrors the real `webhook_logs` table — every inbound webhook receipt, successful or not.
+// ---------------------------------------------------------------------------
+// Email templates + email sequences
+// ---------------------------------------------------------------------------
+
+/// A saved subject/body pair. Sequence steps load from one to prefill, then diverge —
+/// a step keeps its own copy, so editing a template never rewrites a live sequence.
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  subject   String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EmailSequence {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  /// draft | active | paused — only `active` sends. Draft and paused hold their enrollments.
+  status      String  @default("draft")
+
+  /// Unenroll when an inbound email from the lead is recorded (a LeadActivity of
+  /// type `email_received`) after the enrollment started.
+  stopOnReply Boolean @default(true)
+  /// Unenroll when the lead's status becomes "won".
+  stopOnWon   Boolean @default(true)
+
+  steps       EmailSequenceStep[]
+  enrollments EmailSequenceEnrollment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+model EmailSequenceStep {
+  id         String        @id @default(cuid())
+  sequence   EmailSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  sequenceId String
+  sortOrder  Int           @default(0)
+
+  /// Measured from the previous step, or from enrollment for the first step.
+  delayDays  Int    @default(0)
+  delayHours Int    @default(0)
+  subject    String
+  body       String
+
+  sends EmailSequenceSend[]
+
+  @@index([sequenceId, sortOrder])
+}
+
+model EmailSequenceEnrollment {
+  id         String        @id @default(cuid())
+  sequence   EmailSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  sequenceId String
+  lead       Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId     String
+
+  /// active | completed | stopped
+  status        String    @default("active")
+  /// Index of the next step to send. Equals the step count once every step has gone out.
+  currentStep   Int       @default(0)
+  nextSendAt    DateTime?
+  completedAt   DateTime?
+  stoppedAt     DateTime?
+  stoppedReason String?
+
+  sends EmailSequenceSend[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// One enrollment per sequence+lead — re-enrolling restarts the existing row.
+  @@unique([sequenceId, leadId])
+  @@index([status, nextSendAt])
+}
+
+/// What actually went out (or would have — no email provider is configured, see
+/// server/src/services/email.ts). Subject and body are stored as rendered, so the
+/// record still reads correctly after the step is edited.
+model EmailSequenceSend {
+  id           String                  @id @default(cuid())
+  enrollment   EmailSequenceEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  enrollmentId String
+  step         EmailSequenceStep       @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  stepId       String
+  stepIndex    Int
+
+  subject String
+  body    String
+  /// sent | failed
+  status  String
+  message String?
+
+  sentAt DateTime @default(now())
+
+  @@index([enrollmentId])
+}
+
+// ---------------------------------------------------------------------------
+// Telephony (Airphone) — call routing, call logs, click-to-call
+// ---------------------------------------------------------------------------
+
+/// Single row, id "default". Credentials are stored encrypted (services/crypto.ts) and are
+/// never returned to the frontend — only whether one is set.
+model TelephonySettings {
+  id       String  @id @default("default")
+  provider String  @default("airphone")
+  enabled  Boolean @default(false)
+
+  baseUrl       String  @default("https://airphone.in/api")
+  /// The portal auth key. Used as the `token` form field for click-to-call and as the
+  /// Bearer token for the mobile dial-call endpoint.
+  apiToken      String?
+  /// The virtual number (VNM) customers dial. Also the default for outbound calls.
+  virtualNumber String?
+
+  /// Secret embedded in the webhook URLs handed to the provider — the URL is the credential,
+  /// the same arrangement the lead-source webhooks use. Rotatable.
+  webhookToken String @unique
+
+  /// Where a call goes when no agent can be resolved. Empty means "reject the routing request".
+  fallbackNumber String?
+  /// Prefer the agent already assigned to the caller's lead before falling back to round-robin.
+  stickyRouting  Boolean @default(true)
+
+  /// How an outbound call is placed: `c2c` is the click-to-call bridge (the provider rings the
+  /// agent, then the customer); `dial-call` is the endpoint for agents working inside the
+  /// provider's mobile app. Which one an account may use is the provider's decision, not ours.
+  outboundMode String @default("c2c")
+
+  /// Testing only. When set, every incoming call is answered with this number and no agent is
+  /// resolved at all — the way a live call is pointed at one real handset while the staff list
+  /// is still seed data. Both settings screens shout about it while it is on.
+  testRouteNumber String?
+
+  updatedAt DateTime @updatedAt
+}
+
+/// Every request the telephony provider makes to us, kept verbatim. Written for rejections
+/// too: during a live test the useful question is usually "did anything arrive at all, and
+/// with which parameter names?", which the server log answers only if you can reach it.
+model TelephonyEvent {
+  id String @id @default(cuid())
+
+  /// routing | call_log
+  kind    String
+  /// ok | rejected | failed
+  outcome String
+
+  /// Method, path, query and body exactly as received, plus the last characters of the token
+  /// in the URL so a stale webhook URL is visible without storing the credential.
+  request      Json?
+  /// What we answered with — the other half of the exchange.
+  response     Json?
+  errorMessage String?
+
+  /// The CallLog this request created or completed, when there was one.
+  callLogId String?
+
+  receivedAt DateTime @default(now())
+
+  @@index([receivedAt])
+}
+
+/// One row per call. Created either when the provider asks us who to route to (inbound) or
+/// when we place a click-to-call (outbound), then completed by the call-log webhook after
+/// hangup. `rawPayload` keeps the provider's own body so a mis-mapped field is recoverable.
+model CallLog {
+  id String @id @default(cuid())
+
+  /// The provider's call id. Absent until a routing request turns into an actual call.
+  uniqueId  String? @unique
+  /// The id we hand back from the agent-number webhook; the provider echoes it as `response_id`.
+  requestId String  @unique
+
+  /// incoming | outgoing
+  direction String @default("incoming")
+  /// routing | answered | missed | off_hour | no_answer | failed
+  status    String @default("routing")
+
+  callerNumber  String
+  agentNumber   String?
+  virtualNumber String?
+
+  lead        Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  leadId      String?
+  agentUser   User?   @relation(fields: [agentUserId], references: [id], onDelete: SetNull)
+  agentUserId String?
+
+  durationSeconds          Int     @default(0)
+  recordingUrl             String?
+  recordingDurationSeconds Int     @default(0)
+  dtmf                     String?
+  feedback                 String?
+
+  rawPayload Json?
+
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([leadId])
+  @@index([agentUserId])
+  @@index([status])
+  @@index([startedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Email delivery — provider credentials, inbound replies, unsubscribes
+// ---------------------------------------------------------------------------
+
+/// Single row, id "default". The API key is stored encrypted (services/crypto.ts) and is
+/// never returned to the browser — only whether one is set.
+model EmailSettings {
+  id       String  @id @default("default")
+  provider String  @default("brevo")
+  enabled  Boolean @default(false)
+
+  apiKey String?
+
+  fromName     String @default("")
+  fromEmail    String @default("")
+  replyToEmail String @default("")
+
+  /// Secret in the inbound webhook URL handed to the provider. Rotatable.
+  inboundWebhookToken String @unique
+
+  /// Appended to every sequence email above the unsubscribe link.
+  footerText String @default("You are receiving this because you enquired with us.")
+
+  updatedAt DateTime @updatedAt
+}
+
+/// Anyone who unsubscribed or hard-bounced. Checked before every send, so a suppressed
+/// address is never mailed again by any sequence or automation.
+model EmailSuppression {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  /// unsubscribed | bounced | complained | manual
+  reason    String   @default("unsubscribed")
+  leadId    String?
+  createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// WhatsApp — linked business numbers, conversations, messages
+// ---------------------------------------------------------------------------
+
+/// One linked WhatsApp Business number. Credentials are stored encrypted
+/// (services/crypto.ts) and never returned to the browser.
+model WhatsAppAccount {
+  id String @id @default(cuid())
+
+  /// Shown in the account switcher, e.g. "Techtaru Digital".
+  label         String
+  /// The number customers see, digits only, e.g. 919829822983.
+  displayPhone  String  @unique
+  /// Meta's `phone_number_id` — what the send API is addressed to, not the number itself.
+  phoneNumberId String  @unique
+  wabaId        String?
+
+  accessToken String?
+  /// App secret for X-Hub-Signature-256 on the inbound webhook.
+  appSecret   String?
+  /// Echoed back during Meta's one-time webhook handshake.
+  verifyToken String
+
+  active    Boolean @default(true)
+  /// connected | disconnected | error
+  status    String  @default("disconnected")
+  lastError String?
+
+  /// An inbound message from an unknown number becomes a lead. Off means it is still
+  /// recorded as a conversation, just without one.
+  createLeadOnInbound Boolean @default(true)
+
+  lastMessageAt DateTime?
+  conversations WhatsAppConversation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WhatsAppConversation {
+  id        String          @id @default(cuid())
+  account   WhatsAppAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId String
+
+  contactPhone String
+  contactName  String?
+
+  lead   Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  leadId String?
+
+  assignedUserId String?
+
+  lastMessageAt      DateTime?
+  lastMessagePreview String?
+  /// Drives WhatsApp's 24-hour service window: after this + 24h only a template may be sent.
+  lastInboundAt      DateTime?
+  unreadCount        Int       @default(0)
+  /// True once a person (not an automation) has replied here — the "Intervened" tab.
+  intervened         Boolean   @default(false)
+  archived           Boolean   @default(false)
+
+  messages WhatsAppMessage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// One thread per number per linked account.
+  @@unique([accountId, contactPhone])
+  @@index([leadId])
+  @@index([lastMessageAt])
+}
+
+model WhatsAppMessage {
+  id             String               @id @default(cuid())
+  conversation   WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+
+  /// Meta's `wamid`. Unique so a redelivered webhook cannot duplicate a message.
+  providerMessageId String? @unique
+
+  /// inbound | outbound
+  direction     String
+  /// text | image | document | audio | video | sticker | location | template | unsupported
+  type          String  @default("text")
+  body          String  @default("")
+  mediaUrl      String?
+  mediaMimeType String?
+
+  /// queued | sent | delivered | read | failed
+  status String  @default("sent")
+  error  String?
+
+  /// Null for inbound, and for anything sent by an automation rather than a person.
+  sentByUserId String?
+
+  sentAt DateTime @default(now())
+
+  @@index([conversationId, sentAt])
+}
+
+model IntegrationActivity {
+  id           String               @id @default(cuid())
+  connection   LeadSourceConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connectionId String
+  source       String
+  status       String // pending | processed | failed | invalid_signature
+  leadId       String?
+  leadsCreated Int                  @default(0)
+  errorMessage String?
+  rawPayload   Json?
+  receivedAt   DateTime             @default(now())
+  processedAt  DateTime?
+
+  @@index([connectionId])
+}
+
+// ---------------------------------------------------------------------------
+// Public lead-capture forms. A form is published at /f/<slug>, can be embedded
+// on any page, and every submission becomes a Lead (source = 'web_form') on the
+// form's configured pipeline stage, plus a stored submission record.
+// ---------------------------------------------------------------------------
+
+model LeadForm {
+  id              String  @id @default(cuid())
+  name            String
+  /// The public URL segment (/f/<slug>) — unique so a link can never resolve to two forms.
+  slug            String  @unique
+  displayTitle    String?
+  description     String?
+  submitLabel     String  @default("Submit")
+  thankYouMessage String?
+  /// When set, the public form redirects here after a successful submit instead of showing the thank-you text.
+  redirectUrl     String?
+  /// Renders the fields grouped by their `step` with Back/Next controls.
+  isMultiStep     Boolean @default(false)
+  /// An inactive form keeps its URL but stops accepting submissions.
+  isActive        Boolean @default(true)
+
+  pipeline        Pipeline?      @relation(fields: [pipelineId], references: [id])
+  pipelineId      String?
+  stage           PipelineStage? @relation(fields: [pipelineStageId], references: [id])
+  pipelineStageId String?
+  /// Owner every lead from this form is assigned to. Not a hard FK — partners/employees still
+  /// live in the frontend's reference data, exactly like `Lead.assignedUserId`.
+  assignedUserId  String?
+
+  // Appearance
+  accentColor String @default("#C34245")
+  layout      String @default("card") // card | plain
+
+  // Spam protection
+  recaptchaEnabled   Boolean @default(false)
+  recaptchaSiteKey   String?
+  /// Encrypted at rest by the app layer before insert, and never returned to any client.
+  recaptchaSecretKey String?
+
+  fields      LeadFormField[]
+  submissions LeadFormSubmission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+}
+
+model LeadFormField {
+  id          String   @id @default(cuid())
+  form        LeadForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+  formId      String
+  /// short_text | long_text | email | phone | number | date | dropdown | checkbox | gdpr_consent
+  type        String
+  label       String
+  placeholder String?
+  /// Maps the answer onto a Lead column when it matches one (firstName, lastName, name, email,
+  /// phone, city, company, jobTitle, country, notes). Anything else stays in the submission
+  /// payload and is copied into a note on the created lead, so no answer is ever lost.
+  fieldKey    String
+  step        Int      @default(1)
+  required    Boolean  @default(false)
+  /// string[] — only meaningful for `dropdown`.
+  options     Json?
+  sortOrder   Int      @default(0)
+
+  @@index([formId])
+}
+
+model LeadFormSubmission {
+  id        String   @id @default(cuid())
+  form      LeadForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+  formId    String
+  /// Kept even if the lead is later deleted, so submission counts and analytics stay honest.
+  lead      Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  leadId    String?
+  /// The raw answers keyed by field key — the record of what the visitor actually typed.
+  data      Json
+  ipAddress String?
+  userAgent String?
+  pageUrl   String?
+  createdAt DateTime @default(now())
+
+  @@index([formId])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Business Hours (Settings > Business Hours) — a single settings row read on every inbound
+// lead to flag whether it arrived while the office was marked closed. No timezone-conversion
+// library is used: the app has no other per-tenant timezone handling either (see the CRM
+// calendar/reports code, which all assume the server's own local clock is the org's clock), so
+// `openTime`/`closeTime` are compared directly against server-local wall-clock time.
+// ---------------------------------------------------------------------------
+
+model BusinessHoursSettings {
+  id            String   @id @default("singleton")
+  enabled       Boolean  @default(false)
+  /// Label only — see the note above on why it isn't used for real conversion.
+  timezone      String   @default("Asia/Kolkata")
+  /// One entry per weekday (0 = Sunday .. 6 = Saturday): { day, isOpen, openTime: "HH:mm", closeTime: "HH:mm" }.
+  schedule      Json
+  /// Shown alongside the "outside business hours" badge — what the admin wants staff to know.
+  closedMessage String?
+  updatedAt     DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// AI SDR Agents (CRM > AI SDR Agents). An agent is a *configuration*: who it sounds like,
+// what it's selling, how hard it may push (guardrails), and who it hands a qualified lead to.
+//
+// IMPORTANT — what actually runs today: enrollment, the follow-up cadence, business-hours
+// gating and handoff are all real. Message *composition* is not: this app has no LLM provider
+// configured, so nothing is auto-written, and it has no email/SMS/WhatsApp provider either, so
+// nothing is auto-delivered. The engine therefore surfaces "due" enrollments and lets a human
+// log what they actually sent, instead of inventing content or faking delivery. Wiring a real
+// provider later only needs the compose+send step filled in — see aiSdrEngine.ts.
+// ---------------------------------------------------------------------------
+
+model AiSdrAgent {
+  id           String  @id @default(cuid())
+  name         String
+  active       Boolean @default(true)
+  /// qualify_lead | book_meeting
+  goal         String  @default("qualify_lead")
+  /// email | sms | whatsapp — SMS/WhatsApp additionally need the lead to have a phone number.
+  channel      String  @default("email")
+  /// How the agent should sound, e.g. "a warm, concise B2B SDR named Alex".
+  persona      String?
+  /// What you sell and the value proposition.
+  offerContext String?
+
+  // --- Guardrails ---
+  /// Hard ceiling on messages before the agent must hand off.
+  maxFollowUps             Int     @default(4)
+  /// The same lead is never messaged more often than this.
+  minHoursBetweenFollowUps Int     @default(24)
+  /// Only send inside the Settings > Business Hours window.
+  respectBusinessHours     Boolean @default(true)
+
+  // --- Handoff ---
+  /// Rep a qualified lead is assigned to. Not a hard FK — partners/employees still live in the
+  /// frontend's reference data, exactly like `Lead.assignedUserId`.
+  handoffUserId String?
+  /// Free text: this app has no meeting/booking-link feature to point at yet.
+  meetingType   String?
+
+  enrollments AiSdrEnrollment[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model AiSdrEnrollment {
+  id      String     @id @default(cuid())
+  agent   AiSdrAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  agentId String
+  lead    Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId  String
+
+  /// active | qualified | handed_off | exhausted | stopped
+  status            String    @default("active")
+  followUpsSent     Int       @default(0)
+  lastMessageAt     DateTime?
+  /// Earliest moment the next follow-up is allowed, from `minHoursBetweenFollowUps`.
+  nextEligibleAt    DateTime?
+  handedOffAt       DateTime?
+  handedOffToUserId String?
+  stoppedReason     String?
+
+  messages  AiSdrMessage[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  /// One enrollment per agent+lead — re-enrolling reactivates the existing row instead.
+  @@unique([agentId, leadId])
+  @@index([status, nextEligibleAt])
+}
+
+model AiSdrMessage {
+  id           String          @id @default(cuid())
+  enrollment   AiSdrEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  enrollmentId String
+  /// outbound | inbound
+  direction    String
+  channel      String
+  body         String
+  /// Who/what produced it: human | agent (only 'human' occurs until an LLM provider is wired).
+  author       String          @default("human")
+  /// logged | sent | failed — 'logged' means recorded in the CRM but not delivered by us.
+  status       String          @default("logged")
+  /// Why it wasn't actually delivered, when that applies.
+  deliveryNote String?
+  createdAt    DateTime        @default(now())
+
+  @@index([enrollmentId])
+}
+
+// ===========================================================================
+// PLATFORM CORE — shared by all three modules (CRM, User App, HRMS).
+//
+// One database, one identity table. A `User` row is a partner (Agent/Employee/
+// Leader) or an Admin; the CRM's loose `assignedUserId`/`handoffUserId` strings
+// above now resolve against this same table, the HRMS attaches attendance to it,
+// and the Flutter partner app authenticates against it.
+//
+// Two API surfaces read these tables and neither owns them:
+//   /api/*         -> admin panel  (camelCase, numeric status codes, rich shapes)
+//   /api/v1/app/*  -> Flutter app  (snake_case, string enums, per API_DOCUMENTATION.md)
+// Everything the app doc exposes that isn't a stored column (plot_size_range,
+// starting_price, available_count, plot_sizes, commission_rate, PropertyStatus,
+// MemberActivity, BusinessSummary, ...) is DERIVED in the serializer layer rather
+// than stored twice — see server/src/services/appMappers.ts.
+// ===========================================================================
+
+/// Stored as a string so both surfaces can map it: the admin panel uses the real
+/// system's numeric role ids (0=Agent, 1=Admin, 2=Employee, 3=Leader), the app uses
+/// these names verbatim (§8 UserRole).
+enum UserRole {
+  agent
+  admin
+  employee
+  leader
+}
+
+enum UserAccountStatus {
+  active
+  inactive
+  suspended
+}
+
+model User {
+  id           String            @id @default(cuid())
+  name         String
+  phone        String            @unique
+  email        String?
+  /// bcrypt. Only Admins log in with a password; partners are OTP-only.
+  passwordHash String?
+  role         UserRole
+  status       UserAccountStatus @default(active)
+  avatarUrl    String?
+
+  /// Which admin-panel role this user signs in with. Only meaningful for `role = admin`:
+  /// every panel user is an `admin` in the enum, and what they can actually see and do is
+  /// decided by this row's module list. Null on a legacy admin = treated as full access.
+  panelRole   PanelRole? @relation(fields: [panelRoleId], references: [id])
+  panelRoleId String?
+
+  /// Telephony extension (Airphone `received_id`), when it differs from `phone`. Used to
+  /// resolve who took a call and to read live extension status.
+  callExtension String? @unique
+
+  /// Firebase device token, sent by the app when it verifies an OTP. One per account: signing
+  /// in on a second device replaces the first, which is what the app's own sign-in does too.
+  /// Cleared when Firebase reports it as unregistered.
+  fcmToken          String?
+  fcmTokenUpdatedAt DateTime?
+
+  /// TOTP shared secret, base32, encrypted at rest the same way provider credentials are.
+  /// Present but with no `twoFactorEnabledAt` means enrolment was started and never finished.
+  twoFactorSecret     String?
+  twoFactorEnabledAt  DateTime?
+  /// SHA-256 of each unused recovery code. Hashed because they are password-equivalent, plain
+  /// SHA-256 because they are 80 bits of server-generated randomness, not a chosen secret.
+  twoFactorRecoveryCodes String[] @default([])
+
+  sessions Session[]
+
+  leaveRequests   LeaveRequest[]   @relation("LeaveRequester")
+  leaveBalances   LeaveBalance[]
+  salaryStructure SalaryStructure?
+  payslips        Payslip[]
+
+  /// Server-owned and unique, format SR-<ROLE>-<n> (app doc §1.3).
+  partnerCode  String  @unique
+  /// The code OTHER partners enter to join this one's downline. Equal to partnerCode
+  /// for every row created by this backend; kept separate because the real system's
+  /// legacy data has referral codes that differ from the partner code.
+  referralCode String  @unique
+  sponsor      User?   @relation("Sponsorship", fields: [sponsorId], references: [id])
+  sponsorId    String?
+  downline     User[]  @relation("Sponsorship")
+
+  city    String?
+  address String?
+  pincode String?
+
+  // Employee / Leader profile
+  designation       String?
+  area              String?
+  reportingLeader   User?   @relation("ReportsTo", fields: [reportingLeaderId], references: [id])
+  reportingLeaderId String?
+  reports           User[]  @relation("ReportsTo")
+  /// Only meaningful for role = leader — the code this leader was issued on registration.
+  leaderCode        String?
+
+  team    Team?   @relation("TeamMembers", fields: [teamId], references: [id])
+  teamId  String?
+  /// Set on the Team, not here — the inverse of Team.leader.
+  ledTeam Team?   @relation("TeamLeader")
+
+  aadhaarNumber String?
+  panNumber     String?
+  /// Real `users.adhar_verification`: 0 = pending, 1 = verified, 2 = rejected.
+  kycStatus     Int     @default(0)
+
+  /// Real `users.balance` — spendable wallet balance, in whole rupees.
+  walletBalance Int @default(0)
+
+  joinedOn  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  kycDocuments  KycDocument[]
+  bankAccounts  BankAccount[]
+  attendance    AttendanceRecord[]
+  bookings      Booking[]
+  investments   Investment[]
+  payouts       PayoutRequest[]
+  funds         FundRequest[]
+  incentiveReqs IncentiveRequest[]
+  earnings      EarningEntry[]
+  tickets       SupportTicket[]
+  notifications NotificationRecipient[]
+  plotHolds     PlotHold[]
+  feedback      Feedback[]
+  propertyUnits PropertyUnit[]
+
+  calls CallLog[]
+
+  @@index([role, status])
+  @@index([sponsorId])
+}
+
+/// OTP-only partner login (app doc §1.1/§1.2). The code itself is stored hashed;
+/// `devOtp` is only ever echoed back by the route on non-production.
+model OtpCode {
+  id         String    @id @default(cuid())
+  phone      String
+  codeHash   String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  attempts   Int       @default(0)
+  createdAt  DateTime  @default(now())
+
+  @@index([phone, createdAt])
+}
+
+enum KycDocumentKind {
+  aadhaarFront
+  aadhaarBack
+  panCard
+  passportPhoto
+  cancelledCheque
+}
+
+model KycDocument {
+  id         String          @id @default(cuid())
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  kind       KycDocumentKind
+  /// Path under the server's static /uploads mount.
+  fileUrl    String
+  uploadedAt DateTime        @default(now())
+
+  @@unique([userId, kind])
+}
+
+enum BankAccountState {
+  verified
+  pending
+  rejected
+}
+
+/// Payout destinations (app doc §5.4/§5.5). The full account number is stored and
+/// returned as-is — the app masks it for display so a partner can confirm which
+/// account is which when adding a new one.
+model BankAccount {
+  id            String           @id @default(cuid())
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  bankName      String
+  accountNumber String
+  holderName    String
+  ifsc          String
+  /// "Savings" | "Current" — free text in the real system, and the app UI offers only these two.
+  accountType   String           @default("Savings")
+  state         BankAccountState @default(pending)
+  isPrimary     Boolean          @default(false)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([userId])
+}
+
+/// One signed-in device. The JWT carries this row's id, so a token can be revoked without
+/// waiting for it to expire — which is what makes the Security screen's session list real
+/// rather than decorative.
+model Session {
+  id String @id @default(cuid())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  /// A readable label built from the User-Agent ("Chrome on macOS"), plus the raw header so a
+  /// bad guess can be re-read later. No geo-IP lookup: the address is shown as it arrived.
+  device    String
+  userAgent String?
+  ipAddress String?
+
+  createdAt  DateTime  @default(now())
+  /// Written at most once a minute, so a busy session does not mean a write per request.
+  lastSeenAt DateTime  @default(now())
+  revokedAt  DateTime?
+
+  @@index([userId])
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  leader    User?    @relation("TeamLeader", fields: [leaderId], references: [id])
+  leaderId  String?  @unique
+  members   User[]   @relation("TeamMembers")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// App doc §5.6 — a partner's free-text feedback, one of a fixed topic list.
+model Feedback {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  topic     String
+  message   String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// ===========================================================================
+// HRMS — attendance
+//
+// Offline-first by design (app doc §2): the phone writes a mark locally and pushes
+// it later, so `POST /attendance` is an UPSERT on (userId, date) and is safe to
+// call twice for the same day. The admin panel reads the same rows.
+// ===========================================================================
+
+/// The geofence a partner may check in/out inside (app doc §2.1). Multiple rows are
+/// allowed; `isDefault` is the one assigned to anyone without an explicit location.
+model WorkLocation {
+  id        String  @id @default(cuid())
+  name      String
+  area      String
+  latitude  Float
+  longitude Float
+  /// Meters.
+  radius    Float   @default(200)
+  isDefault Boolean @default(false)
+
+  attendance AttendanceRecord[]
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+}
+
+enum AttendanceSyncStatus {
+  synced
+  pending
+  failed
+}
+
+enum GeoFenceResult {
+  inside
+  outside
+  unknown
+}
+
+enum CorrectionStatus {
+  pending
+  approved
+  rejected
+}
+
+model AttendanceRecord {
+  id     String   @id @default(cuid())
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  /// Midnight-anchored day key. One row per user per calendar day.
+  date   DateTime @db.Date
+
+  checkInAt        DateTime?
+  checkOutAt       DateTime?
+  /// Resolved location NAME, which is all the app sends by default (app doc §2.3).
+  checkInLocation  String?
+  checkOutLocation String?
+  /// Raw coordinates, when the client sends them — the app has them at the point of
+  /// check-in and the doc flags them as addable, so they are accepted and stored.
+  checkInLat       Float?
+  checkInLng       Float?
+  checkOutLat      Float?
+  checkOutLng      Float?
+
+  location   WorkLocation? @relation(fields: [locationId], references: [id])
+  locationId String?
+
+  isLate           Boolean @default(false)
+  isEarlyDeparture Boolean @default(false)
+  isAbsent         Boolean @default(false)
+  /// Derived on write from checkInAt/checkOutAt, stored so reports can aggregate in SQL.
+  workingHours     Float?
+
+  geoFenceResult           GeoFenceResult       @default(unknown)
+  distanceFromOfficeMeters Int?
+  syncStatus               AttendanceSyncStatus @default(synced)
+  failureReason            String?
+
+  markedBy String?
+  device   String?
+
+  correctionRequested Boolean           @default(false)
+  correctionReason    String?
+  correctionStatus    CorrectionStatus?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([date])
+  @@index([correctionStatus])
+}
+
+/// Singleton — the geofence/lateness rules the admin panel edits (Settings > Attendance).
+/// `officeLat`/`officeLng`/`geoFenceRadiusMeters` mirror the default WorkLocation so the
+/// admin's existing single-office policy screen keeps working unchanged.
+model AttendancePolicySettings {
+  id                   String   @id @default("singleton")
+  officeLat            Float    @default(21.1702)
+  officeLng            Float    @default(72.8311)
+  geoFenceRadiusMeters Int      @default(200)
+  workStartTime        String   @default("09:30")
+  lateAfterMinutes     Int      @default(15)
+  standardWorkingHours Float    @default(8.5)
+  updatedAt            DateTime @updatedAt
+}
+
+// ===========================================================================
+// PROJECTS & PROPERTIES
+//
+// ShreeRam sells land plots: a Project is a layout/scheme, a PropertyUnit is one
+// plot inside it. Columns follow the real Laravel `projects` / `manage_properties`
+// tables (which the admin panel is already built against). The app doc's flatter
+// shape is produced by mapping, not by a second set of columns:
+//   plot_size_range / starting_price / property_count / available_count /
+//   plot_sizes / commission_rate  -> aggregated from this project's units
+//   ProjectStatus open|onHold|soldOut -> from `status` + `holdReason` + unit counts
+//   PropertyStatus available|onHold|booked|soldOut -> from `bookingStatus` + live PlotHold
+//   PropertyType standard|corner -> from `isCorner`
+// ===========================================================================
+
+/// Lookup tables the Add/Edit forms use as Select sources.
+model Amenity {
+  id   String @id @default(cuid())
+  name String @unique
+}
+
+model PropertyTypeOption {
+  id   String @id @default(cuid())
+  name String @unique
+}
+
+/// Area/locality picker (real `addresses` + `address_details`).
+model AddressOption {
+  id   String @id @default(cuid())
+  name String @unique
+}
+
+/// App doc §8 ProjectCategory.
+enum ProjectCategory {
+  residential
+  commercial
+  agricultural
+}
+
+model Project {
+  id                 String          @id @default(cuid())
+  projectName        String
+  /// Real column is free text ("Plots", "Farm Land", ...) and stays that way for the admin.
+  projectType        String?
+  /// The app's closed 3-value category, which the free-text projectType cannot express.
+  category           ProjectCategory @default(residential)
+  projectLocation    String
+  landArea           String          @default("")
+  /// Free-text display price on the real column, e.g. "Starting ₹45 L".
+  projectPrice       String?
+  projectDescription String          @default("")
+  /// Real `projects.status`: 1 = Active, 0 = Deactive.
+  status             Int             @default(1)
+  sortOrder          Int             @default(0)
+  /// Set when the admin puts a project on hold; also what makes the app report
+  /// ProjectStatus = onHold instead of open.
+  holdReason         String?
+
+  banner            String?
+  thumbnail         String?
+  map               String?
+  /// Real `google_location` — a maps link, not coordinates.
+  googleLocation    String?
+  /// Real coordinates, so the app can drop a pin instead of falling back to a text search.
+  latitude          Float?
+  longitude         Float?
+  distanceMap       String?
+  layoutPlanUrl     String?
+  d3ViewLink        String?
+  d3ViewFile        String?
+  d3WalkthroughLink String?
+  d3WalkthroughFile String?
+
+  /// Real `amenity_id` is a JSON array of Amenity ids on the project row (no pivot table).
+  amenityIds String[] @default([])
+  /// Extra image URLs beyond banner/thumbnail — the app's `gallery`.
+  gallery    String[] @default([])
+
+  files ProjectFile[]
+  units PropertyUnit[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+/// Real `jda_certificates` / `rera_certificates` / `construction_photo_graphs` — three
+/// one-file-per-row tables, unified here because they differ only by `kind`.
+/// `capturedOn`/`caption`/`isVideo` are only used by `construction` rows, which is what
+/// the app reads as `construction_updates`.
+enum ProjectFileKind {
+  jda
+  rera
+  construction
+}
+
+model ProjectFile {
+  id         String          @id @default(cuid())
+  project    Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId  String
+  kind       ProjectFileKind
+  file       String
+  capturedOn DateTime?
+  caption    String?
+  isVideo    Boolean         @default(false)
+  createdAt  DateTime        @default(now())
+
+  @@index([projectId, kind])
+}
+
+model PropertyUnit {
+  id        String  @id @default(cuid())
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  addressId String?
+
+  propertyTitle       String
+  propertyNumber      String
+  /// Free text in the real system; PropertyTypeOption is only the form's Select source.
+  propertyType        String  @default("Plot")
+  /// varchar on the real column, e.g. "138.88".
+  propertyArea        String  @default("")
+  propertyMeasurement String  @default("Sq yard")
+  width               String?
+  length              String?
+  details             String?
+
+  /// Real `manage_properties.status`: 1 = active, 0 = deactive (the record's own flag).
+  status        Int     @default(1)
+  /// Real `booking_status`: 0 = Available, 1 = Booked, 2 = Sold Out.
+  bookingStatus Int     @default(0)
+  isCorner      Boolean @default(false)
+  isFeatured    Boolean @default(false)
+  isVerified    Boolean @default(false)
+
+  location   String?
+  thumbnail  String?
+  sitePlan   String?
+  images     String[] @default([])
+  amenityIds String[] @default([])
+
+  constructedArea       String?
+  /// Rate columns — the admin form auto-computes the totals from these.
+  perAreaAmount         Int     @default(0)
+  perAreaProfit         Int     @default(0)
+  totalInvestmentAmount Int     @default(0)
+  /// Despite the real column name, this is a currency AMOUNT ("Total Commission"), not a percent.
+  profit                Int     @default(0)
+
+  /// The three amounts the app's booking screen needs on top of the base price.
+  charges            Int @default(0)
+  gstAndRegistration Int @default(0)
+  /// What a customer pays now to book. The app gates its Pay button on this.
+  tokenAmount        Int @default(0)
+
+  bookedBy   User?   @relation(fields: [bookedById], references: [id])
+  bookedById String?
+
+  facings       PlotFacing[]
+  holds         PlotHold[]
+  bookings      Booking[]
+  investments   Investment[]
+  incentiveReqs IncentiveRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([bookingStatus])
+  @@index([bookedById])
+}
+
+/// Real `plot_facings` (pro_id/key/value) — a free-form key/value repeater on the unit
+/// form, e.g. "Facing" -> "North". The app's single `facing` field reads the "Facing" key.
+model PlotFacing {
+  id     String       @id @default(cuid())
+  unit   PropertyUnit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  unitId String
+  key    String
+  value  String
+
+  @@index([unitId])
+}
+
+/// Real `plot_holds` — a time-boxed hold, independent of `bookingStatus`. An active hold
+/// is what makes the app report PropertyStatus = onHold for an otherwise-available plot.
+model PlotHold {
+  id        String       @id @default(cuid())
+  unit      PropertyUnit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  unitId    String
+  user      User?        @relation(fields: [userId], references: [id])
+  userId    String?
+  holdStart DateTime
+  holdEnd   DateTime
+  /// 1 = active, 0 = released/expired.
+  status    Int          @default(1)
+  createdAt DateTime     @default(now())
+
+  @@index([unitId, status])
+}
+
+// ===========================================================================
+// BOOKINGS, MONEY & LEDGERS
+//
+// A unit can have MANY Booking rows: one initial booking (`isDeposit = 0`) plus later
+// installment/deposit payments (`isDeposit = 1`). "Remaining" is never stored — it is
+// unit.totalInvestmentAmount minus the sum of that unit's booking amounts.
+// ===========================================================================
+
+/// App doc §8 PaymentMode. The real `bookings.paymant_mode` (sic) column is numeric
+/// 0=Bank Transfer, 1=Cash, 2=Cheque, 3=Other; `online` is new — the real Property
+/// module's admin booking flow has no gateway mode, but the app's booking screen offers one.
+enum PaymentMode {
+  online
+  bankTransfer
+  cash
+  cheque
+  other
+}
+
+/// App doc §8 BookingStatus. The real column only ever holds pending/confirmed (0/1);
+/// `partPaid` and `cancelled` come from the app's own status list.
+enum BookingStatus {
+  pending
+  booked
+  partPaid
+  cancelled
+}
+
+model Booking {
+  id         String       @id @default(cuid())
+  /// Server-owned, unique, format BKG-<n> (app doc §4.2 — never trusted from the client).
+  reference  String       @unique
+  unit       PropertyUnit @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  propertyId String
+
+  bookingName String
+  phone       String
+
+  /// The partner/agent who made the booking (real `user_id`).
+  user             User?   @relation(fields: [userId], references: [id])
+  userId           String?
+  /// A downline member credited alongside the booking partner (app doc §4.2
+  /// `involved_member_id`). Deliberately not a relation: it points at the same User
+  /// table but adding a second relation here buys nothing the join can't do.
+  involvedMemberId String?
+
+  /// Whole rupees. The real column is a free-form longtext; kept numeric here.
+  amount      Int
+  paymentMode PaymentMode @default(bankTransfer)
+  chequeImage String?
+  /// Required by the app when paymentMode = other — how the payment was actually made.
+  note        String?
+
+  aadhaarNumber String?
+  aadhaarImage  String?
+  aadhaarBack   String?
+
+  /// 0 = initial booking payment, 1 = a later deposit/installment against the same unit.
+  isDeposit  Int           @default(0)
+  status     BookingStatus @default(pending)
+  /// Server-computed at creation from the unit's commission rate — never accepted from the client.
+  commission Int           @default(0)
+
+  investments Investment[]
+  earnings    EarningEntry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([propertyId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+/// 0 = flat currency amount, 1 = percentage.
+model Investment {
+  id         String       @id @default(cuid())
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  unit       PropertyUnit @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  propertyId String
+  /// The originating Booking/deposit row (real `trx`).
+  booking    Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId  String
+
+  amount     Int
+  profit     Int @default(0)
+  profitType Int @default(0)
+  netProfit  Int @default(0)
+  loss       Int @default(0)
+  lossType   Int @default(0)
+
+  /// Real `investments.is_active` — 1/0. Deactivating always requires a reason.
+  isActive       Int     @default(1)
+  deactiveReason String?
+
+  returnDate     DateTime?
+  lastReturnDate DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([propertyId])
+}
+
+/// Real `funds` table — manual wallet-deposit requests awaiting admin approval.
+/// Status codes kept as in the real system: 2 = pending, 1 = approved, 3 = rejected.
+model FundRequest {
+  id          String   @id @default(cuid())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  amount      Int
+  gatewayName String   @default("Bank Transfer")
+  trxId       String
+  status      Int      @default(2)
+  feedback    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status])
+}
+
+/// Real `incentive_reqs` — 0 = pending, 1 = accepted, 2 = rejected. Deliberately thin:
+/// the real handler only flips `status`, with no balance side effect of its own.
+model IncentiveRequest {
+  id         String       @id @default(cuid())
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  unit       PropertyUnit @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  propertyId String
+  status     Int          @default(0)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([status])
+}
+
+/// Real `PayoutRecordController` 5-state lifecycle. `confirmed` -> `released` is a genuine
+/// two-step process (confirm, then actually debit the wallet), not one "approve".
+enum PayoutStatus {
+  pending
+  confirmed
+  released
+  rejected
+  failed
+}
+
+model PayoutRequest {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  amount            Int
+  requestDate       DateTime     @default(now())
+  status            PayoutStatus @default(pending)
+  processor         String?
+  bankAccountMasked String       @default("")
+  bankIfsc          String       @default("")
+  referralBonus     Int          @default(0)
+  commission        Int          @default(0)
+  /// Only automatic (gateway-driven) methods can fail via webhook.
+  isAutomaticMethod Boolean      @default(false)
+  lastError         String?
+
+  history PayoutStatusEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([userId])
+}
+
+model PayoutStatusEvent {
+  id        String        @id @default(cuid())
+  payout    PayoutRequest @relation(fields: [payoutId], references: [id], onDelete: Cascade)
+  payoutId  String
+  status    PayoutStatus
+  note      String?
+  createdAt DateTime      @default(now())
+
+  @@index([payoutId])
+}
+
+/// App doc §8 EarningKind.
+enum EarningKind {
+  bookingCommission
+  referralBonus
+  joiningBonus
+}
+
+/// The single commission/bonus ledger. It backs BOTH the admin panel's
+/// "Commission Statements" screen and the app's §5.2 /partner/earnings breakdown —
+/// `by_kind`, `total_earned` and `recent` are all aggregates of these rows, so neither
+/// surface stores its own copy of the numbers.
+model EarningEntry {
+  id     String      @id @default(cuid())
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  kind   EarningKind
+  /// Display label, e.g. "A-05 · Suresh Jadhav".
+  title  String
+  amount Int
+
+  /// The booking that generated a bookingCommission row.
+  booking        Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  bookingId      String?
+  /// The downline partner whose activity generated a referralBonus row.
+  referralUserId String?
+
+  /// Mirrors PayoutRequest.status semantics for this single entry: pending until a payout
+  /// covering it is released. Drives the app's released / in_process / pending split.
+  status PayoutStatus @default(pending)
+
+  creditedOn DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([userId, creditedOn])
+  @@index([kind])
+}
+
+// ===========================================================================
+// SUPPORT, NOTIFICATIONS, CONFIG & AUDIT
+// ===========================================================================
+
+enum TicketStatus {
+  open
+  pending
+  resolved
+  closed
+}
+
+model SupportTicket {
+  id      String       @id @default(cuid())
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+  subject String
+  status  TicketStatus @default(open)
+
+  messages    TicketMessage[]
+  lastReplyAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+model TicketMessage {
+  id          String        @id @default(cuid())
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId    String
+  authorId    String
+  authorName  String
+  /// admin | user
+  authorRole  String
+  message     String
+  attachments String[]      @default([])
+  createdAt   DateTime      @default(now())
+
+  @@index([ticketId])
+}
+
+enum NotificationAudience {
+  all
+  agents
+  employees
+  leaders
+  /// A hand-picked list of people rather than a role group. The chosen recipients are the
+  /// NotificationRecipient rows themselves, so no second place can disagree about who got it.
+  custom
+}
+
+/// App doc §8 NotificationType — decides the icon/colour the app renders, so it is
+/// stored rather than guessed from the text.
+enum NotificationType {
+  booking
+  payout
+  team
+  system
+}
+
+enum NotificationDeliveryStatus {
+  draft
+  /// Composed, waiting for its send time. The poller picks these up.
+  scheduled
+  sent
+  delivered
+  failed
+}
+
+/// One admin broadcast. Delivery counts are derived from NotificationRecipient rows.
+model Notification {
+  id             String                     @id @default(cuid())
+  title          String
+  body           String
+  type           NotificationType           @default(system)
+  audience       NotificationAudience       @default(all)
+  deliveryStatus NotificationDeliveryStatus @default(sent)
+
+  recipients NotificationRecipient[]
+
+  /// When this should go out. Null means it already has. A scheduled broadcast has its
+  /// recipients resolved at send time, not now — a partner who joins tomorrow should still
+  /// get tomorrow's announcement.
+  scheduledFor DateTime?
+  sentAt       DateTime?
+  /// Who composed it, for the audit trail the list already shows.
+  createdBy    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+/// Per-partner fan-out. This is what the app's §6.1 feed reads, and it is what makes
+/// §6.2/§6.3 (mark one / mark all read) per-user rather than global.
+model NotificationRecipient {
+  id             String       @id @default(cuid())
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  notificationId String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  read           Boolean      @default(false)
+  readAt         DateTime?
+  /// Set when fan-out to this partner failed, feeding the admin's failedCount.
+  failed         Boolean      @default(false)
+
+  @@unique([notificationId, userId])
+  @@index([userId, read])
+}
+
+/// One recipient of one broadcast. Written for failures too, so a template Meta has stopped
+/// approving is visible here rather than only in a toast that has gone.
+model WhatsAppTemplateSend {
+  id String @id @default(cuid())
+
+  /// The approved template as it was named on Meta at the time of sending.
+  templateName String
+  language     String @default("en")
+
+  destination String
+  params      String[] @default([])
+  /// The wording actually delivered, placeholders filled in.
+  body        String?
+
+  /// sent | failed
+  status       String
+  errorMessage String?
+
+  leadId String?
+  sentBy String?
+  sentAt DateTime @default(now())
+
+  @@index([sentAt])
+}
+
+// ---------------------------------------------------------------------------
+// Leave
+//
+// Attendance already knows who turned up. Leave is the other half of that question — why
+// somebody did not — and without it every approved absence counts against them in payroll.
+// ---------------------------------------------------------------------------
+
+enum LeaveStatus {
+  pending
+  approved
+  rejected
+  cancelled
+}
+
+/// Casual, Sick, Earned, Unpaid… configured per organisation rather than hard-coded, because
+/// every company counts these differently.
+model LeaveType {
+  id   String @id @default(cuid())
+  name String
+  /// Short form shown on the calendar and the payslip, e.g. "CL".
+  code String @unique
+
+  /// Days granted per person per year. Zero means unlimited-but-tracked, as unpaid leave is.
+  annualQuota Float @default(0)
+  /// Unpaid leave still needs approving and recording; it just costs a day's salary.
+  isPaid      Boolean @default(true)
+  /// Whether an unused balance survives into next year.
+  carryForward Boolean @default(false)
+  active       Boolean @default(true)
+
+  requests LeaveRequest[]
+  balances LeaveBalance[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// What somebody has left this year. Recomputed from approved requests rather than trusted as
+/// a running total, so a cancelled or edited request can never leave the figure adrift.
+model LeaveBalance {
+  id String @id @default(cuid())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  type   LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+  leaveTypeId String
+  year   Int
+
+  /// Usually the type's annual quota, but overridable per person — a joiner mid-year gets less.
+  allocated Float @default(0)
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, leaveTypeId, year])
+  @@index([userId, year])
+}
+
+model LeaveRequest {
+  id String @id @default(cuid())
+
+  user   User   @relation("LeaveRequester", fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  type   LeaveType @relation(fields: [leaveTypeId], references: [id])
+  leaveTypeId String
+
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  /// Counted in days so a half day is 0.5. Stored rather than derived because the working-day
+  /// rules that produced it may change later, and a decided request must not move.
+  days      Float
+  halfDay   Boolean @default(false)
+
+  reason String
+
+  status       LeaveStatus @default(pending)
+  decidedBy    String?
+  decidedAt    DateTime?
+  decisionNote String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, startDate])
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// Payroll
+// ---------------------------------------------------------------------------
+
+enum PayrollRunStatus {
+  /// Figures calculated and editable; nothing is owed yet.
+  draft
+  /// Locked. Attendance or leave changing afterwards will not move these numbers.
+  finalised
+  paid
+}
+
+/// What one employee is paid, as it stands today. One row per person: history lives in the
+/// payslips, which keep their own copy of every figure used.
+model SalaryStructure {
+  id String @id @default(cuid())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique
+
+  /// All amounts are whole rupees per month.
+  basic          Int @default(0)
+  hra            Int @default(0)
+  otherAllowance Int @default(0)
+
+  pfDeduction      Int @default(0)
+  professionalTax  Int @default(0)
+  otherDeduction   Int @default(0)
+
+  effectiveFrom DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model PayrollRun {
+  id String @id @default(cuid())
+
+  month Int
+  year  Int
+
+  status PayrollRunStatus @default(draft)
+  notes  String?
+
+  createdBy   String?
+  finalisedAt DateTime?
+  paidAt      DateTime?
+
+  payslips Payslip[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([month, year])
+}
+
+/// One person's pay for one month. Every figure is copied in rather than referenced, so a
+/// payslip issued in March still reads the same after April's salary revision.
+model Payslip {
+  id String @id @default(cuid())
+
+  run   PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  runId String
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  /// Days in the month the company expected work, and how they were accounted for.
+  workingDays   Float
+  presentDays   Float
+  paidLeaveDays Float @default(0)
+  /// Loss of pay: absences with no approved paid leave behind them.
+  lopDays       Float @default(0)
+
+  basic          Int
+  hra            Int
+  otherAllowance Int
+  grossEarnings  Int
+
+  pfDeduction     Int
+  professionalTax Int
+  otherDeduction  Int
+  /// What the LOP days cost, kept separate so a payslip can explain the shortfall.
+  lopDeduction    Int @default(0)
+  totalDeductions Int
+
+  netPay Int
+
+  createdAt DateTime @default(now())
+
+  @@unique([runId, userId])
+  @@index([userId])
+}
+
+/// Real `manage_times` — master data for investment return/maturity duration options.
+model ManageTime {
+  id       String @id @default(cuid())
+  time     Int
+  /// Days | Months | Years
+  timeType String
+  status   Int    @default(1)
+}
+
+/// Real `badges` (+ `badge_details`) — admin-configurable rank thresholds and bonus.
+model Badge {
+  id          String  @id @default(cuid())
+  rankName    String
+  rankLevel   Int
+  description String?
+  minInvest   Int     @default(0)
+  minDeposit  Int     @default(0)
+  minEarning  Int     @default(0)
+  bonus       Int     @default(0)
+  status      Int     @default(1)
+  sortOrder   Int     @default(0)
+}
+
+/// Real `plan_levels` — a team-volume-range to incentive-% ladder (validated non-overlapping).
+model PlanLevel {
+  id         String @id @default(cuid())
+  levelTitle String
+  rangeFrom  Int
+  rangeTo    Int
+  incentive  Float
+}
+
+/// deposit | investment | profit
+enum CommissionType {
+  deposit
+  investment
+  profit
+}
+
+/// Real `referrals` — level to percent, one table per commission type.
+model ReferralLevelRule {
+  id             String         @id @default(cuid())
+  commissionType CommissionType
+  level          Int
+  percent        Float
+
+  @@unique([commissionType, level])
+}
+
+/// Singleton — the global commission on/off toggles (real `config/basic.php`).
+model ReferralToggleSettings {
+  id                   String   @id @default("singleton")
+  depositCommission    Boolean  @default(true)
+  investmentCommission Boolean  @default(true)
+  profitCommission     Boolean  @default(false)
+  updatedAt            DateTime @updatedAt
+}
+
+/// Singletons behind Settings > Organization / Notifications.
+model OrganizationSettings {
+  id           String   @id @default("singleton")
+  companyName  String   @default("Shree Ram Group")
+  logoUrl      String   @default("")
+  contactEmail String   @default("")
+  contactPhone String   @default("")
+  address      String   @default("")
+  updatedAt    DateTime @updatedAt
+}
+
+/// Exactly the four toggles Settings > Notifications offers. Kept to what the UI can
+/// actually change, rather than a wider set of switches nothing turns on or off.
+model NotificationSettings {
+  id           String   @id @default("singleton")
+  emailAlerts  Boolean  @default(true)
+  pushAlerts   Boolean  @default(true)
+  dailySummary Boolean  @default(false)
+  ticketAlerts Boolean  @default(true)
+  updatedAt    DateTime @updatedAt
+}
+
+/// Every admin mutation writes one row. Replaces the frontend's in-memory audit array.
+model AuditEntry {
+  id          String   @id @default(cuid())
+  userId      String
+  userName    String
+  action      String
+  module      String
+  recordId    String
+  recordLabel String
+  description String   @default("")
+  createdAt   DateTime @default(now())
+
+  @@index([module])
+  @@index([recordId])
+  @@index([createdAt])
+}
+
+/// A named set of admin-panel module permissions — "HR Manager", "Lead Manager", and so on.
+/// Modules are the top-level sidebar sections (see server/src/services/permissions.ts for the
+/// canonical list and the API paths each one covers). `isFullAccess` is the super-admin escape
+/// hatch: it ignores `modules` entirely and is the only kind of role that may manage roles and
+/// panel users, so a manager can never grant themselves more than they were given.
+model PanelRole {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  description  String?
+  isFullAccess Boolean  @default(false)
+  /// string[] of module keys; ignored when `isFullAccess` is true.
+  modules      Json     @default("[]")
+  /// A built-in role cannot be deleted or have its full-access flag changed.
+  isSystem     Boolean  @default(false)
+  users        User[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

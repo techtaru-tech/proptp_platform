@@ -1,0 +1,558 @@
+import { Router } from 'express';
+import type { Prisma } from '@prisma/client';
+import { prisma } from '../prisma';
+
+export const reportsRouter = Router();
+
+function startOfDay(d: Date): Date {
+  const c = new Date(d);
+  c.setHours(0, 0, 0, 0);
+  return c;
+}
+function daysAgo(n: number): Date {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d;
+}
+
+reportsRouter.get('/dashboard-stats', async (_req, res) => {
+  const todayStart = startOfDay(new Date());
+  const weekStart = daysAgo(7);
+  const monthStart = daysAgo(30);
+
+  const [totalLeads, newToday, newThisWeek, newThisMonth, won, lost, activeInPipeline, wonAgg] = await Promise.all([
+    prisma.lead.count(),
+    prisma.lead.count({ where: { createdAt: { gte: todayStart } } }),
+    prisma.lead.count({ where: { createdAt: { gte: weekStart } } }),
+    prisma.lead.count({ where: { createdAt: { gte: monthStart } } }),
+    prisma.lead.count({ where: { status: 'won' } }),
+    prisma.lead.count({ where: { status: 'lost' } }),
+    prisma.lead.count({ where: { status: { notIn: ['won', 'lost'] } } }),
+    prisma.lead.aggregate({ where: { status: 'won' }, _sum: { wonValue: true } }),
+  ]);
+
+  const closed = won + lost;
+  const conversionRate = closed > 0 ? Math.round((won / closed) * 1000) / 10 : 0;
+
+  res.json({
+    totalLeads,
+    newToday,
+    newThisWeek,
+    newThisMonth,
+    conversionRate,
+    activeInPipeline,
+    wonDeals: won,
+    wonValue: wonAgg._sum.wonValue ?? 0,
+  });
+});
+
+reportsRouter.get('/lead-trend', async (req, res) => {
+  const days = Math.max(1, Number(req.query.days) || 14);
+  const since = startOfDay(daysAgo(days - 1));
+  const rows = await prisma.lead.findMany({ where: { createdAt: { gte: since } }, select: { createdAt: true } });
+
+  const counts = new Map<string, number>();
+  rows.forEach((r) => {
+    const key = r.createdAt.toISOString().slice(0, 10);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  });
+
+  const points = Array.from({ length: days }, (_, i) => {
+    const d = daysAgo(days - 1 - i);
+    const key = d.toISOString().slice(0, 10);
+    return { date: key.slice(5), leads: counts.get(key) ?? 0 };
+  });
+  res.json(points);
+});
+
+reportsRouter.get('/status-breakdown', async (_req, res) => {
+  const groups = await prisma.lead.groupBy({ by: ['status'], _count: { _all: true } });
+  const order = ['new', 'contacted', 'qualified', 'won', 'lost'];
+  const byStatus = new Map(groups.map((g) => [g.status, g._count._all]));
+  res.json(order.map((s) => ({ name: s.charAt(0).toUpperCase() + s.slice(1), value: byStatus.get(s as any) ?? 0 })));
+});
+
+reportsRouter.get('/source-performance', async (_req, res) => {
+  const [totals, wonBySource] = await Promise.all([
+    prisma.lead.groupBy({ by: ['source'], _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['source'], where: { status: 'won' }, _count: { _all: true } }),
+  ]);
+  const wonMap = new Map(wonBySource.map((g) => [g.source, g._count._all]));
+  const rows = totals
+    .map((g) => {
+      const total = g._count._all;
+      const won = wonMap.get(g.source) ?? 0;
+      return { source: g.source, total, won, conversionRate: total > 0 ? Math.round((won / total) * 1000) / 10 : 0 };
+    })
+    .sort((a, b) => b.total - a.total);
+  res.json(rows);
+});
+
+reportsRouter.get('/stage-distribution', async (req, res) => {
+  const pipelineId = (req.query.pipelineId as string) || undefined;
+  const pipeline = pipelineId
+    ? await prisma.pipeline.findUnique({ where: { id: pipelineId } })
+    : await prisma.pipeline.findFirst({ where: { isDefault: true } });
+  if (!pipeline) return res.json([]);
+
+  const stages = await prisma.pipelineStage.findMany({ where: { pipelineId: pipeline.id }, orderBy: { sortOrder: 'asc' } });
+  const counts = await prisma.lead.groupBy({ by: ['pipelineStageId'], where: { pipelineStageId: { in: stages.map((s) => s.id) } }, _count: { _all: true } });
+  const countMap = new Map(counts.map((c) => [c.pipelineStageId, c._count._all]));
+  res.json(stages.map((s) => ({ name: s.name, value: countMap.get(s.id) ?? 0, color: s.color })));
+});
+
+reportsRouter.get('/assignee-performance', async (_req, res) => {
+  const [totals, won, lost] = await Promise.all([
+    prisma.lead.groupBy({ by: ['assignedUserId'], where: { assignedUserId: { not: null } }, _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['assignedUserId'], where: { assignedUserId: { not: null }, status: 'won' }, _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['assignedUserId'], where: { assignedUserId: { not: null }, status: 'lost' }, _count: { _all: true } }),
+  ]);
+  const wonMap = new Map(won.map((g) => [g.assignedUserId, g._count._all]));
+  const lostMap = new Map(lost.map((g) => [g.assignedUserId, g._count._all]));
+  const rows = totals
+    .map((g) => {
+      const total = g._count._all;
+      const w = wonMap.get(g.assignedUserId) ?? 0;
+      const l = lostMap.get(g.assignedUserId) ?? 0;
+      return { userId: g.assignedUserId as string, total, won: w, lost: l, conversionRate: total > 0 ? Math.round((w / total) * 1000) / 10 : 0 };
+    })
+    .sort((a, b) => b.total - a.total);
+  res.json(rows);
+});
+
+reportsRouter.get('/followup-performance', async (_req, res) => {
+  const [total, completed, missed, pending, rescheduled] = await Promise.all([
+    prisma.leadFollowUp.count(),
+    prisma.leadFollowUp.count({ where: { status: 'completed' } }),
+    prisma.leadFollowUp.count({ where: { status: 'missed' } }),
+    prisma.leadFollowUp.count({ where: { status: 'pending' } }),
+    prisma.leadFollowUp.count({ where: { status: 'rescheduled' } }),
+  ]);
+  const completionRate = total > 0 ? Math.round((completed / total) * 1000) / 10 : 0;
+  res.json({ total, completed, missed, pending, rescheduled, completionRate });
+});
+
+reportsRouter.get('/lead-rows', async (req, res) => {
+  const { dateFrom, dateTo } = req.query as Record<string, string>;
+  const where: Record<string, unknown> = {};
+  if (dateFrom || dateTo) {
+    where.createdAt = {};
+    if (dateFrom) (where.createdAt as any).gte = new Date(dateFrom);
+    if (dateTo) (where.createdAt as any).lte = new Date(dateTo);
+  }
+  const rows = await prisma.lead.findMany({ where, orderBy: { createdAt: 'desc' } });
+  res.json(
+    rows.map((l) => ({
+      id: l.id,
+      name: `${l.firstName} ${l.lastName}`.trim(),
+      source: l.source,
+      status: l.status,
+      priority: l.priority,
+      assignedUserId: l.assignedUserId,
+      assignedTo: l.assignedTo,
+      dealValue: l.dealValue ?? 0,
+      createdAt: l.createdAt,
+    }))
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Report Center — a dedicated multi-report section (CRM > Report Center), distinct from
+// the analytics dashboard above. Every endpoint here accepts optional `from`/`to` (ISO
+// dates) and most accept a free-text `source` filter, matching the shared filter bar the
+// frontend renders across all of these reports.
+// ---------------------------------------------------------------------------
+
+/** Local calendar date (YYYY-MM-DD). Never `toISOString().slice(0,10)` — see ist-timezone notes:
+ * a local midnight serialises to the previous day and every "day" bucket would be off by one. */
+function localDateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** The Monday that starts `d`'s week, as a local date key — used to bucket "week" grouping. */
+function localWeekKey(d: Date): string {
+  const day = d.getDay(); // 0 = Sunday
+  const diff = (day === 0 ? -6 : 1) - day; // shift back to Monday
+  const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() + diff);
+  return localDateKey(monday);
+}
+
+function localMonthKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** Reads the shared `from`/`to` query params into a Prisma date-range filter, or `{}` if neither is set. */
+function parseDateRange(query: Record<string, string>): { gte?: Date; lte?: Date } {
+  const range: { gte?: Date; lte?: Date } = {};
+  if (query.from) range.gte = new Date(query.from);
+  if (query.to) {
+    // A bare date (no time) should include the whole day, not stop at 00:00:00.
+    const to = new Date(query.to);
+    if (query.to.length <= 10) to.setHours(23, 59, 59, 999);
+    range.lte = to;
+  }
+  return range;
+}
+
+reportsRouter.get('/lead-volume', async (req, res) => {
+  const { source, groupBy } = req.query as Record<string, string>;
+  const dateRange = parseDateRange(req.query as Record<string, string>);
+
+  const where: Record<string, unknown> = {};
+  if (Object.keys(dateRange).length > 0) where.createdAt = dateRange;
+  if (source?.trim()) {
+    where.OR = [
+      { source: { contains: source.trim(), mode: 'insensitive' } },
+      { otherSource: { contains: source.trim(), mode: 'insensitive' } },
+    ];
+  }
+
+  const rows = await prisma.lead.findMany({ where, select: { createdAt: true } });
+  const keyFor = groupBy === 'week' ? localWeekKey : groupBy === 'month' ? localMonthKey : localDateKey;
+
+  const counts = new Map<string, number>();
+  for (const row of rows) counts.set(keyFor(row.createdAt), (counts.get(keyFor(row.createdAt)) ?? 0) + 1);
+
+  const points = [...counts.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([period, count]) => ({ period, count }));
+  res.json({ total: rows.length, points });
+});
+
+reportsRouter.get('/source-performance-report', async (req, res) => {
+  const { source } = req.query as Record<string, string>;
+  const dateRange = parseDateRange(req.query as Record<string, string>);
+  const where: Record<string, unknown> = {};
+  if (Object.keys(dateRange).length > 0) where.createdAt = dateRange;
+  if (source?.trim()) where.source = { contains: source.trim(), mode: 'insensitive' };
+
+  const [totals, won, lost, wonValueAgg] = await Promise.all([
+    prisma.lead.groupBy({ by: ['source'], where, _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['source'], where: { ...where, status: 'won' }, _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['source'], where: { ...where, status: 'lost' }, _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['source'], where: { ...where, status: 'won' }, _sum: { wonValue: true } }),
+  ]);
+  const wonMap = new Map(won.map((g) => [g.source, g._count._all]));
+  const lostMap = new Map(lost.map((g) => [g.source, g._count._all]));
+  const valueMap = new Map(wonValueAgg.map((g) => [g.source, g._sum.wonValue ?? 0]));
+
+  const rows = totals
+    .map((g) => {
+      const total = g._count._all;
+      const wonCount = wonMap.get(g.source) ?? 0;
+      return {
+        source: g.source,
+        total,
+        won: wonCount,
+        lost: lostMap.get(g.source) ?? 0,
+        conversionRate: total > 0 ? Math.round((wonCount / total) * 1000) / 10 : 0,
+        wonValue: valueMap.get(g.source) ?? 0,
+      };
+    })
+    .sort((a, b) => b.total - a.total);
+  res.json(rows);
+});
+
+reportsRouter.get('/source-attribution', async (req, res) => {
+  const dateRange = parseDateRange(req.query as Record<string, string>);
+  const where: Record<string, unknown> = {};
+  if (Object.keys(dateRange).length > 0) where.createdAt = dateRange;
+
+  const rows = await prisma.lead.findMany({ where, select: { utmSource: true, utmMedium: true, utmCampaign: true, source: true } });
+
+  const bySourceMap = new Map<string, number>();
+  const byCampaignMap = new Map<string, number>();
+  for (const row of rows) {
+    // Falls back to the plain `source` for leads with no UTM tagging (e.g. manually created).
+    const utmKey = row.utmSource?.trim() || row.source;
+    bySourceMap.set(utmKey, (bySourceMap.get(utmKey) ?? 0) + 1);
+    if (row.utmCampaign?.trim()) {
+      const label = row.utmMedium?.trim() ? `${row.utmCampaign} (${row.utmMedium})` : row.utmCampaign;
+      byCampaignMap.set(label, (byCampaignMap.get(label) ?? 0) + 1);
+    }
+  }
+
+  res.json({
+    total: rows.length,
+    bySource: [...bySourceMap.entries()].map(([utmSource, total]) => ({ utmSource, total })).sort((a, b) => b.total - a.total),
+    byCampaign: [...byCampaignMap.entries()]
+      .map(([campaign, total]) => ({ campaign, total }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 15),
+  });
+});
+
+reportsRouter.get('/pipeline-funnel', async (req, res) => {
+  const { pipelineId } = req.query as Record<string, string>;
+  const dateRange = parseDateRange(req.query as Record<string, string>);
+
+  const pipeline = pipelineId
+    ? await prisma.pipeline.findUnique({ where: { id: pipelineId } })
+    : await prisma.pipeline.findFirst({ where: { isDefault: true } });
+  if (!pipeline) return res.json({ pipelineId: null, stages: [] });
+
+  const stages = await prisma.pipelineStage.findMany({ where: { pipelineId: pipeline.id }, orderBy: { sortOrder: 'asc' } });
+  const where: Record<string, unknown> = { pipelineStageId: { in: stages.map((s) => s.id) } };
+  if (Object.keys(dateRange).length > 0) where.createdAt = dateRange;
+
+  const counts = await prisma.lead.groupBy({ by: ['pipelineStageId'], where, _count: { _all: true } });
+  const countMap = new Map(counts.map((c) => [c.pipelineStageId, c._count._all]));
+
+  /**
+   * "Reached stage N" = currently at stage N or any later stage — the closest funnel view
+   * available without a per-stage entry/exit history table (only the *current* stage is
+   * tracked on Lead; LeadStageHistoryEntry logs moves but not a clean "time in stage N" span
+   * for leads still mid-pipeline). Directionally correct for a forward-moving pipeline.
+   */
+  const rawCounts = stages.map((s) => countMap.get(s.id) ?? 0);
+  const reached = rawCounts.map((_, i) => rawCounts.slice(i).reduce((sum, c) => sum + c, 0));
+
+  const result = stages.map((stage, i) => ({
+    stageId: stage.id,
+    stage: stage.name,
+    color: stage.color,
+    count: rawCounts[i],
+    reached: reached[i],
+    conversionFromPrevious: i === 0 ? 100 : reached[i - 1] > 0 ? Math.round((reached[i] / reached[i - 1]) * 1000) / 10 : 0,
+  }));
+
+  res.json({ pipelineId: pipeline.id, pipelineName: pipeline.name, stages: result });
+});
+
+reportsRouter.get('/pipeline-bottlenecks', async (req, res) => {
+  const { pipelineId } = req.query as Record<string, string>;
+  const pipeline = pipelineId
+    ? await prisma.pipeline.findUnique({ where: { id: pipelineId } })
+    : await prisma.pipeline.findFirst({ where: { isDefault: true } });
+  if (!pipeline) return res.json({ pipelineId: null, stages: [] });
+
+  const stages = await prisma.pipelineStage.findMany({ where: { pipelineId: pipeline.id }, orderBy: { sortOrder: 'asc' } });
+  const leads = await prisma.lead.findMany({
+    where: { pipelineStageId: { in: stages.map((s) => s.id) } },
+    select: { pipelineStageId: true, stageEnteredAt: true, createdAt: true },
+  });
+
+  const now = Date.now();
+  const byStage = new Map<string, number[]>();
+  for (const lead of leads) {
+    const enteredAt = (lead.stageEnteredAt ?? lead.createdAt).getTime();
+    const days = (now - enteredAt) / 86_400_000;
+    const bucket = byStage.get(lead.pipelineStageId as string);
+    if (bucket) bucket.push(days);
+    else byStage.set(lead.pipelineStageId as string, [days]);
+  }
+
+  const result = stages
+    .map((stage) => {
+      const days = byStage.get(stage.id) ?? [];
+      const avgDays = days.length > 0 ? days.reduce((sum, d) => sum + d, 0) / days.length : 0;
+      return { stageId: stage.id, stage: stage.name, color: stage.color, leadsInStage: days.length, avgDaysInStage: Math.round(avgDays * 10) / 10 };
+    })
+    .sort((a, b) => b.avgDaysInStage - a.avgDaysInStage);
+
+  res.json({ pipelineId: pipeline.id, pipelineName: pipeline.name, stages: result });
+});
+
+reportsRouter.get('/agent-performance-report', async (req, res) => {
+  const dateRange = parseDateRange(req.query as Record<string, string>);
+  const base: Record<string, unknown> = { assignedUserId: { not: null } };
+  if (Object.keys(dateRange).length > 0) base.createdAt = dateRange;
+
+  const [totals, won, lost, wonValueAgg] = await Promise.all([
+    prisma.lead.groupBy({ by: ['assignedUserId'], where: base, _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['assignedUserId'], where: { ...base, status: 'won' }, _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['assignedUserId'], where: { ...base, status: 'lost' }, _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['assignedUserId'], where: { ...base, status: 'won' }, _sum: { wonValue: true } }),
+  ]);
+  const wonMap = new Map(won.map((g) => [g.assignedUserId, g._count._all]));
+  const lostMap = new Map(lost.map((g) => [g.assignedUserId, g._count._all]));
+  const valueMap = new Map(wonValueAgg.map((g) => [g.assignedUserId, g._sum.wonValue ?? 0]));
+
+  const rows = totals
+    .map((g) => {
+      const total = g._count._all;
+      const w = wonMap.get(g.assignedUserId) ?? 0;
+      return {
+        userId: g.assignedUserId as string,
+        total,
+        won: w,
+        lost: lostMap.get(g.assignedUserId) ?? 0,
+        conversionRate: total > 0 ? Math.round((w / total) * 1000) / 10 : 0,
+        wonValue: valueMap.get(g.assignedUserId) ?? 0,
+      };
+    })
+    .sort((a, b) => b.total - a.total);
+  res.json(rows);
+});
+
+/**
+ * The leads behind one agent's row, for the drill-down on the report.
+ *
+ * Deliberately uses the same `parseDateRange` and the same `assignedUserId` test as the row
+ * above it: a drawer that opens off a figure and then disagrees with it is worse than no
+ * drawer at all.
+ */
+reportsRouter.get('/agent-performance-report/:userId/leads', async (req, res, next) => {
+  try {
+    const userId = String(req.params.userId);
+    const dateRange = parseDateRange(req.query as Record<string, string>);
+
+    const where: Prisma.LeadWhereInput = { assignedUserId: userId };
+    if (Object.keys(dateRange).length > 0) where.createdAt = dateRange;
+
+    const [leads, byStatus] = await Promise.all([
+      prisma.lead.findMany({
+        where,
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          status: true,
+          priority: true,
+          source: true,
+          dealValue: true,
+          wonValue: true,
+          createdAt: true,
+          stage: { select: { name: true } },
+          pipeline: { select: { name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 500,
+      }),
+      prisma.lead.groupBy({ by: ['status'], where, _count: { _all: true } }),
+    ]);
+
+    res.json({
+      total: leads.length,
+      byStatus: Object.fromEntries(byStatus.map((g) => [g.status, g._count._all])),
+      leads: leads.map((l) => ({
+        id: l.id,
+        name: `${l.firstName} ${l.lastName}`.trim(),
+        phone: l.phone,
+        status: l.status,
+        priority: l.priority,
+        source: l.source,
+        stageName: l.stage?.name ?? null,
+        pipelineName: l.pipeline?.name ?? null,
+        dealValue: l.dealValue ?? null,
+        wonValue: l.wonValue ?? null,
+        createdAt: l.createdAt.toISOString(),
+      })),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+reportsRouter.get('/revenue-by-rep', async (req, res) => {
+  const dateRange = parseDateRange(req.query as Record<string, string>);
+  // Revenue is dated by when the deal closed, not when the lead first came in.
+  const where: Record<string, unknown> = { status: 'won' };
+  if (Object.keys(dateRange).length > 0) where.wonAt = dateRange;
+
+  const [totals, valueAgg] = await Promise.all([
+    prisma.lead.groupBy({ by: ['assignedUserId'], where, _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['assignedUserId'], where, _sum: { wonValue: true } }),
+  ]);
+  const valueMap = new Map(valueAgg.map((g) => [g.assignedUserId, g._sum.wonValue ?? 0]));
+
+  const rows = totals
+    .map((g) => ({
+      userId: (g.assignedUserId as string) ?? null,
+      deals: g._count._all,
+      revenue: valueMap.get(g.assignedUserId) ?? 0,
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+  res.json(rows);
+});
+
+reportsRouter.get('/automation-stats', async (req, res) => {
+  const dateRange = parseDateRange(req.query as Record<string, string>);
+  const where: Record<string, unknown> = {};
+  if (Object.keys(dateRange).length > 0) where.ranAt = dateRange;
+
+  const runs = await prisma.automationRun.findMany({ where, select: { automationId: true, automationName: true, status: true } });
+  const byAutomation = new Map<string, { name: string; success: number; failed: number; skipped: number }>();
+  for (const run of runs) {
+    const entry = byAutomation.get(run.automationId) ?? { name: run.automationName, success: 0, failed: 0, skipped: 0 };
+    if (run.status === 'success') entry.success += 1;
+    else if (run.status === 'failed') entry.failed += 1;
+    else entry.skipped += 1;
+    byAutomation.set(run.automationId, entry);
+  }
+
+  const rows = [...byAutomation.entries()]
+    .map(([automationId, e]) => ({
+      automationId,
+      name: e.name,
+      total: e.success + e.failed + e.skipped,
+      success: e.success,
+      failed: e.failed,
+      skipped: e.skipped,
+      successRate: e.success + e.failed > 0 ? Math.round((e.success / (e.success + e.failed)) * 1000) / 10 : 0,
+    }))
+    .sort((a, b) => b.total - a.total);
+  res.json(rows);
+});
+
+reportsRouter.get('/response-time', async (req, res) => {
+  const { source } = req.query as Record<string, string>;
+  const dateRange = parseDateRange(req.query as Record<string, string>);
+  const where: Record<string, unknown> = {};
+  if (Object.keys(dateRange).length > 0) where.createdAt = dateRange;
+  if (source?.trim()) where.source = { contains: source.trim(), mode: 'insensitive' };
+
+  const leads = await prisma.lead.findMany({ where, select: { source: true, createdAt: true, contactedAt: true } });
+  const contacted = leads.filter((l) => l.contactedAt);
+  const minutesFor = (l: (typeof contacted)[number]) => (l.contactedAt!.getTime() - l.createdAt.getTime()) / 60_000;
+
+  const bySourceMinutes = new Map<string, number[]>();
+  for (const lead of contacted) {
+    const bucket = bySourceMinutes.get(lead.source);
+    const minutes = minutesFor(lead);
+    if (bucket) bucket.push(minutes);
+    else bySourceMinutes.set(lead.source, [minutes]);
+  }
+
+  const avg = (values: number[]) => (values.length > 0 ? Math.round((values.reduce((s, v) => s + v, 0) / values.length) * 10) / 10 : 0);
+
+  res.json({
+    totalLeads: leads.length,
+    contactedCount: contacted.length,
+    notContactedCount: leads.length - contacted.length,
+    avgResponseMinutes: avg(contacted.map(minutesFor)),
+    bySource: [...bySourceMinutes.entries()]
+      .map(([src, values]) => ({ source: src, count: values.length, avgResponseMinutes: avg(values) }))
+      .sort((a, b) => a.avgResponseMinutes - b.avgResponseMinutes),
+  });
+});
+
+reportsRouter.get('/form-analytics-summary', async (req, res) => {
+  const dateRange = parseDateRange(req.query as Record<string, string>);
+  const submissionWhere: Record<string, unknown> = Object.keys(dateRange).length > 0 ? { createdAt: dateRange } : {};
+
+  const forms = await prisma.leadForm.findMany({
+    include: {
+      _count: { select: { submissions: true } },
+      submissions: { where: submissionWhere, select: { leadId: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  const rows = forms.map((form) => ({
+    id: form.id,
+    name: form.name,
+    slug: form.slug,
+    isActive: form.isActive,
+    allTimeSubmissions: form._count.submissions,
+    submissionsInRange: form.submissions.length,
+    leadsInRange: form.submissions.filter((s) => s.leadId).length,
+  }));
+
+  res.json({
+    totalForms: forms.length,
+    activeForms: forms.filter((f) => f.isActive).length,
+    totalSubmissionsInRange: rows.reduce((sum, r) => sum + r.submissionsInRange, 0),
+    totalLeadsInRange: rows.reduce((sum, r) => sum + r.leadsInRange, 0),
+    forms: rows.sort((a, b) => b.submissionsInRange - a.submissionsInRange),
+  });
+});

@@ -1,0 +1,265 @@
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
+import { UIProvider } from './context/UIContext';
+import { ReferenceDataProvider } from './context/ReferenceDataContext';
+import { ProtectedRoute } from './app/ProtectedRoute';
+import { AdminLayout } from './layouts/AdminLayout';
+
+import { Login } from './pages/auth/Login';
+import { Dashboard } from './pages/dashboard/Dashboard';
+
+import { CrmOverview } from './pages/crm/CrmOverview';
+import { LeadList } from './pages/crm/LeadList';
+import { AddLead } from './pages/crm/AddLead';
+import { ImportLeads } from './pages/crm/ImportLeads';
+import { LeadDetail } from './pages/crm/LeadDetail';
+import { Pipelines } from './pages/crm/Pipelines';
+import { PipelineBoard } from './pages/crm/PipelineBoard';
+import { FollowUps } from './pages/crm/FollowUps';
+import { TaskCalendar } from './pages/crm/TaskCalendar';
+import { Forms } from './pages/crm/Forms';
+import { FormBuilder } from './pages/crm/FormBuilder';
+import { FormView } from './pages/crm/FormView';
+import { PublicForm } from './pages/public/PublicForm';
+import { ReportCenter } from './pages/crm/reports/ReportCenter';
+import { LeadActivities } from './pages/crm/LeadActivities';
+import { Automations } from './pages/crm/Automations';
+import { AutomationBuilder } from './pages/crm/AutomationBuilder';
+import { AiSdrAgents } from './pages/crm/AiSdrAgents';
+import { EmailSequences } from './pages/crm/EmailSequences';
+import { EmailSequenceBuilder } from './pages/crm/EmailSequenceBuilder';
+import { EmailSequenceDetail } from './pages/crm/EmailSequenceDetail';
+import { CallHistory } from './pages/crm/CallHistory';
+import { TelephonySettingsPage } from './pages/settings/TelephonySettingsPage';
+import { EmailSettingsPage } from './pages/settings/EmailSettingsPage';
+import { WhatsAppSettingsPage } from './pages/settings/WhatsAppSettingsPage';
+import { Conversations } from './pages/crm/Conversations';
+import { AiSdrAgentBuilder } from './pages/crm/AiSdrAgentBuilder';
+import { AiSdrAgentDetail } from './pages/crm/AiSdrAgentDetail';
+import { Integrations } from './pages/crm/Integrations';
+import { AddConnection } from './pages/crm/AddConnection';
+
+import { ProjectList } from './pages/projects/ProjectList';
+import { AddProject } from './pages/projects/AddProject';
+import { ProjectDetail } from './pages/projects/ProjectDetail';
+
+import { PropertyList } from './pages/properties/PropertyList';
+import { AddProperty } from './pages/properties/AddProperty';
+import { PlotHoldList } from './pages/properties/PlotHoldList';
+import { BulkPriceUpdate } from './pages/properties/BulkPriceUpdate';
+
+import { BookingList } from './pages/bookings/BookingList';
+import { BookingDetail } from './pages/bookings/BookingDetail';
+import { RemainingPayments } from './pages/bookings/RemainingPayments';
+
+import { Transactions } from './pages/transactions/Transactions';
+
+import { InvestmentList } from './pages/investments/InvestmentList';
+
+import { WalletApprovals } from './pages/wallet/WalletApprovals';
+import { KycApprovals } from './pages/wallet/KycApprovals';
+
+import { IncentiveRequestList } from './pages/incentives/IncentiveRequestList';
+
+import { AgentList } from './pages/users/AgentList';
+import { EmployeeList } from './pages/users/EmployeeList';
+import { LeaderList } from './pages/users/LeaderList';
+import { UserDetail } from './pages/users/UserDetail';
+
+import { TeamsOverview } from './pages/teams/TeamsOverview';
+import { TeamDetail } from './pages/teams/TeamDetail';
+
+import { AttendanceToday } from './pages/attendance/AttendanceToday';
+import { AttendanceHistory } from './pages/attendance/AttendanceHistory';
+import { AttendanceDetail } from './pages/attendance/AttendanceDetail';
+import { AttendanceCorrections } from './pages/attendance/AttendanceCorrections';
+import { AttendanceReports } from './pages/attendance/AttendanceReports';
+
+import { PayoutList } from './pages/payouts/PayoutList';
+import { PayoutDetail } from './pages/payouts/PayoutDetail';
+import { CommissionStatements } from './pages/payouts/CommissionStatements';
+
+import { TicketList } from './pages/support/TicketList';
+import { TicketDetail } from './pages/support/TicketDetail';
+
+import { Notifications } from './pages/notifications/Notifications';
+import { LeaveRequests } from './pages/hr/LeaveRequests';
+import { LeaveSettings } from './pages/hr/LeaveSettings';
+import { Payroll } from './pages/hr/Payroll';
+import { WhatsAppTemplates } from './pages/notifications/WhatsAppTemplates';
+
+import { ReportsHome } from './pages/reports/ReportsHome';
+import { PropertyReport } from './pages/reports/PropertyReport';
+import { BookingReport } from './pages/reports/BookingReport';
+import { PaymentReport } from './pages/reports/PaymentReport';
+import { PartnerReport } from './pages/reports/PartnerReport';
+import { TeamReport } from './pages/reports/TeamReport';
+import { AttendanceReport } from './pages/reports/AttendanceReport';
+import { SupportReport } from './pages/reports/SupportReport';
+import { PayoutReport } from './pages/reports/PayoutReport';
+
+import { OrganizationSettings } from './pages/settings/OrganizationSettings';
+import { BusinessHoursSettings } from './pages/settings/BusinessHoursSettings';
+import { RolesSettings } from './pages/settings/RolesSettings';
+import { PanelUsersSettings } from './pages/settings/PanelUsersSettings';
+import { AttendancePolicySettings } from './pages/settings/AttendancePolicySettings';
+import { NotificationSettings } from './pages/settings/NotificationSettings';
+import { AdminProfileSettings } from './pages/settings/AdminProfileSettings';
+import { SecuritySettings } from './pages/settings/SecuritySettings';
+import { ScheduleManage } from './pages/settings/ScheduleManage';
+import { ReferralCommissionSettings } from './pages/settings/ReferralCommissionSettings';
+import { BadgeSettings } from './pages/settings/BadgeSettings';
+import { AuditLogPage } from './pages/audit/AuditLogPage';
+
+import { NotFound } from './pages/NotFound';
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <ToastProvider>
+          <UIProvider>
+            <ReferenceDataProvider>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              {/* Visitor-facing lead capture — no auth, no admin chrome. */}
+              <Route path="/f/:slug" element={<PublicForm />} />
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+              <Route
+                element={
+                  <ProtectedRoute>
+                    <AdminLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route path="/dashboard" element={<Dashboard />} />
+
+                <Route path="/crm" element={<CrmOverview />} />
+                <Route path="/crm/leads" element={<LeadList />} />
+                <Route path="/crm/leads/new" element={<AddLead />} />
+                <Route path="/crm/leads/import" element={<ImportLeads />} />
+                <Route path="/crm/leads/:id" element={<LeadDetail />} />
+                <Route path="/crm/pipeline" element={<Pipelines />} />
+                <Route path="/crm/pipeline/kanban" element={<PipelineBoard />} />
+                <Route path="/crm/follow-ups" element={<FollowUps />} />
+                <Route path="/crm/calendar" element={<TaskCalendar />} />
+                <Route path="/crm/forms" element={<Forms />} />
+                <Route path="/crm/forms/new" element={<FormBuilder />} />
+                <Route path="/crm/forms/:id" element={<FormView />} />
+                <Route path="/crm/forms/:id/edit" element={<FormBuilder />} />
+                <Route path="/crm/report-center" element={<ReportCenter />} />
+                <Route path="/crm/activities" element={<LeadActivities />} />
+                <Route path="/crm/automation" element={<Automations />} />
+                <Route path="/crm/automation/new" element={<AutomationBuilder />} />
+                <Route path="/crm/automation/:id/edit" element={<AutomationBuilder />} />
+                <Route path="/crm/sdr-agents" element={<AiSdrAgents />} />
+                <Route path="/crm/sdr-agents/new" element={<AiSdrAgentBuilder />} />
+                <Route path="/crm/sdr-agents/:id" element={<AiSdrAgentDetail />} />
+                <Route path="/crm/sdr-agents/:id/edit" element={<AiSdrAgentBuilder />} />
+                <Route path="/crm/email-sequences" element={<EmailSequences />} />
+                <Route path="/crm/email-sequences/new" element={<EmailSequenceBuilder />} />
+                <Route path="/crm/email-sequences/:id" element={<EmailSequenceDetail />} />
+                <Route path="/crm/email-sequences/:id/edit" element={<EmailSequenceBuilder />} />
+                <Route path="/crm/calls" element={<CallHistory />} />
+                <Route path="/crm/conversations" element={<Conversations />} />
+                <Route path="/crm/integrations" element={<Integrations />} />
+                <Route path="/crm/integrations/new" element={<AddConnection />} />
+
+                <Route path="/projects" element={<ProjectList />} />
+                <Route path="/projects/new" element={<AddProject />} />
+                <Route path="/projects/:id" element={<ProjectDetail />} />
+
+                <Route path="/properties" element={<PropertyList />} />
+                <Route path="/properties/running" element={<PropertyList filter="running" />} />
+                <Route path="/properties/sold-out" element={<PropertyList filter="sold-out" />} />
+                <Route path="/properties/booked" element={<PropertyList filter="booked" />} />
+                <Route path="/properties/new" element={<AddProperty />} />
+                <Route path="/properties/holds" element={<PlotHoldList />} />
+                <Route path="/properties/bulk-price-update" element={<BulkPriceUpdate />} />
+
+                <Route path="/bookings" element={<BookingList />} />
+                <Route path="/bookings/pending" element={<BookingList statusFilter="pending" />} />
+                <Route path="/bookings/booked" element={<BookingList statusFilter="confirmed" />} />
+                <Route path="/bookings/remaining" element={<RemainingPayments />} />
+                <Route path="/bookings/:id" element={<BookingDetail />} />
+
+                <Route path="/transactions" element={<Transactions />} />
+
+                <Route path="/investments" element={<InvestmentList />} />
+                <Route path="/investments/running" element={<InvestmentList filter="running" />} />
+                <Route path="/investments/due" element={<InvestmentList filter="due" />} />
+                <Route path="/investments/expired" element={<InvestmentList filter="expired" />} />
+                <Route path="/investments/completed" element={<InvestmentList filter="completed" />} />
+
+                <Route path="/wallet/approvals" element={<WalletApprovals />} />
+                <Route path="/wallet/kyc" element={<KycApprovals />} />
+
+                <Route path="/incentive-requests" element={<IncentiveRequestList />} />
+
+                <Route path="/users/agents" element={<AgentList />} />
+                <Route path="/users/employees" element={<EmployeeList />} />
+                <Route path="/users/leaders" element={<LeaderList />} />
+                <Route path="/users/:id" element={<UserDetail />} />
+
+                <Route path="/teams" element={<TeamsOverview />} />
+                <Route path="/teams/:id" element={<TeamDetail />} />
+
+                <Route path="/attendance/today" element={<AttendanceToday />} />
+                <Route path="/attendance/history" element={<AttendanceHistory />} />
+                <Route path="/attendance/corrections" element={<AttendanceCorrections />} />
+                <Route path="/attendance/reports" element={<AttendanceReports />} />
+                <Route path="/attendance/:id" element={<AttendanceDetail />} />
+
+                <Route path="/payouts" element={<PayoutList />} />
+                <Route path="/payouts/statements" element={<CommissionStatements />} />
+                <Route path="/payouts/:id" element={<PayoutDetail />} />
+
+                <Route path="/support" element={<TicketList />} />
+                <Route path="/support/:id" element={<TicketDetail />} />
+
+                <Route path="/attendance/leave" element={<LeaveRequests />} />
+                <Route path="/attendance/leave-types" element={<LeaveSettings />} />
+                <Route path="/payouts/payroll" element={<Payroll />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="/notifications/whatsapp" element={<WhatsAppTemplates />} />
+
+                <Route path="/reports" element={<ReportsHome />} />
+                <Route path="/reports/properties" element={<PropertyReport />} />
+                <Route path="/reports/bookings" element={<BookingReport />} />
+                <Route path="/reports/payments" element={<PaymentReport />} />
+                <Route path="/reports/partners" element={<PartnerReport />} />
+                <Route path="/reports/teams" element={<TeamReport />} />
+                <Route path="/reports/attendance" element={<AttendanceReport />} />
+                <Route path="/reports/support" element={<SupportReport />} />
+                <Route path="/reports/payouts" element={<PayoutReport />} />
+
+                <Route path="/settings/organization" element={<OrganizationSettings />} />
+                <Route path="/settings/business-hours" element={<BusinessHoursSettings />} />
+                <Route path="/settings/roles" element={<RolesSettings />} />
+                <Route path="/settings/panel-users" element={<PanelUsersSettings />} />
+                <Route path="/settings/telephony" element={<TelephonySettingsPage />} />
+                <Route path="/settings/email" element={<EmailSettingsPage />} />
+                <Route path="/settings/whatsapp" element={<WhatsAppSettingsPage />} />
+                <Route path="/settings/attendance" element={<AttendancePolicySettings />} />
+                <Route path="/settings/notifications" element={<NotificationSettings />} />
+                <Route path="/settings/profile" element={<AdminProfileSettings />} />
+                <Route path="/settings/security" element={<SecuritySettings />} />
+                <Route path="/settings/schedules" element={<ScheduleManage />} />
+                <Route path="/settings/referral-commission" element={<ReferralCommissionSettings />} />
+                <Route path="/settings/badges" element={<BadgeSettings />} />
+                <Route path="/settings/audit-log" element={<AuditLogPage />} />
+              </Route>
+
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            </ReferenceDataProvider>
+          </UIProvider>
+        </ToastProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}
+
+export default App;
