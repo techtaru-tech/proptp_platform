@@ -34,7 +34,7 @@ body {
 }
 
 .focus-ring {
-  @apply outline-none focus-visible:ring-2 focus-visible:ring-navy-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
+  @apply outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
 }
 
 @layer utilities {

@@ -81,7 +81,7 @@ export function FileUploadField({
     <div className={cn('flex flex-col gap-1.5', wrapperClassName)}>
       <label htmlFor={inputId} className="text-sm font-medium text-ink">
         {label}
-        {required && <span className="text-accent-600"> *</span>}
+        {required && <span className="text-danger-500"> *</span>}
       </label>
       <div className="flex items-center gap-3">
         {preview ? preview(value ?? undefined) : value ? <Thumb url={value} alt={label} className="h-14 w-20 shrink-0" /> : null}

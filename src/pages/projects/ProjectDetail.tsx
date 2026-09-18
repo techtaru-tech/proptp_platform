@@ -46,7 +46,7 @@ const UNIT_STATUS_OPTIONS: { value: UnitBookingStatus | 'all'; label: string }[]
 const UNIT_STATUS_TINT: Record<UnitBookingStatus, string> = {
   0: 'border-success-200 bg-success-50 text-success-700',
   1: 'border-info-200 bg-info-50 text-info-700',
-  2: 'border-navy-200 bg-navy-50 text-navy-700',
+  2: 'border-shell-200 bg-shell-50 text-shell-700',
 };
 
 export function ProjectDetail() {
@@ -179,14 +179,14 @@ export function ProjectDetail() {
 
       <Card padded={false} className="mb-6 overflow-hidden">
         <img
-          src={fileUrl(project.banner) ?? 'https://placehold.co/1200x480/243a61/ffffff?text=Project'}
+          src={fileUrl(project.banner) ?? 'https://placehold.co/1200x480/652251/ffffff?text=Project'}
           alt={project.projectName}
           className="h-48 w-full object-cover sm:h-64"
         />
       </Card>
 
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="Total Units" value={unitCounts.total} tone="navy" icon={Building2} />
+        <StatCard label="Total Units" value={unitCounts.total} tone="shell" icon={Building2} />
         <StatCard label="Available" value={unitCounts.available} tone="success" />
         <StatCard label="Booked" value={unitCounts.booked} tone="info" />
         <StatCard label="Sold Out" value={unitCounts.soldOut} tone="brand" />
@@ -305,7 +305,7 @@ function OverviewTab({ project }: { project: NonNullable<Awaited<ReturnType<type
         <p className="mb-1.5 mt-5 text-xs font-semibold uppercase tracking-wide text-ink-faint">Amenities</p>
         <div className="flex flex-wrap gap-2">
           {amenityNamesForIds(project.amenityIds).map((a) => (
-            <Badge key={a} tone="navy">
+            <Badge key={a} tone="shell">
               {a}
             </Badge>
           ))}
@@ -365,14 +365,14 @@ function InventoryTab({ projectId, onSelectUnit }: { projectId: string; onSelect
             <button
               type="button"
               onClick={() => setView('grid')}
-              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${view === 'grid' ? 'bg-navy-800 text-white' : 'text-ink-faint'}`}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${view === 'grid' ? 'bg-shell-800 text-white' : 'text-ink-faint'}`}
             >
               Grid
             </button>
             <button
               type="button"
               onClick={() => setView('table')}
-              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${view === 'table' ? 'bg-navy-800 text-white' : 'text-ink-faint'}`}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${view === 'table' ? 'bg-shell-800 text-white' : 'text-ink-faint'}`}
             >
               Table
             </button>

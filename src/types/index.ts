@@ -22,6 +22,9 @@ export const ROLE_NAME_BY_ID: Record<RoleId, RoleName> = {
 
 export type AccountStatus = 'active' | 'inactive' | 'suspended';
 
+/** `User.role` as the API spells it. Distinct from the numeric `RoleId` the older screens use. */
+export type AccountRole = 'admin' | 'employee' | 'leader' | 'agent';
+
 /**
  * Real `funds` table (`Admin\PaymentLogController`) — manual wallet-deposit requests that need
  * admin approval. Automated gateways (PayTM/RazorPay/PayUmoney) auto-confirm via webhook and
@@ -1180,6 +1183,11 @@ export interface PanelUser {
   avatarUrl?: string;
   panelRoleId: string | null;
   roleName: string;
+  /**
+   * What this account *is* (`User.role`), as opposed to `roleName`, which is the panel role
+   * deciding which modules they see. Task visibility is scoped by this one.
+   */
+  accountRole: AccountRole;
   isFullAccess: boolean;
   createdAt: string;
 }
@@ -1868,4 +1876,58 @@ export interface Payslip {
 
 export interface PayrollRunDetail extends PayrollRun {
   payslips: Payslip[];
+}
+
+// ---------------------------------------------------------------------------
+// Task management (server/src/routes/tasks.ts)
+// ---------------------------------------------------------------------------
+
+export type TaskStatus = 'todo' | 'in_progress' | 'blocked' | 'done' | 'cancelled';
+export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent';
+
+/**
+ * How wide the signed-in user's view of tasks is, as the server resolved it. The panel never
+ * decides this for itself — it renders whatever `/tasks/assignable` reports, so the filters
+ * and pickers on screen always match what the API would actually accept.
+ */
+export type TaskScopeKind = 'all' | 'team' | 'own';
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueAt: string | null;
+  /** Past its due date and still open. Computed server-side so every screen agrees. */
+  isOverdue: boolean;
+  assigneeId: string;
+  assigneeName: string;
+  assigneeRole: RoleId | null;
+  assigneeAvatarUrl?: string;
+  createdById: string;
+  createdByName: string;
+  commentCount: number;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TaskComment {
+  id: string;
+  taskId: string;
+  body: string;
+  authorId: string;
+  authorName: string;
+  authorAvatarUrl?: string;
+  createdAt: string;
+}
+
+/** One person the signed-in user is allowed to assign work to. */
+export interface TaskAssignee {
+  id: string;
+  name: string;
+  role: RoleId;
+  avatarUrl?: string;
+  teamId: string | null;
 }

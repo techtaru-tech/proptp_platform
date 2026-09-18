@@ -40,7 +40,7 @@ const TICKET_SUBJECTS = [
 ];
 
 const BROADCASTS: [string, string, 'booking' | 'payout' | 'team' | 'system', 'all' | 'agents' | 'employees' | 'leaders'][] = [
-  ['New project launched: Shree Ram Sapphire Court', 'Explore the latest inventory and pricing now available for booking.', 'system', 'agents'],
+  ['New project launched: Rosium Sapphire Court', 'Explore the latest inventory and pricing now available for booking.', 'system', 'agents'],
   ['Payout processed for this cycle', 'Your approved payout requests have been credited to your registered bank account.', 'payout', 'all'],
   ['Attendance policy update', 'Office geo-fence radius has been updated. Please review the new check-in guidelines.', 'system', 'employees'],
   ['Monthly team performance summary', 'Your team booking and referral summary for the month is now available.', 'team', 'leaders'],

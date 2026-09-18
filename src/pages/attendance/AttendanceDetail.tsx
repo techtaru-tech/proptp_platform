@@ -152,7 +152,7 @@ function MapPlaceholder({ record }: { record: NonNullable<Awaited<ReturnType<typ
           className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-dashed"
           style={{ borderColor: inside ? '#12b76a' : '#f04438' }}
         >
-          <span className="flex flex-col items-center gap-0.5 text-navy-800">
+          <span className="flex flex-col items-center gap-0.5 text-shell-800">
             <Navigation size={16} />
             <span className="text-[10px] font-medium">Office</span>
           </span>

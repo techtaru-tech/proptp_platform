@@ -59,7 +59,7 @@ export function TeamReport() {
 
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-2">
         <StatCard label="Teams" value={stats.teams} icon={UsersRound} tone="brand" />
-        <StatCard label="Total Members" value={stats.totalMembers} icon={Layers} tone="navy" />
+        <StatCard label="Total Members" value={stats.totalMembers} icon={Layers} tone="shell" />
       </div>
 
       <div className="mb-6">

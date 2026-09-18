@@ -1,7 +1,7 @@
 {
-  "name": "shreeram-crm-server",
+  "name": "rosium-platform-server",
   "version": "1.0.0",
-  "description": "ShreeRam CRM backend — Leads + Meta Lead Ads integration (Express + Prisma + PostgreSQL)",
+  "description": "Rosium platform backend — CRM, operations and HRMS (Express + Prisma + PostgreSQL)",
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",

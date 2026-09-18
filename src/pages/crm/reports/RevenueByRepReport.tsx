@@ -46,7 +46,7 @@ export function RevenueByRepReport() {
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <StatCard label="Total revenue" value={formatCurrency(totalRevenue)} icon={Banknote} tone="success" />
-        <StatCard label="Deals won" value={totalDeals} icon={Handshake} tone="navy" />
+        <StatCard label="Deals won" value={totalDeals} icon={Handshake} tone="shell" />
       </div>
 
       <Card padded={false}>

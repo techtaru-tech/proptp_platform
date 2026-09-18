@@ -151,7 +151,7 @@ export function Dashboard() {
             <StatCard label="Active" value={snapshot.properties.active} tone="success" />
             <StatCard label="Inactive" value={snapshot.properties.inactive} tone="neutral" />
             <StatCard label="Available Units" value={snapshot.units.available} tone="success" />
-            <StatCard label="Sold Out Units" value={snapshot.units.soldOut} tone="navy" />
+            <StatCard label="Sold Out Units" value={snapshot.units.soldOut} tone="shell" />
           </div>
 
           {/* Bookings */}
@@ -168,7 +168,7 @@ export function Dashboard() {
           <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             <StatCard label="Collected" value={formatCurrency(snapshot.payments.collected)} icon={Wallet} tone="success" onClick={() => navigate('/transactions')} />
             <StatCard label="Remaining" value={formatCurrency(snapshot.payments.remaining)} tone="danger" onClick={() => navigate('/bookings/remaining')} />
-            <StatCard label="Bank Transfer" value={formatCurrency(snapshot.payments.bankTransfer)} tone="navy" />
+            <StatCard label="Bank Transfer" value={formatCurrency(snapshot.payments.bankTransfer)} tone="shell" />
             <StatCard label="Cash" value={formatCurrency(snapshot.payments.cash)} tone="neutral" />
             <StatCard label="Cheque" value={formatCurrency(snapshot.payments.cheque)} tone="info" />
           </div>
@@ -177,7 +177,7 @@ export function Dashboard() {
           <SectionLabel label="Partners / Users" />
           <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             <StatCard label="Total Agents" value={snapshot.partners.agents} icon={Users} tone="brand" onClick={() => navigate('/users/agents')} />
-            <StatCard label="Employees" value={snapshot.partners.employees} tone="navy" onClick={() => navigate('/users/employees')} />
+            <StatCard label="Employees" value={snapshot.partners.employees} tone="shell" onClick={() => navigate('/users/employees')} />
             <StatCard label="Leaders" value={snapshot.partners.leaders} tone="accent" onClick={() => navigate('/users/leaders')} />
             <StatCard label="Active Users" value={snapshot.partners.active} tone="success" />
             <StatCard label="Inactive Users" value={snapshot.partners.inactive} tone="neutral" />
@@ -186,7 +186,7 @@ export function Dashboard() {
           {/* Teams + Attendance + Support combined row */}
           <SectionLabel label="Teams · Attendance · Support" />
           <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            <StatCard label="Employee Network" value={snapshot.teams.employeeNetwork} tone="navy" onClick={() => navigate('/teams')} />
+            <StatCard label="Employee Network" value={snapshot.teams.employeeNetwork} tone="shell" onClick={() => navigate('/teams')} />
             <StatCard label="Leader Network" value={snapshot.teams.leaderNetwork} tone="accent" />
             <StatCard label="Present Today" value={snapshot.attendance.present} icon={Fingerprint} tone="success" onClick={() => navigate('/attendance/today')} />
             <StatCard label="Late" value={snapshot.attendance.late} tone="warning" />

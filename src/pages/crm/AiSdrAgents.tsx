@@ -50,7 +50,7 @@ export function AiSdrAgents() {
         </div>
       ),
     },
-    { key: 'goal', header: 'Goal', render: (a) => <Badge tone="navy">{SDR_GOAL_OPTIONS.find((o) => o.value === a.goal)?.label ?? a.goal}</Badge> },
+    { key: 'goal', header: 'Goal', render: (a) => <Badge tone="shell">{SDR_GOAL_OPTIONS.find((o) => o.value === a.goal)?.label ?? a.goal}</Badge> },
     { key: 'channel', header: 'Channel', render: (a) => SDR_CHANNEL_OPTIONS.find((o) => o.value === a.channel)?.label ?? a.channel },
     {
       key: 'guardrails',

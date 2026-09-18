@@ -66,7 +66,7 @@ export function Automations() {
     {
       key: 'trigger',
       header: 'Trigger Event',
-      render: (a) => <Badge tone="navy">{TRIGGER_OPTIONS.find((o) => o.value === a.triggerType)?.label ?? a.triggerType}</Badge>,
+      render: (a) => <Badge tone="shell">{TRIGGER_OPTIONS.find((o) => o.value === a.triggerType)?.label ?? a.triggerType}</Badge>,
     },
     { key: 'steps', header: 'Steps', align: 'center', render: (a) => a.steps.length },
     {

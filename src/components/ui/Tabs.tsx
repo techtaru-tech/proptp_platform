@@ -37,7 +37,7 @@ export function Tabs({ items, value, defaultValue, onChange, children }: TabsPro
             onClick={() => select(item.key)}
             className={cn(
               'relative flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3.5 py-2.5 text-sm font-medium transition-colors focus-ring',
-              active === item.key ? 'text-navy-800' : 'text-ink-muted hover:text-ink'
+              active === item.key ? 'text-shell-800' : 'text-ink-muted hover:text-ink'
             )}
           >
             {item.icon}
@@ -45,7 +45,7 @@ export function Tabs({ items, value, defaultValue, onChange, children }: TabsPro
             {item.badge !== undefined && (
               <span className="rounded-full bg-surface-muted px-1.5 py-0.5 text-[11px] font-semibold text-ink-muted">{item.badge}</span>
             )}
-            {active === item.key && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-navy-800" />}
+            {active === item.key && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-shell-800" />}
           </button>
         ))}
       </div>

@@ -169,7 +169,7 @@ export function WalletApprovals() {
       >
         <div className="flex flex-col gap-1.5">
           <label htmlFor="fund-reject-feedback" className="text-sm font-medium text-ink">
-            Feedback<span className="text-accent-600"> *</span>
+            Feedback<span className="text-danger-500"> *</span>
           </label>
           <textarea
             id="fund-reject-feedback"

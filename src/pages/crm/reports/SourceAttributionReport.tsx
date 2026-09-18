@@ -59,7 +59,7 @@ export function SourceAttributionReport() {
         <div className="flex flex-col gap-3 border-b border-line p-4 lg:flex-row lg:items-center lg:justify-between">
           <DateRangeFilter value={range} onChange={setRange} />
           <div className="flex items-center gap-2">
-            <Badge tone="navy">Total: {data?.total ?? 0} leads</Badge>
+            <Badge tone="shell">Total: {data?.total ?? 0} leads</Badge>
             <Button variant="outline" size="sm" leftIcon={<Download size={13} />} onClick={() => exportBoth('csv')} disabled={bySource.length === 0}>
               Export CSV
             </Button>

@@ -162,7 +162,7 @@ export function AttendanceReports() {
           </div>
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <StatCard label="Avg. Working Hours" value={formatHours(summary.avgHours)} tone="navy" />
+            <StatCard label="Avg. Working Hours" value={formatHours(summary.avgHours)} tone="shell" />
             <StatCard label="Late Arrivals" value={summary.late} tone="warning" />
             <StatCard label="Early Departures" value={summary.early} tone="accent" />
             <StatCard label="Records in Range" value={rows.length} tone="brand" />

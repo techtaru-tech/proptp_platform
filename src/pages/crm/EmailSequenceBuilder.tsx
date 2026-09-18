@@ -289,7 +289,7 @@ function StepEditor({ index, step, templates, isFirst, isLast, onChange, onMove,
 
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-ink">
-            Body<span className="text-accent-600"> *</span>
+            Body<span className="text-danger-500"> *</span>
           </span>
           <RichTextEditor
             ariaLabel={`Step ${index + 1} body`}

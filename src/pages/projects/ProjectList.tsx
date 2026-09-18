@@ -81,7 +81,7 @@ export function ProjectList() {
       render: (p) => (
         <div className="flex items-center gap-3">
           <img
-            src={fileUrl(p.thumbnail ?? p.banner) ?? 'https://placehold.co/140x100/243a61/ffffff?text=Project'}
+            src={fileUrl(p.thumbnail ?? p.banner) ?? 'https://placehold.co/140x100/652251/ffffff?text=Project'}
             alt={p.projectName}
             className="h-10 w-14 shrink-0 rounded-md object-cover"
           />
@@ -146,7 +146,7 @@ export function ProjectList() {
                 aria-pressed={view === 'list'}
                 onClick={() => setView('list')}
                 className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors focus-ring ${
-                  view === 'list' ? 'bg-navy-800 text-white' : 'text-ink-faint hover:text-ink'
+                  view === 'list' ? 'bg-shell-800 text-white' : 'text-ink-faint hover:text-ink'
                 }`}
               >
                 <List size={14} />
@@ -157,7 +157,7 @@ export function ProjectList() {
                 aria-pressed={view === 'grid'}
                 onClick={() => setView('grid')}
                 className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors focus-ring ${
-                  view === 'grid' ? 'bg-navy-800 text-white' : 'text-ink-faint hover:text-ink'
+                  view === 'grid' ? 'bg-shell-800 text-white' : 'text-ink-faint hover:text-ink'
                 }`}
               >
                 <LayoutGrid size={14} />
@@ -240,7 +240,7 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
     >
       <div className="relative h-32 w-full">
         <img
-          src={fileUrl(project.thumbnail ?? project.banner) ?? 'https://placehold.co/400x300/243a61/ffffff?text=Project'}
+          src={fileUrl(project.thumbnail ?? project.banner) ?? 'https://placehold.co/400x300/652251/ffffff?text=Project'}
           alt={project.projectName}
           className="h-full w-full object-cover"
         />
@@ -270,7 +270,7 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
             <p className="text-[10px] uppercase tracking-wide text-ink-faint">Booked</p>
           </div>
           <div>
-            <p className="text-sm font-semibold text-navy-700">{counts.soldOut}</p>
+            <p className="text-sm font-semibold text-shell-700">{counts.soldOut}</p>
             <p className="text-[10px] uppercase tracking-wide text-ink-faint">Sold Out</p>
           </div>
         </div>

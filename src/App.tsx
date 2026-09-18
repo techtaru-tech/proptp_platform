@@ -40,6 +40,11 @@ import { AiSdrAgentDetail } from './pages/crm/AiSdrAgentDetail';
 import { Integrations } from './pages/crm/Integrations';
 import { AddConnection } from './pages/crm/AddConnection';
 
+import { TaskList } from './pages/tasks/TaskList';
+import { TaskBoard } from './pages/tasks/TaskBoard';
+import { TaskDetail } from './pages/tasks/TaskDetail';
+import { TaskForm } from './pages/tasks/TaskForm';
+
 import { ProjectList } from './pages/projects/ProjectList';
 import { AddProject } from './pages/projects/AddProject';
 import { ProjectDetail } from './pages/projects/ProjectDetail';
@@ -166,6 +171,14 @@ function App() {
                 <Route path="/crm/conversations" element={<Conversations />} />
                 <Route path="/crm/integrations" element={<Integrations />} />
                 <Route path="/crm/integrations/new" element={<AddConnection />} />
+
+                {/* Tasks. `/tasks/new` is declared before `/tasks/:id` so "new" is not read as an id. */}
+                <Route path="/tasks" element={<TaskList />} />
+                <Route path="/tasks/board" element={<TaskBoard />} />
+                <Route path="/tasks/mine" element={<TaskList mineOnly />} />
+                <Route path="/tasks/new" element={<TaskForm />} />
+                <Route path="/tasks/:id" element={<TaskDetail />} />
+                <Route path="/tasks/:id/edit" element={<TaskForm />} />
 
                 <Route path="/projects" element={<ProjectList />} />
                 <Route path="/projects/new" element={<AddProject />} />

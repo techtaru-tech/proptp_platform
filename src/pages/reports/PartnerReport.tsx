@@ -70,7 +70,7 @@ export function PartnerReport() {
 
   const columns: DataTableColumn<Row>[] = [
     { key: 'name', header: 'Name', render: (r) => <span className="font-medium text-ink">{r.name}</span> },
-    { key: 'role', header: 'Role', render: (r) => <Badge tone="navy">{r.role}</Badge> },
+    { key: 'role', header: 'Role', render: (r) => <Badge tone="shell">{r.role}</Badge> },
     { key: 'status', header: 'Status', render: (r) => <StatusBadge kind="account" status={r.status} /> },
     { key: 'team', header: 'Team / Referral Mapping', render: (r) => r.team ?? '—' },
   ];

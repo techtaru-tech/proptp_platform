@@ -89,7 +89,7 @@ export function PropertyReport() {
 
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatCard label="Projects" value={stats.count} icon={Building2} tone="brand" />
-        <StatCard label="Total Units" value={stats.totalUnits} icon={LayoutGrid} tone="navy" />
+        <StatCard label="Total Units" value={stats.totalUnits} icon={LayoutGrid} tone="shell" />
         <StatCard label="Available Units" value={stats.available} icon={Layers} tone="success" />
         <StatCard label="Sold Units" value={stats.sold} icon={CircleCheckBig} tone="accent" />
       </div>

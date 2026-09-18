@@ -1,45 +1,55 @@
-# Deploying to shreeram.techtaru.in
+# Deploying to rosium.techtaru.in
 
-Same shape as the taskflow backend already on this box: GitHub → `git pull` → `./deploy.sh`.
-The difference is that this repo holds **both** halves — the React frontend and the Express
-API — so one deploy builds and ships both.
+GitHub → `git pull` → `./deploy.sh`. This repo holds **both** halves — the React frontend and
+the Express API — so one deploy builds and ships both.
 
 | | |
 |---|---|
-| Server | `ec2-user@65.2.106.176` (Amazon Linux 2023, shared with taskflow) |
-| App directory | `/home/ec2-user/shreeram` |
-| Backend port | `127.0.0.1:4100` (taskflow keeps its own; never exposed publicly) |
-| Process manager | pm2, app name `shreeram-backend` |
-| Web server | nginx, `/etc/nginx/conf.d/shreeram.conf` |
-| Database | local PostgreSQL 15, database `shreeram_platform` |
+| Server | `ec2-user@65.2.106.176` (Amazon Linux 2023) |
+| App directory | `/home/ec2-user/rosium` |
+| Backend port | `127.0.0.1:4300` (never exposed publicly) |
+| Process manager | pm2, app name `rosium-backend` |
+| Web server | nginx, `/etc/nginx/conf.d/rosium.conf` |
+| Database | local PostgreSQL, database `rosium_platform` |
 | Frontend | built to `dist/`, served as static files by nginx |
+
+**This box is shared.** taskflow and the ShreeRam platform already run on it, on their own
+ports and databases. Rosium is the third, which is why it has its own port (4300), its own
+database, its own pm2 process and its own nginx server block — nothing here touches the
+neighbours. The memory note below is not optional advice.
 
 ## First time
 
 ```bash
-# 1. DNS — already done: shreeram.techtaru.in -> 65.2.106.176
-# 2. GitHub → repo → Settings → Deploy keys → add the box's public key
-#    (~/.ssh/shreeram_deploy.pub on the server; read-only is enough)
+# 1. DNS — point rosium.techtaru.in at 65.2.106.176
+# 2. GitHub → repo → Settings → Deploy keys → add the box's public key (read-only is enough)
+#    The box already holds keys for other repos, so give this one its own host alias in
+#    ~/.ssh/config:
+#
+#      Host github-rosium
+#        HostName github.com
+#        IdentityFile ~/.ssh/rosium_deploy
+#        IdentitiesOnly yes
 
-# 2. On the server
+# 3. On the server
 ssh -i ~/.ssh/taskflow-backend-key.pem ec2-user@65.2.106.176
-git clone git@github-shreeram:techtaru-tech/shreeram-platform.git ~/shreeram
-cd ~/shreeram && ./deploy/server-setup.sh
+git clone git@github-rosium:techtaru-tech/rosium-platform.git ~/rosium
+cd ~/rosium && ./deploy/server-setup.sh
 ```
 
-`server-setup.sh` adds swap, creates the database and user, installs the nginx config, and
-prints the `DATABASE_URL` to paste in. It is safe to re-run.
+`server-setup.sh` makes sure swap exists, creates the database and user, installs the nginx
+config, and prints the `DATABASE_URL` to paste in. It is safe to re-run.
 
 Then, by hand:
 
 ```bash
 cp server/.env.example server/.env && nano server/.env   # DATABASE_URL + fresh secrets
-echo 'VITE_API_BASE_URL=https://shreeram.techtaru.in/api' > .env.production
+echo 'VITE_API_BASE_URL=https://rosium.techtaru.in/api' > .env.production
 
-./deploy.sh                                  # builds both halves and starts pm2
-cd server && npx prisma db seed && cd ..     # first time only — creates the admin user
-sudo certbot --nginx -d shreeram.techtaru.in # TLS
-pm2 startup                                  # run the line it prints, then:
+./deploy.sh                                # builds both halves and starts pm2
+cd server && npx prisma db seed && cd ..    # first time only — creates the admin user
+sudo certbot --nginx -d rosium.techtaru.in  # TLS
+pm2 startup                                 # run the line it prints, then:
 pm2 save
 ```
 
@@ -51,13 +61,16 @@ git push origin main
 
 # server
 ssh -i ~/.ssh/taskflow-backend-key.pem ec2-user@65.2.106.176
-cd shreeram && ./deploy.sh
+cd rosium && ./deploy.sh
 ```
 
 ## Things that bite
 
-**Swap is not optional.** The box has 911 MB of RAM and already runs taskflow. `vite build`
-will be OOM-killed without it. `server-setup.sh` adds 2 GB.
+**Memory is the real constraint.** The box has 911 MB of RAM and now runs three apps plus
+Postgres. `vite build` is the heaviest thing that happens here and will be OOM-killed without
+swap — `server-setup.sh` ensures 2 GB. If a deploy dies mid-build, check `free -h` and
+`sudo swapon --show` first. `max_memory_restart` in `ecosystem.config.cjs` is set to 250M so a
+leak in this process restarts it rather than dragging the neighbours down with it.
 
 **`VITE_API_BASE_URL` is compiled in, not read at runtime.** Change it and you must rebuild —
 editing `.env.production` alone does nothing to a build that already happened.
@@ -66,8 +79,8 @@ editing `.env.production` alone does nothing to a build that already happened.
 secret, Airphone token, WhatsApp token, Brevo key) is encrypted with it. Change it later and
 they all become unreadable and have to be re-entered.
 
-**Every webhook URL is derived from `PUBLIC_BASE_URL`.** After the first deploy, re-register
-all four with their providers, because they currently point at a dev tunnel:
+**Every webhook URL is derived from `PUBLIC_BASE_URL`.** After the first deploy, register all
+four with their providers:
 
 | Provider | Where | URL |
 |---|---|---|
@@ -78,4 +91,4 @@ all four with their providers, because they currently point at a dev tunnel:
 
 The exact URLs are shown, with copy buttons, on each integration's settings screen.
 
-**Health check:** `https://shreeram.techtaru.in/api/health` → `{"ok":true}`
+**Health check:** `https://rosium.techtaru.in/api/health` → `{"ok":true}`

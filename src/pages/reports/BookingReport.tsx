@@ -83,7 +83,7 @@ export function BookingReport() {
 
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatCard label="Bookings" value={stats.count} icon={ClipboardList} tone="brand" />
-        <StatCard label="Total Amount" value={formatCurrency(stats.totalAmount)} icon={IndianRupee} tone="navy" />
+        <StatCard label="Total Amount" value={formatCurrency(stats.totalAmount)} icon={IndianRupee} tone="shell" />
         <StatCard label="Booked" value={stats.booked} icon={CheckCircle2} tone="success" />
         <StatCard label="Pending" value={stats.pending} icon={Clock3} tone="warning" />
       </div>

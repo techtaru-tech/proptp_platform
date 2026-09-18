@@ -8,6 +8,7 @@ import morgan from 'morgan';
 import { webhookRouter } from './routes/webhooks';
 import { connectionsRouter } from './routes/connections';
 import { leadsRouter } from './routes/leads';
+import { tasksRouter } from './routes/tasks';
 import { pipelinesRouter, tagsRouter } from './routes/pipelines';
 import { followUpsRouter } from './routes/followups';
 import { automationsRouter } from './routes/automations';
@@ -31,7 +32,7 @@ import { startEmailSequencePoller } from './services/emailSequenceEngine';
 import { startNotificationPoller } from './services/notify';
 import { startFollowUpReminderPoller } from './services/followUpReminders';
 
-// --- Admin panel (ShreeRam operations + HRMS) ---
+// --- Admin panel (operations + HRMS) ---
 import { adminAuthRouter, adminGuard } from './routes/admin/auth';
 import { adminUsersRouter, adminKycRouter } from './routes/admin/users';
 import { adminTeamsRouter } from './routes/admin/teams';
@@ -166,7 +167,10 @@ app.use('/api/whatsapp', whatsappRouter);
 app.use('/api/whatsapp-templates', whatsappTemplatesRouter);
 app.use('/api/lead-fields', leadFieldsRouter);
 
-// ShreeRam operations + HRMS
+// Task management
+app.use('/api/tasks', tasksRouter);
+
+// Operations + HRMS
 app.use('/api/leave', adminLeaveRouter);
 app.use('/api/payroll', adminPayrollRouter);
 app.use('/api/users', adminUsersRouter);
@@ -208,7 +212,7 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 const HOST = process.env.HOST || (process.env.NODE_ENV === 'production' ? '127.0.0.1' : '0.0.0.0');
 
 app.listen(PORT, HOST, () => {
-  console.log(`ShreeRam platform server listening on http://${HOST}:${PORT}`);
+  console.log(`Rosium platform server listening on http://${HOST}:${PORT}`);
   console.log(`  admin API  ->  /api/*`);
   console.log(`  app API    ->  /api/v1/app/*`);
   startAutomationPoller();

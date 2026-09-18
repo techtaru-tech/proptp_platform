@@ -5,7 +5,8 @@ import { NAV_ITEMS } from '../../app/navConfig';
 import { usePermissions } from '../../app/usePermissions';
 import { useUI } from '../../context/UIContext';
 import { cn } from '../../utils/cn';
-import shreeramLogo from '../../assets/brand/shreeram-logo.png';
+import rosiumLockup from '../../assets/brand/rosium-lockup.png';
+import rosiumMark from '../../assets/brand/rosium-mark.png';
 
 function useAutoExpanded(pathname: string) {
   const match = NAV_ITEMS.find((item) => item.children?.some((c) => pathname.startsWith(c.to)) || pathname.startsWith(item.to));
@@ -22,12 +23,18 @@ export function Sidebar() {
   const activeGroup = expanded ?? autoExpanded;
 
   const content = (
-    <div className="flex h-full flex-col bg-navy-900 text-white">
+    <div className="flex h-full flex-col bg-shell-900 text-white">
       <div className={cn('flex items-center border-b border-white/10 px-4 py-4', sidebarCollapsed ? 'justify-center' : 'justify-between')}>
+        {/* The logo's own plum is close to the sidebar's, and "Developers" is set in near-black,
+            so it sits on a white chip rather than directly on the dark surface. */}
         {sidebarCollapsed ? (
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold">SR</span>
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white p-1.5 shadow-card">
+            <img src={rosiumMark} alt="Rosium Developers" className="h-full w-auto" />
+          </span>
         ) : (
-          <img src={shreeramLogo} alt="Shree Ram Group" className="h-8 w-auto rounded" />
+          <span className="inline-flex rounded-lg bg-white px-2.5 py-1.5 shadow-card">
+            <img src={rosiumLockup} alt="Rosium Developers" className="h-6 w-auto" />
+          </span>
         )}
         <button
           type="button"
@@ -134,7 +141,7 @@ export function Sidebar() {
 
       {mobileSidebarOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
-          <div className="absolute inset-0 bg-navy-950/60" onClick={() => setMobileSidebarOpen(false)} aria-hidden="true" />
+          <div className="absolute inset-0 bg-shell-950/60" onClick={() => setMobileSidebarOpen(false)} aria-hidden="true" />
           <div className="relative z-10 h-full w-64">{content}</div>
         </div>
       )}

@@ -11,7 +11,7 @@ const PROJECT_STATUS: StatusMap = {
 const UNIT_STATUS: StatusMap = {
   '0': { label: 'Available', tone: 'success' },
   '1': { label: 'Booked', tone: 'info' },
-  '2': { label: 'Sold Out', tone: 'navy' },
+  '2': { label: 'Sold Out', tone: 'shell' },
 };
 
 /** Unit `status` (active/deactive flag), distinct from booking_status. */
@@ -28,7 +28,7 @@ const BOOKING_STATUS: StatusMap = {
 
 /** Booking `is_deposit`: 0=Initial payment, 1=Installment/deposit payment. */
 const DEPOSIT_TYPE: StatusMap = {
-  '0': { label: 'Initial Payment', tone: 'navy' },
+  '0': { label: 'Initial Payment', tone: 'shell' },
   '1': { label: 'Installment', tone: 'accent' },
 };
 
@@ -75,7 +75,7 @@ const TICKET_STATUS: StatusMap = {
 
 /** Booking `paymant_mode` (real column, misspelled): 0=Bank Transfer, 1=Cash, 2=Cheque, 3=Other. */
 const PAYMENT_MODE: StatusMap = {
-  '0': { label: 'Bank Transfer', tone: 'navy' },
+  '0': { label: 'Bank Transfer', tone: 'shell' },
   '1': { label: 'Cash', tone: 'neutral' },
   '2': { label: 'Cheque', tone: 'info' },
   '3': { label: 'Other', tone: 'neutral' },

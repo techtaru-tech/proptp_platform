@@ -38,7 +38,7 @@ export function Modal({ isOpen, onClose, title, description, children, footer, s
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-navy-950/50 backdrop-blur-[2px]" onClick={onClose} aria-hidden="true" />
+      <div className="absolute inset-0 bg-shell-950/50 backdrop-blur-[2px]" onClick={onClose} aria-hidden="true" />
       <div
         role="dialog"
         aria-modal="true"

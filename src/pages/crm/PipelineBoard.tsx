@@ -197,7 +197,7 @@ function StageColumn({ title, color, column, isLoading, onLoadMore, isDragOver, 
                 <div className="mb-1.5 flex items-center justify-between gap-2">
                   <p className="flex items-center gap-1 truncate text-sm font-medium text-ink">
                     {leadFullName(lead)}
-                    {lead.isStarred && <Star size={11} className="shrink-0 fill-accent-500 text-accent-500" />}
+                    {lead.isStarred && <Star size={11} className="shrink-0 fill-warning-500 text-warning-500" />}
                   </p>
                 </div>
                 <LeadSourceBadge source={lead.source} otherSource={lead.otherSource} />

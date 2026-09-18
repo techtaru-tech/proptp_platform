@@ -90,7 +90,7 @@ export function AttendanceReport() {
 
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatCard label="Records" value={stats.count} icon={Fingerprint} tone="brand" />
-        <StatCard label="Avg. Working Hours" value={formatHours(stats.avgHours)} icon={Clock3} tone="navy" />
+        <StatCard label="Avg. Working Hours" value={formatHours(stats.avgHours)} icon={Clock3} tone="shell" />
         <StatCard label="Late" value={stats.late} tone="warning" />
         <StatCard label="Outside Geo-fence" value={stats.outside} icon={MapPinOff} tone="danger" />
       </div>

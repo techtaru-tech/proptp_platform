@@ -13,7 +13,7 @@ import { touchSession } from './sessions';
  * Both receive the same JWT, and every protected route reads it through `requireAuth`.
  */
 
-const JWT_SECRET = process.env.JWT_SECRET || 'shreeram-dev-jwt-secret-change-me';
+const JWT_SECRET = process.env.JWT_SECRET || 'rosium-dev-jwt-secret-change-me';
 /** No refresh-token flow exists yet (see API docs §1.2) — a long-lived token instead. */
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '30d';
 

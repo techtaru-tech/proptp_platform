@@ -337,9 +337,9 @@ export function LeadList() {
           <Link to={`/crm/leads/${l.id}`} onClick={(e) => e.stopPropagation()} className="min-w-0 rounded focus-ring">
             <p className="flex items-center gap-1 font-medium text-ink">
               {leadFullName(l)}
-              {l.isStarred && <Star size={12} className="fill-accent-500 text-accent-500" />}
+              {l.isStarred && <Star size={12} className="fill-warning-500 text-warning-500" />}
               {l.receivedOutsideBusinessHours && (
-                <MoonStar size={12} className="text-navy-400" aria-label="Received outside business hours" />
+                <MoonStar size={12} className="text-shell-400" aria-label="Received outside business hours" />
               )}
             </p>
             <p className="text-xs text-ink-faint">{l.phone}</p>
@@ -408,9 +408,9 @@ export function LeadList() {
             type="button"
             onClick={() => handleToggleStar(l)}
             aria-label={l.isStarred ? 'Unstar lead' : 'Star lead'}
-            className="rounded p-1.5 text-ink-faint hover:bg-surface-muted hover:text-accent-500 focus-ring"
+            className="rounded p-1.5 text-ink-faint hover:bg-surface-muted hover:text-warning-500 focus-ring"
           >
-            <Star size={14} className={l.isStarred ? 'fill-accent-500 text-accent-500' : ''} />
+            <Star size={14} className={l.isStarred ? 'fill-warning-500 text-warning-500' : ''} />
           </button>
           <button
             type="button"

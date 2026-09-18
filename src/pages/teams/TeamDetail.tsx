@@ -85,7 +85,7 @@ export function TeamDetail() {
               type="button"
               onClick={() => setView('tree')}
               className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors focus-ring ${
-                view === 'tree' ? 'bg-navy-800 text-white' : 'text-ink-faint hover:text-ink'
+                view === 'tree' ? 'bg-shell-800 text-white' : 'text-ink-faint hover:text-ink'
               }`}
             >
               <Network size={13} /> Tree
@@ -94,7 +94,7 @@ export function TeamDetail() {
               type="button"
               onClick={() => setView('list')}
               className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors focus-ring ${
-                view === 'list' ? 'bg-navy-800 text-white' : 'text-ink-faint hover:text-ink'
+                view === 'list' ? 'bg-shell-800 text-white' : 'text-ink-faint hover:text-ink'
               }`}
             >
               <LayoutList size={13} /> List
@@ -104,7 +104,7 @@ export function TeamDetail() {
       />
 
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="Total Members" value={team.memberIds.length} tone="navy" />
+        <StatCard label="Total Members" value={team.memberIds.length} tone="shell" />
         <StatCard label="Team Size (Leader)" value={tree?.teamSize ?? '—'} tone="brand" />
         <StatCard label="Direct Reports" value={tree?.children.length ?? '—'} tone="accent" />
         <StatCard label="Created" value={new Date(team.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })} tone="neutral" />

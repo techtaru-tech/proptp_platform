@@ -125,7 +125,7 @@ export function FormView() {
           {form.isActive ? 'Active' : 'Inactive'}
         </Badge>
         {form.isMultiStep && <Badge tone="info">Multi-step</Badge>}
-        {form.recaptchaEnabled && <Badge tone="navy">reCAPTCHA v3</Badge>}
+        {form.recaptchaEnabled && <Badge tone="shell">reCAPTCHA v3</Badge>}
         <code className="rounded-md bg-surface-muted px-2 py-0.5 text-xs text-ink-muted">/f/{form.slug}</code>
         <span className="text-xs text-ink-faint">Created {formatDate(form.createdAt)}</span>
       </div>
@@ -187,7 +187,7 @@ export function FormView() {
                           <div className="flex shrink-0 items-center gap-2">
                             {field.required && <Badge tone="warning">Required</Badge>}
                             {field.type === 'gdpr_consent' && <Badge tone="neutral">Locked</Badge>}
-                            <Badge tone="navy">{fieldTypeLabel(field.type)}</Badge>
+                            <Badge tone="shell">{fieldTypeLabel(field.type)}</Badge>
                           </div>
                         </div>
                       ))}
@@ -262,7 +262,7 @@ export function FormView() {
             {active === 'analytics' && (
               <div className="flex flex-col gap-5">
                 <div className="grid gap-4 sm:grid-cols-3">
-                  <StatCard label="Total submissions" value={analytics?.total ?? 0} icon={Inbox} tone="navy" />
+                  <StatCard label="Total submissions" value={analytics?.total ?? 0} icon={Inbox} tone="shell" />
                   <StatCard label="Leads created" value={analytics?.leadsCreated ?? 0} icon={Check} tone="success" />
                   <StatCard label="Last 7 days" value={analytics?.last7Days ?? 0} icon={BarChart3} tone="info" />
                 </div>

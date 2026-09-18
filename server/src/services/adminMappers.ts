@@ -19,6 +19,8 @@ import type {
   ProjectFile,
   PropertyUnit,
   SupportTicket,
+  Task,
+  TaskComment,
   TicketMessage,
   User,
   UserRole,
@@ -466,5 +468,54 @@ export function adminBankAccount(account: BankAccount) {
     accountType: account.accountType,
     state: account.state,
     isPrimary: account.isPrimary,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Task management
+// ---------------------------------------------------------------------------
+
+type TaskPerson = Pick<User, 'id' | 'name' | 'role' | 'avatarUrl'>;
+
+/**
+ * A task as the panel's list, board and detail screens read it.
+ *
+ * `isOverdue` is computed here rather than in the browser so every surface agrees on it —
+ * a done task is never overdue, however long ago its due date passed.
+ */
+export function adminTask(
+  task: Task & { assignee?: TaskPerson | null; createdBy?: TaskPerson | null; _count?: { comments: number } }
+) {
+  const isOpen = task.status !== 'done' && task.status !== 'cancelled';
+  return {
+    id: task.id,
+    title: task.title,
+    description: task.description ?? '',
+    status: task.status,
+    priority: task.priority,
+    dueAt: task.dueAt?.toISOString() ?? null,
+    isOverdue: isOpen && !!task.dueAt && task.dueAt.getTime() < Date.now(),
+    assigneeId: task.assigneeId,
+    assigneeName: task.assignee?.name ?? '',
+    assigneeRole: task.assignee ? ROLE_ID[task.assignee.role] : null,
+    assigneeAvatarUrl: task.assignee?.avatarUrl ?? undefined,
+    createdById: task.createdById,
+    createdByName: task.createdBy?.name ?? '',
+    commentCount: task._count?.comments ?? 0,
+    completedAt: task.completedAt?.toISOString() ?? null,
+    createdAt: task.createdAt.toISOString(),
+    updatedAt: task.updatedAt.toISOString(),
+  };
+}
+
+export function adminTaskComment(comment: TaskComment & { author?: TaskPerson | null }) {
+  return {
+    id: comment.id,
+    taskId: comment.taskId,
+    body: comment.body,
+    authorId: comment.authorId,
+    authorName: comment.author?.name ?? '',
+    authorAvatarUrl: comment.author?.avatarUrl ?? undefined,
+    createdAt: comment.createdAt.toISOString(),
   };
 }

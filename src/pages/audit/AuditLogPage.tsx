@@ -64,7 +64,7 @@ export function AuditLogPage() {
   const columns: DataTableColumn<AuditEntry>[] = [
     { key: 'userName', header: 'User', render: (a) => <span className="font-medium text-ink">{a.userName}</span> },
     { key: 'action', header: 'Action', render: (a) => a.action },
-    { key: 'module', header: 'Module', render: (a) => <Badge tone="navy">{a.module}</Badge> },
+    { key: 'module', header: 'Module', render: (a) => <Badge tone="shell">{a.module}</Badge> },
     { key: 'recordLabel', header: 'Record', render: (a) => <span className="line-clamp-1 max-w-xs">{a.recordLabel}</span> },
     { key: 'timestamp', header: 'Timestamp', sortable: true, render: (a) => formatDateTime(a.timestamp) },
   ];
@@ -123,7 +123,7 @@ export function AuditLogPage() {
           <dl className="space-y-3 text-sm">
             <Row label="User" value={selected.userName} />
             <Row label="Action" value={selected.action} />
-            <Row label="Module" value={<Badge tone="navy">{selected.module}</Badge>} />
+            <Row label="Module" value={<Badge tone="shell">{selected.module}</Badge>} />
             <Row label="Record" value={selected.recordLabel} />
             <Row label="Timestamp" value={formatDateTime(selected.timestamp)} />
             <Row label="Description" value={selected.description} />

@@ -136,8 +136,8 @@ export function AiSdrAgentDetail() {
 
       <div className="mb-5 flex flex-wrap items-center gap-2">
         <Badge tone={agent.active ? 'success' : 'neutral'} dot>{agent.active ? 'Active' : 'Paused'}</Badge>
-        <Badge tone="navy">max {agent.maxFollowUps} follow-ups</Badge>
-        <Badge tone="navy">≥{agent.minHoursBetweenFollowUps}h apart</Badge>
+        <Badge tone="shell">max {agent.maxFollowUps} follow-ups</Badge>
+        <Badge tone="shell">≥{agent.minHoursBetweenFollowUps}h apart</Badge>
         {agent.respectBusinessHours && <Badge tone="info">Respects business hours</Badge>}
         {agent.handoffUserId && (
           <span className="inline-flex items-center gap-1 text-xs text-ink-muted">

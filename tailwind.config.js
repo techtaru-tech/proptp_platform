@@ -8,48 +8,65 @@ export default {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       colors: {
-        // Dark slate — derived from the live ShreeRam Partner site's --bgDark (#0c2239).
-        // Used for the sidebar, dark surfaces and high-emphasis dark text.
-        navy: {
-          50: '#f5f7fa',
-          100: '#e7edf4',
-          200: '#cbd8e6',
-          300: '#a5bcd4',
-          400: '#7498be',
-          500: '#4b749f',
-          600: '#385676',
-          700: '#293f57',
-          800: '#1a2c3f',
-          900: '#0c2239',
-          950: '#071522',
+        // The app shell — a plum-tinted dark neutral rather than a true grey, so the
+        // sidebar and every dark surface sit in the same family as the Rosium primary
+        // instead of reading as a second, unrelated brand colour.
+        shell: {
+          50: '#f8f5f8',
+          100: '#efe8ee',
+          200: '#ddd0da',
+          300: '#c2aebe',
+          400: '#a0869b',
+          500: '#80687b',
+          600: '#665061',
+          700: '#4e3c4a',
+          800: '#382837',
+          900: '#231021',
+          950: '#160a15',
         },
-        // Brand red — the ShreeRam Group primary (--primary: #C34245 on the live site).
+        // Rosium primary — #652251, the plum of the ROSIUM wordmark's second half.
+        // 600 is the exact brand value; it is what solid buttons and active nav use.
         brand: {
-          50: '#faeff0',
-          100: '#f5dcdc',
-          200: '#eab8b9',
-          300: '#dd8d8f',
-          400: '#d06264',
-          500: '#c53a3d',
-          600: '#C34245',
-          700: '#86282a',
-          800: '#661e20',
-          900: '#471516',
-          950: '#270c0c',
+          50: '#faf1f6',
+          100: '#f3e0ec',
+          200: '#e7c2da',
+          300: '#d29ac0',
+          400: '#b56b9d',
+          500: '#7a2a62',
+          600: '#652251',
+          700: '#531b42',
+          800: '#411534',
+          900: '#300f26',
+          950: '#1d0917',
         },
-        // Brand orange — the ShreeRam Group secondary (--secondary: #FF9439 on the live site).
+        // Rosium secondary — #2596BE. White on 500 is too low-contrast for a filled
+        // control, so anything with text on it uses 600 or darker.
         accent: {
-          50: '#fff4eb',
-          100: '#ffe6d1',
-          200: '#ffcda3',
-          300: '#ffaf6b',
-          400: '#ff9133',
-          500: '#FF9439',
-          600: '#d66200',
-          700: '#ad5000',
-          800: '#853d00',
-          900: '#5c2a00',
-          950: '#331700',
+          50: '#eff9fd',
+          100: '#d8f0f9',
+          200: '#b2e1f2',
+          300: '#7dcbe7',
+          400: '#47b0d6',
+          500: '#2596BE',
+          600: '#1f7ca0',
+          700: '#1d6581',
+          800: '#1e536a',
+          900: '#1d465a',
+          950: '#0f2c3c',
+        },
+        // The vivid pink of the mark and the "ROS" half of the wordmark. Not a UI colour —
+        // it is here so charts and illustrations can reach for the logo's own accent.
+        blossom: {
+          50: '#fdf0f6',
+          100: '#fce0ec',
+          200: '#f9c1da',
+          300: '#f28fbc',
+          400: '#e85398',
+          500: '#D4166C',
+          600: '#b90f5c',
+          700: '#98104d',
+          800: '#7d1241',
+          900: '#69143a',
         },
         surface: {
           DEFAULT: '#ffffff',

@@ -174,7 +174,7 @@ export function InvestmentList({ filter = 'all' }: InvestmentListProps) {
       header: 'Status',
       render: (inv) => {
         const bucket = investmentBucket(inv);
-        const tone = bucket === 'completed' ? 'navy' : bucket === 'running' ? 'success' : bucket === 'due' ? 'warning' : 'danger';
+        const tone = bucket === 'completed' ? 'shell' : bucket === 'running' ? 'success' : bucket === 'due' ? 'warning' : 'danger';
         return <Badge tone={tone}>{bucket.charAt(0).toUpperCase() + bucket.slice(1)}</Badge>;
       },
     },
@@ -244,7 +244,7 @@ export function InvestmentList({ filter = 'all' }: InvestmentListProps) {
           <div className="space-y-5">
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone={selected.isActive === 1 ? 'success' : 'danger'}>{selected.isActive === 1 ? 'Active' : 'Deactivated'}</Badge>
-              <Badge tone="navy">{investmentBucket(selected).charAt(0).toUpperCase() + investmentBucket(selected).slice(1)}</Badge>
+              <Badge tone="shell">{investmentBucket(selected).charAt(0).toUpperCase() + investmentBucket(selected).slice(1)}</Badge>
             </div>
             <dl className="space-y-2.5 text-sm">
               <DetailRow label="Investor" value={selected.userName} />
@@ -306,7 +306,7 @@ export function InvestmentList({ filter = 'all' }: InvestmentListProps) {
       >
         <div className="flex flex-col gap-1.5">
           <label htmlFor="deactivate-reason" className="text-sm font-medium text-ink">
-            Reason<span className="text-accent-600"> *</span>
+            Reason<span className="text-danger-500"> *</span>
           </label>
           <textarea
             id="deactivate-reason"

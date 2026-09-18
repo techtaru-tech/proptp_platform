@@ -203,7 +203,7 @@ export function PayoutDetail() {
       >
         <div className="flex flex-col gap-1.5">
           <label htmlFor="payout-reject-reason" className="text-sm font-medium text-ink">
-            Reason<span className="text-accent-600"> *</span>
+            Reason<span className="text-danger-500"> *</span>
           </label>
           <textarea
             id="payout-reject-reason"

@@ -41,7 +41,7 @@ export function SourcePerformanceReport() {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Total leads" value={totals.total} icon={Target} tone="navy" />
+        <StatCard label="Total leads" value={totals.total} icon={Target} tone="shell" />
         <StatCard label="Won deals" value={totals.won} icon={Trophy} tone="success" />
         <StatCard label="Overall conversion" value={totals.total > 0 ? `${Math.round((totals.won / totals.total) * 1000) / 10}%` : '0%'} icon={TrendingUp} tone="info" />
       </div>

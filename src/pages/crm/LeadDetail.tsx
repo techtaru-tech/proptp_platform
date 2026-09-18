@@ -302,7 +302,7 @@ export function LeadDetail() {
             <StatusBadge kind="leadPriority" status={lead.priority} dot={false} />
             {lead.receivedOutsideBusinessHours && (
               <span title="This lead arrived while Business Hours (Settings > Business Hours) marked the office closed.">
-                <Badge tone="navy">
+                <Badge tone="shell">
                   <MoonStar size={12} />
                   Outside Business Hours
                 </Badge>
@@ -319,8 +319,8 @@ export function LeadDetail() {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-semibold text-ink">{leadFullName(lead)}</h2>
-                <button onClick={handleToggleStar} aria-label="Toggle star" className="text-ink-faint hover:text-accent-500 focus-ring rounded">
-                  <Star size={16} className={lead.isStarred ? 'fill-accent-500 text-accent-500' : ''} />
+                <button onClick={handleToggleStar} aria-label="Toggle star" className="text-ink-faint hover:text-warning-500 focus-ring rounded">
+                  <Star size={16} className={lead.isStarred ? 'fill-warning-500 text-warning-500' : ''} />
                 </button>
               </div>
               <p className="mt-0.5 text-sm text-ink-muted">
@@ -704,7 +704,7 @@ export function LeadDetail() {
           {statusValue === 'lost' && (
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-ink">
-                Lost reason<span className="text-accent-600"> *</span>
+                Lost reason<span className="text-danger-500"> *</span>
               </label>
               <textarea
                 rows={3}

@@ -84,10 +84,10 @@ export const SDR_CHANNEL_OPTIONS = [
   { value: 'whatsapp', label: 'WhatsApp' },
 ];
 
-export const SDR_STATUS_TONE: Record<string, 'success' | 'info' | 'warning' | 'neutral' | 'navy'> = {
+export const SDR_STATUS_TONE: Record<string, 'success' | 'info' | 'warning' | 'neutral' | 'shell'> = {
   active: 'info',
   qualified: 'success',
-  handed_off: 'navy',
+  handed_off: 'shell',
   exhausted: 'warning',
   stopped: 'neutral',
 };

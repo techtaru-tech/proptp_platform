@@ -2,7 +2,7 @@ import type { PrismaClient, UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 /**
- * Seeds the ShreeRam operations + HRMS + partner-app side of the shared database:
+ * Seeds the Rosium operations + HRMS + partner-app side of the shared database:
  * one admin, a partner hierarchy, lookup tables, projects with plots, bookings with their
  * ledger side effects, attendance history, payouts, tickets and notifications.
  *
@@ -38,16 +38,16 @@ const ADDRESSES = ['Vesu', 'Adajan', 'Bopal', 'SG Highway', 'Alkapuri', 'Race Co
   'Vijay Nagar', 'Manjalpur', 'Katargam', 'Gota', 'Wakad'];
 
 const PROJECTS = [
-  ['Shree Ram Elysium', 'Vesu, Surat', 'residential'],
-  ['Shree Ram Meridian', 'Adajan, Surat', 'residential'],
-  ['Shree Ram Orchid Residency', 'Bopal, Ahmedabad', 'residential'],
-  ['Shree Ram Business Hub', 'SG Highway, Ahmedabad', 'commercial'],
-  ['Shree Ram Riverside Heights', 'Alkapuri, Vadodara', 'residential'],
-  ['Shree Ram Green Valley', 'Race Course, Rajkot', 'agricultural'],
-  ['Shree Ram Skyline Towers', 'Baner, Pune', 'residential'],
-  ['Shree Ram Sapphire Court', 'Vijay Nagar, Indore', 'commercial'],
-  ['Shree Ram Emerald Enclave', 'Manjalpur, Vadodara', 'residential'],
-  ['Shree Ram Platinum Square', 'Katargam, Surat', 'commercial'],
+  ['Rosium Elysium', 'Vesu, Surat', 'residential'],
+  ['Rosium Meridian', 'Adajan, Surat', 'residential'],
+  ['Rosium Orchid Residency', 'Bopal, Ahmedabad', 'residential'],
+  ['Rosium Business Hub', 'SG Highway, Ahmedabad', 'commercial'],
+  ['Rosium Riverside Heights', 'Alkapuri, Vadodara', 'residential'],
+  ['Rosium Green Valley', 'Race Course, Rajkot', 'agricultural'],
+  ['Rosium Skyline Towers', 'Baner, Pune', 'residential'],
+  ['Rosium Sapphire Court', 'Vijay Nagar, Indore', 'commercial'],
+  ['Rosium Emerald Enclave', 'Manjalpur, Vadodara', 'residential'],
+  ['Rosium Platinum Square', 'Katargam, Surat', 'commercial'],
 ] as const;
 
 const FACING_VALUES = ['North', 'South', 'East', 'West', 'North-East', 'South-West'];
@@ -78,11 +78,11 @@ export async function seedPlatform(prisma: PrismaClient) {
     update: {},
     create: {
       id: 'singleton',
-      companyName: 'Shree Ram Group',
+      companyName: 'Rosium Developers',
       logoUrl: '',
-      contactEmail: 'contact@shreeramgroup.in',
+      contactEmail: 'contact@rosium.in',
       contactPhone: '+91 90000 00000',
-      address: 'Shree Ram Corporate House, Vesu, Surat, Gujarat 395007',
+      address: 'Rosium Corporate House, Vesu, Surat, Gujarat 395007',
     },
   });
   await prisma.notificationSettings.upsert({ where: { id: 'singleton' }, update: {}, create: { id: 'singleton' } });
@@ -97,7 +97,7 @@ export async function seedPlatform(prisma: PrismaClient) {
     update: {},
     create: {
       id: 'LOC-HQ',
-      name: 'ShreeRam Office',
+      name: 'Rosium Office',
       area: 'Vesu, Surat',
       latitude: policy.officeLat,
       longitude: policy.officeLng,
@@ -158,14 +158,14 @@ export async function seedPlatform(prisma: PrismaClient) {
   // -------------------------------------------------------------------------
   // People: one admin, then leaders -> employees -> agents
   // -------------------------------------------------------------------------
-  const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@shreeramgroup.in';
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'ShreeRam@2026';
+  const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@rosium.in';
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'Rosium@2026';
   const admin = await prisma.user.upsert({
     where: { phone: '9800000001' },
     update: { passwordHash: await bcrypt.hash(adminPassword, 10) },
     create: {
       id: 'ADMIN-1',
-      name: 'Priyanka Singh',
+      name: 'Rosium',
       phone: '9800000001',
       email: adminEmail,
       passwordHash: await bcrypt.hash(adminPassword, 10),
@@ -189,7 +189,7 @@ export async function seedPlatform(prisma: PrismaClient) {
       create: {
         name,
         phone: phoneFor(seq),
-        email: `${name.toLowerCase().replace(/\s+/g, '.')}${seq}@shreeramgroup.in`,
+        email: `${name.toLowerCase().replace(/\s+/g, '.')}${seq}@rosium.in`,
         role,
         status: rng() > 0.12 ? 'active' : rng() > 0.5 ? 'inactive' : 'suspended',
         partnerCode: code,
@@ -286,8 +286,8 @@ export async function seedPlatform(prisma: PrismaClient) {
         status: inactive ? 0 : 1,
         holdReason: inactive ? 'Layout approval renewal in progress with the local authority.' : null,
         sortOrder: p + 1,
-        banner: `https://placehold.co/1200x480/243a61/ffffff?text=${encodeURIComponent(name)}`,
-        thumbnail: `https://placehold.co/300x200/243a61/ffffff?text=${encodeURIComponent(name.split(' ').slice(-1)[0])}`,
+        banner: `https://placehold.co/1200x480/652251/ffffff?text=${encodeURIComponent(name)}`,
+        thumbnail: `https://placehold.co/300x200/652251/ffffff?text=${encodeURIComponent(name.split(' ').slice(-1)[0])}`,
         map: 'https://placehold.co/800x500/eef0f3/667085?text=Site+Map',
         googleLocation: `https://maps.google.com/?q=${encodeURIComponent(location)}`,
         latitude: Number((21.17 + rng() * 2).toFixed(6)),
@@ -295,8 +295,8 @@ export async function seedPlatform(prisma: PrismaClient) {
         layoutPlanUrl: 'https://placehold.co/800x1100/eef0f3/667085?text=Layout+Plan',
         amenityIds,
         gallery: [
-          `https://placehold.co/1200x800/1e3a5f/ffffff?text=${encodeURIComponent(name)}+1`,
-          `https://placehold.co/1200x800/3c5480/ffffff?text=${encodeURIComponent(name)}+2`,
+          `https://placehold.co/1200x800/652251/ffffff?text=${encodeURIComponent(name)}+1`,
+          `https://placehold.co/1200x800/9e4a82/ffffff?text=${encodeURIComponent(name)}+2`,
         ],
         files: {
           create: [
@@ -349,9 +349,9 @@ export async function seedPlatform(prisma: PrismaClient) {
           isCorner: rng() > 0.8,
           isFeatured: rng() > 0.85,
           isVerified: false,
-          thumbnail: `https://placehold.co/600x400/243a61/ffffff?text=Plot+${u + 1}`,
+          thumbnail: `https://placehold.co/600x400/652251/ffffff?text=Plot+${u + 1}`,
           sitePlan: 'https://placehold.co/800x600/eef0f3/667085?text=Plot+Site+Plan',
-          images: [`https://placehold.co/1200x800/1e3a5f/ffffff?text=Plot+${u + 1}`],
+          images: [`https://placehold.co/1200x800/652251/ffffff?text=Plot+${u + 1}`],
           amenityIds,
           perAreaAmount: perArea,
           perAreaProfit,

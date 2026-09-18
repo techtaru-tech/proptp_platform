@@ -16,7 +16,7 @@ const SIZE_CLASSES = {
   lg: 'h-14 w-14 text-base',
 };
 
-const PALETTE = ['bg-navy-100 text-navy-700', 'bg-accent-100 text-accent-700', 'bg-info-100 text-info-700', 'bg-success-100 text-success-700', 'bg-warning-100 text-warning-700'];
+const PALETTE = ['bg-shell-100 text-shell-700', 'bg-accent-100 text-accent-700', 'bg-info-100 text-info-700', 'bg-success-100 text-success-700', 'bg-warning-100 text-warning-700'];
 
 function colorFor(name: string) {
   let hash = 0;

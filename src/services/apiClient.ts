@@ -1,11 +1,11 @@
 /**
- * Fetch wrapper for the ShreeRam platform backend (server/ — Express + Prisma + PostgreSQL).
+ * Fetch wrapper for the Rosium platform backend (server/ — Express + Prisma + PostgreSQL).
  * Every service function goes through this, so the API base URL, the Authorization header
  * and error normalisation live in exactly one place.
  */
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000/api';
 
-const SESSION_KEY = 'shreeram_admin_session';
+const SESSION_KEY = 'rosium_admin_session';
 
 /** Where the origin serving /uploads lives — the API base minus its trailing /api. */
 export const FILE_BASE_URL = BASE_URL.replace(/\/api\/?$/, '');
@@ -48,7 +48,7 @@ export function onUnauthorized(listener: UnauthorizedListener): () => void {
 }
 
 /** Survives the redirect to /login, which is a fresh render with no props to carry it. */
-const SIGNED_OUT_REASON_KEY = 'shreeram_signed_out_reason';
+const SIGNED_OUT_REASON_KEY = 'rosium_signed_out_reason';
 
 export function takeSignedOutReason(): string | null {
   try {

@@ -6,14 +6,14 @@ interface StatCardProps {
   label: string;
   value: string | number;
   icon?: LucideIcon;
-  tone?: 'navy' | 'brand' | 'accent' | 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+  tone?: 'shell' | 'brand' | 'accent' | 'success' | 'warning' | 'danger' | 'info' | 'neutral';
   trend?: { value: string; direction: 'up' | 'down' };
   footer?: ReactNode;
   onClick?: () => void;
 }
 
 const TONE_CLASSES: Record<NonNullable<StatCardProps['tone']>, string> = {
-  navy: 'bg-navy-50 text-navy-700',
+  shell: 'bg-shell-50 text-shell-700',
   brand: 'bg-brand-50 text-brand-700',
   accent: 'bg-accent-50 text-accent-700',
   success: 'bg-success-50 text-success-700',

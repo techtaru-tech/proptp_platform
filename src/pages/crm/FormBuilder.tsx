@@ -47,7 +47,7 @@ function initialValues(existing?: LeadForm): FormValues {
     pipelineId: existing?.pipelineId ?? '',
     pipelineStageId: existing?.pipelineStageId ?? '',
     assignedUserId: existing?.assignedUserId ?? '',
-    accentColor: existing?.accentColor ?? '#C34245',
+    accentColor: existing?.accentColor ?? '#652251',
     layout: existing?.layout ?? 'card',
     recaptchaEnabled: existing?.recaptchaEnabled ?? false,
     recaptchaSiteKey: existing?.recaptchaSiteKey ?? '',

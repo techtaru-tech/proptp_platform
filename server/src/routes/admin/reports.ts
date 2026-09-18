@@ -10,7 +10,7 @@ export const adminOpsReportsRouter = Router();
  * frontend renders it as a table and exports it to CSV from exactly that shape, so a new
  * column here needs no frontend change.
  *
- * These are the ShreeRam operational reports. The CRM's own report centre is separate and
+ * These are the operational reports. The CRM's own report centre is separate and
  * already lives on /api/reports (server/src/routes/reports.ts).
  */
 

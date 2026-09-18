@@ -24,7 +24,7 @@ export function describeDevice(userAgent: string | undefined): string {
     : /Chrome\//.test(ua) && !/Chromium/.test(ua) ? 'Chrome'
     : /Firefox\//.test(ua) ? 'Firefox'
     : /Safari\//.test(ua) ? 'Safari'
-    : /Dart|Flutter|okhttp/i.test(ua) ? 'ShreeRam app'
+    : /Dart|Flutter|okhttp/i.test(ua) ? 'Rosium app'
     : 'Unknown browser';
 
   const platform =

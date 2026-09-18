@@ -45,7 +45,7 @@ export function RolesSettings() {
         <div>
           <p className="flex items-center gap-2 font-medium text-ink">
             {r.name}
-            {r.isSystem && <Badge tone="navy">Built-in</Badge>}
+            {r.isSystem && <Badge tone="shell">Built-in</Badge>}
           </p>
           {r.description && <p className="max-w-md truncate text-xs text-ink-faint">{r.description}</p>}
         </div>

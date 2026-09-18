@@ -81,7 +81,7 @@ export function LeadVolumeReport() {
             />
           </div>
           <div className="flex items-center gap-2">
-            <Badge tone="navy">Total: {data?.total ?? 0} leads</Badge>
+            <Badge tone="shell">Total: {data?.total ?? 0} leads</Badge>
             <Button variant="outline" size="sm" leftIcon={<Download size={13} />} onClick={handleExportCsv} disabled={rows.length === 0}>
               Export CSV
             </Button>

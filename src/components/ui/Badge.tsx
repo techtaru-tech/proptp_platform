@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { cn } from '../../utils/cn';
 
-export type BadgeTone = 'neutral' | 'navy' | 'brand' | 'accent' | 'success' | 'warning' | 'danger' | 'info';
+export type BadgeTone = 'neutral' | 'shell' | 'brand' | 'accent' | 'success' | 'warning' | 'danger' | 'info';
 
 interface BadgeProps {
   children: ReactNode;
@@ -12,7 +12,7 @@ interface BadgeProps {
 
 const TONE_CLASSES: Record<BadgeTone, string> = {
   neutral: 'bg-surface-muted text-ink-muted',
-  navy: 'bg-navy-50 text-navy-700',
+  shell: 'bg-shell-50 text-shell-700',
   brand: 'bg-brand-50 text-brand-700',
   accent: 'bg-accent-50 text-accent-700',
   success: 'bg-success-50 text-success-700',
@@ -23,7 +23,7 @@ const TONE_CLASSES: Record<BadgeTone, string> = {
 
 const DOT_CLASSES: Record<BadgeTone, string> = {
   neutral: 'bg-ink-faint',
-  navy: 'bg-navy-600',
+  shell: 'bg-shell-600',
   brand: 'bg-brand-600',
   accent: 'bg-accent-500',
   success: 'bg-success-500',

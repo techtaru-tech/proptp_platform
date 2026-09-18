@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { BarChart3, ShieldCheck, Users } from 'lucide-react';
-import shreeramLogo from '../assets/brand/shreeram-logo.png';
+import rosiumLockup from '../assets/brand/rosium-lockup.png';
 
 const HIGHLIGHTS = [
   { icon: BarChart3, label: 'Projects, bookings and payments in one console' },
@@ -17,14 +17,14 @@ export function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-surface-subtle via-surface to-brand-50 p-4 sm:p-6 lg:p-10">
       <div className="grid w-full max-w-6xl overflow-hidden rounded-3xl border border-line bg-white shadow-popover lg:min-h-[640px] lg:grid-cols-2">
-        <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-brand-700 via-brand-600 to-accent-500 p-12 text-white lg:flex">
+        <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-brand-700 via-brand-600 to-blossom-500 p-12 text-white lg:flex">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.14),transparent_45%)]" />
 
-          {/* The logo has its own solid red background, so it sits on a white chip rather than
-              directly on the gradient, where the two reds would muddy each other. */}
+          {/* The wordmark is plum on transparent, which would disappear into the plum
+              gradient, so it sits on a white chip rather than directly on it. */}
           <div className="relative">
-            <span className="inline-flex rounded-xl bg-white p-2.5 shadow-card">
-              <img src={shreeramLogo} alt="Shree Ram Group" className="h-9 w-auto" />
+            <span className="inline-flex rounded-xl bg-white px-4 py-3 shadow-card">
+              <img src={rosiumLockup} alt="Rosium Developers" className="h-9 w-auto" />
             </span>
           </div>
 
@@ -46,7 +46,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
             </ul>
           </div>
 
-          <p className="relative text-xs text-white/60">© {new Date().getFullYear()} Shree Ram Group. All rights reserved.</p>
+          <p className="relative text-xs text-white/60">© {new Date().getFullYear()} Rosium Developers. All rights reserved.</p>
         </div>
 
         <div className="flex items-center justify-center px-6 py-12 sm:px-14 sm:py-16">

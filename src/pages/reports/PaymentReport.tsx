@@ -63,7 +63,7 @@ export function PaymentReport() {
     { key: 'date', header: 'Date', render: (r) => formatDate(r.date) },
     { key: 'mode', header: 'Payment Mode', render: (r) => r.paymentMode },
     { key: 'amount', header: 'Amount', align: 'right', render: (r) => formatCurrency(r.amount) },
-    { key: 'status', header: 'Type', render: (r) => <Badge tone={r.status === 'Installment' ? 'accent' : 'navy'}>{r.status}</Badge> },
+    { key: 'status', header: 'Type', render: (r) => <Badge tone={r.status === 'Installment' ? 'accent' : 'shell'}>{r.status}</Badge> },
   ];
 
   const hasActiveFilters = status !== 'all' || !!searchInput;

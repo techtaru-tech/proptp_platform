@@ -35,7 +35,7 @@ export function Drawer({ isOpen, onClose, title, children, width = 'md' }: Drawe
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-navy-950/50" onClick={onClose} aria-hidden="true" />
+      <div className="absolute inset-0 bg-shell-950/50" onClick={onClose} aria-hidden="true" />
       <div
         role="dialog"
         aria-modal="true"

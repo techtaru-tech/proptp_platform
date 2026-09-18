@@ -85,7 +85,7 @@ export function SupportReport() {
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
         <StatCard label="Total Tickets" value={stats.total} icon={LifeBuoy} tone="brand" />
         <StatCard label="Resolved / Closed" value={stats.resolved} tone="success" />
-        <StatCard label="Avg. Messages / Ticket" value={stats.avgMessages.toFixed(1)} icon={MessageSquare} tone="navy" />
+        <StatCard label="Avg. Messages / Ticket" value={stats.avgMessages.toFixed(1)} icon={MessageSquare} tone="shell" />
       </div>
 
       <div className="mb-6">

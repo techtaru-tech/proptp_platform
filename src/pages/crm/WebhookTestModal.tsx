@@ -161,7 +161,7 @@ export function WebhookTestModal({ connection, onClose }: WebhookTestModalProps)
               Copy curl
             </Button>
           </div>
-          <pre className="overflow-x-auto rounded-lg bg-navy-900 px-3 py-2.5 font-mono text-[11px] leading-relaxed text-navy-100">
+          <pre className="overflow-x-auto rounded-lg bg-shell-900 px-3 py-2.5 font-mono text-[11px] leading-relaxed text-shell-100">
             {curl}
           </pre>
           <p className="text-xs text-ink-faint">This one is real — it creates a lead, unlike the dry run above.</p>

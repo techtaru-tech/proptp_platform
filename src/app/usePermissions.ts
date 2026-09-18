@@ -42,6 +42,7 @@ export function moduleForPath(pathname: string): ModuleKey | null {
   // Sections whose routes don't all sit under the nav entry's own path.
   const EXTRA_PREFIXES: { prefix: string; module: ModuleKey }[] = [
     { prefix: '/crm', module: 'crm' },
+    { prefix: '/tasks', module: 'tasks' },
     { prefix: '/projects', module: 'projects' },
     { prefix: '/properties', module: 'properties' },
     { prefix: '/bookings', module: 'bookings' },

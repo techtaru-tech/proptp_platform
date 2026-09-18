@@ -13,6 +13,7 @@ import {
   BarChart3,
   Settings,
   Target,
+  ListChecks,
   TrendingUp,
   Gift,
   type LucideIcon,
@@ -25,7 +26,7 @@ export interface NavChild {
 
 /** Matches the module keys the server enforces — see server/src/services/permissions.ts. */
 export type ModuleKey =
-  | 'dashboard' | 'crm' | 'projects' | 'properties' | 'bookings' | 'payments' | 'investments'
+  | 'dashboard' | 'crm' | 'tasks' | 'projects' | 'properties' | 'bookings' | 'payments' | 'investments'
   | 'partners' | 'teams' | 'attendance' | 'payouts' | 'incentives' | 'support' | 'notifications'
   | 'reports' | 'settings';
 
@@ -61,6 +62,18 @@ export const NAV_ITEMS: NavItem[] = [
       { label: 'Call History', to: '/crm/calls' },
       { label: 'AI SDR Agents', to: '/crm/sdr-agents' },
       { label: 'Integrations', to: '/crm/integrations' },
+    ],
+  },
+  {
+    label: 'Tasks',
+    to: '/tasks',
+    icon: ListChecks,
+    module: 'tasks',
+    children: [
+      { label: 'All Tasks', to: '/tasks' },
+      { label: 'Board', to: '/tasks/board' },
+      { label: 'My Tasks', to: '/tasks/mine' },
+      { label: 'New Task', to: '/tasks/new' },
     ],
   },
   {

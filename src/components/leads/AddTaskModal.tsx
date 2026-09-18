@@ -131,7 +131,7 @@ export function AddTaskModal({ isOpen, onClose, onCreated, defaultDueAt, lead }:
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-ink">
-            Lead<span className="text-accent-600"> *</span>
+            Lead<span className="text-danger-500"> *</span>
           </span>
 
           {selectedLead ? (

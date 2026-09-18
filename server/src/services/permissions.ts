@@ -14,6 +14,7 @@ import { prisma } from '../prisma';
 export const MODULES = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'crm', label: 'CRM' },
+  { key: 'tasks', label: 'Task Management' },
   { key: 'projects', label: 'Projects' },
   { key: 'properties', label: 'Properties' },
   { key: 'bookings', label: 'Bookings' },
@@ -57,6 +58,8 @@ const PATH_MODULE_ENTRIES = [
   { prefix: '/calls', module: 'crm' },
   { prefix: '/whatsapp', module: 'crm' },
   { prefix: '/connections', module: 'crm' },
+
+  { prefix: '/tasks', module: 'tasks' },
 
   { prefix: '/projects', module: 'projects' },
   { prefix: '/units', module: 'properties' },

@@ -231,7 +231,7 @@ export function UserDetail() {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-lg font-semibold text-ink">{user.name}</h2>
-            <Badge tone="navy">{userService.roleLabel(user.role)}</Badge>
+            <Badge tone="shell">{userService.roleLabel(user.role)}</Badge>
             <StatusBadge kind="account" status={user.status} />
           </div>
           <p className="mt-1 text-sm text-ink-muted">
@@ -315,7 +315,7 @@ export function UserDetail() {
                   <>
                     <CardHeader title="Team Overview" subtitle="Direct and downline network under this leader" />
                     <div className="mb-5 grid grid-cols-2 gap-4 sm:grid-cols-3">
-                      <StatCard label="Team Size" value={(user as { teamSize: number }).teamSize} tone="navy" />
+                      <StatCard label="Team Size" value={(user as { teamSize: number }).teamSize} tone="shell" />
                       <StatCard label="Employees" value={(user as { employeeCount: number }).employeeCount} tone="brand" />
                       <StatCard label="Agents" value={(user as { agentCount: number }).agentCount} tone="accent" />
                     </div>

@@ -309,7 +309,7 @@ export function TaskCalendar() {
                       <span
                         className={cn(
                           'flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold',
-                          isToday ? 'bg-navy-900 text-white' : inMonth ? 'text-ink' : 'text-ink-faint'
+                          isToday ? 'bg-shell-900 text-white' : inMonth ? 'text-ink' : 'text-ink-faint'
                         )}
                       >
                         {day.getDate()}

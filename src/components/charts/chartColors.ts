@@ -1,8 +1,9 @@
-/** Shared categorical palette for Recharts, derived from the ShreeRam brand + semantic tones. */
+/** Shared categorical palette for Recharts — the Rosium brand colours plus semantic tones. */
 export const CHART_COLORS = {
-  brand: '#C34245',
-  accent: '#FF9439',
-  navy: '#4b749f',
+  brand: '#652251',
+  accent: '#2596BE',
+  blossom: '#D4166C',
+  shell: '#80687b',
   success: '#12b76a',
   info: '#2e90fa',
   warning: '#f79009',
@@ -11,13 +12,18 @@ export const CHART_COLORS = {
   slate: '#98a2b3',
 };
 
+/**
+ * Ordered so neighbouring series never share a hue family: the plum primary, the blue
+ * secondary, then the logo's pink, which is far enough in lightness from the plum to stay
+ * readable beside it.
+ */
 export const CHART_SERIES = [
   CHART_COLORS.brand,
   CHART_COLORS.accent,
-  CHART_COLORS.navy,
+  CHART_COLORS.blossom,
   CHART_COLORS.success,
-  CHART_COLORS.info,
   CHART_COLORS.warning,
+  CHART_COLORS.violet,
 ];
 
 export const GRID_STROKE = '#e4e7ec';

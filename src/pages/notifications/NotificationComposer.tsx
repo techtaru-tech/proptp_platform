@@ -177,7 +177,7 @@ export function NotificationComposer({ onClose, onSent }: { onClose: () => void;
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="notif-body" className="text-sm font-medium text-ink">
-              Message<span className="text-accent-600"> *</span>
+              Message<span className="text-danger-500"> *</span>
             </label>
             <textarea
               id="notif-body"
@@ -357,12 +357,12 @@ function PhonePreview({ title, body, scheduled }: { title: string; body: string;
     <div className="flex flex-col items-center gap-3 lg:w-[290px]">
       <span className="text-xs font-medium uppercase tracking-wide text-ink-faint">Mobile preview</span>
 
-      <div className="w-[270px] rounded-[34px] border-[7px] border-ink bg-gradient-to-b from-navy-700 to-navy-900 p-3 pt-7 shadow-popover">
+      <div className="w-[270px] rounded-[34px] border-[7px] border-ink bg-gradient-to-b from-shell-700 to-shell-900 p-3 pt-7 shadow-popover">
         <div className="relative mb-6 text-center">
           {/* The notch, and the clock a lock screen always shows above it. */}
           <span className="absolute left-1/2 top-[-18px] h-4 w-20 -translate-x-1/2 rounded-b-xl bg-ink" />
           <p className="text-3xl font-light text-white">{when === 'now' ? 'Now' : when}</p>
-          <p className="text-xs text-white/60">Shree Ram Partner</p>
+          <p className="text-xs text-white/60">Rosium Partner</p>
         </div>
 
         <div className="rounded-2xl bg-white/95 p-3 shadow-card backdrop-blur">
@@ -370,7 +370,7 @@ function PhonePreview({ title, body, scheduled }: { title: string; body: string;
             <span className="flex h-4 w-4 items-center justify-center rounded bg-brand-600">
               <BellRing size={10} className="text-white" />
             </span>
-            <span className="text-[11px] font-medium text-ink-muted">Shree Ram Group</span>
+            <span className="text-[11px] font-medium text-ink-muted">Rosium Developers</span>
             <span className="ml-auto text-[11px] text-ink-faint">{when === 'now' ? 'now' : when}</span>
           </div>
           <p className="line-clamp-1 text-sm font-semibold text-ink">

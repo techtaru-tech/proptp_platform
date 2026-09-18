@@ -30,7 +30,7 @@ export function ResponseTimeReport() {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Avg. first response" value={formatMinutes(data?.avgResponseMinutes ?? 0)} icon={Timer} tone="navy" />
+        <StatCard label="Avg. first response" value={formatMinutes(data?.avgResponseMinutes ?? 0)} icon={Timer} tone="shell" />
         <StatCard label="Contacted" value={data?.contactedCount ?? 0} icon={Clock3} tone="success" />
         <StatCard label="Not yet contacted" value={data?.notContactedCount ?? 0} icon={MessageCircleQuestion} tone="warning" />
       </div>

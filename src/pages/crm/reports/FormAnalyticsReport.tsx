@@ -49,7 +49,7 @@ export function FormAnalyticsReport() {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Active forms" value={`${data?.activeForms ?? 0} / ${data?.totalForms ?? 0}`} icon={FileText} tone="navy" />
+        <StatCard label="Active forms" value={`${data?.activeForms ?? 0} / ${data?.totalForms ?? 0}`} icon={FileText} tone="shell" />
         <StatCard label="Submissions (range)" value={data?.totalSubmissionsInRange ?? 0} icon={Inbox} tone="info" />
         <StatCard label="Leads created (range)" value={data?.totalLeadsInRange ?? 0} icon={UserCheck} tone="success" />
       </div>

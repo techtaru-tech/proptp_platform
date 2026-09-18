@@ -101,7 +101,7 @@ export function AttendanceToday() {
         <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
           <StatCard label="Present" value={counts.present} icon={UserCheck} tone="success" />
           <StatCard label="Checked-in" value={counts.checkedIn} icon={LogIn} tone="info" />
-          <StatCard label="Checked-out" value={counts.checkedOut} icon={LogOut} tone="navy" />
+          <StatCard label="Checked-out" value={counts.checkedOut} icon={LogOut} tone="shell" />
           <StatCard label="Late" value={counts.late} icon={Clock3} tone="warning" />
           <StatCard label="Absent" value={counts.absent} icon={UserX} tone="danger" />
           <StatCard label="Pending Sync" value={counts.pendingSync} icon={RefreshCw} tone="accent" />

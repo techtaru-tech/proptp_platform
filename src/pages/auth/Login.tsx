@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { takeSignedOutReason } from '../../services/apiClient';
-import shreeramLogo from '../../assets/brand/shreeram-logo.png';
+import rosiumLockup from '../../assets/brand/rosium-lockup.png';
 
 export function Login() {
   const { login, completeTwoFactorLogin, isLoading } = useAuth();
@@ -88,7 +88,7 @@ export function Login() {
     return (
       <AuthLayout>
         <div className="mb-7 flex justify-center lg:hidden">
-          <img src={shreeramLogo} alt="Shree Ram Group" className="h-9 w-auto rounded" />
+          <img src={rosiumLockup} alt="Rosium Developers" className="h-10 w-auto" />
         </div>
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-ink">Two-factor authentication</h1>
@@ -130,7 +130,7 @@ export function Login() {
     return (
       <AuthLayout>
         <div className="mb-7 flex justify-center lg:hidden">
-          <img src={shreeramLogo} alt="Shree Ram Group" className="h-9 w-auto rounded" />
+          <img src={rosiumLockup} alt="Rosium Developers" className="h-10 w-auto" />
         </div>
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-ink">Reset your password</h1>
@@ -142,7 +142,7 @@ export function Login() {
           </div>
         ) : (
           <form onSubmit={handleForgotSubmit} className="space-y-4">
-            <Input label="Email address" type="email" required leftIcon={<Mail size={15} />} placeholder="you@shreeramgroup.in" />
+            <Input label="Email address" type="email" required leftIcon={<Mail size={15} />} placeholder="you@rosium.in" />
             <Button type="submit" className="w-full" size="lg">
               Send reset link
             </Button>
@@ -165,7 +165,7 @@ export function Login() {
   return (
     <AuthLayout>
       <div className="mb-7 flex justify-center lg:hidden">
-        <img src={shreeramLogo} alt="Shree Ram Group" className="h-9 w-auto rounded" />
+        <img src={rosiumLockup} alt="Rosium Developers" className="h-10 w-auto" />
       </div>
       <div className="mb-7">
         <h1 className="text-2xl font-semibold text-ink">Admin sign in</h1>
@@ -187,7 +187,7 @@ export function Login() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           leftIcon={<Mail size={15} />}
-          placeholder="you@shreeramgroup.in"
+          placeholder="you@rosium.in"
           autoComplete="username"
         />
         <Input

@@ -99,7 +99,7 @@ export function ProjectBasicInfoFields({ values, errors, onChange }: FieldsProps
         value={values.projectName}
         onChange={(e) => onChange({ projectName: e.target.value })}
         error={errors.projectName}
-        placeholder="e.g. Shree Ram Elysium"
+        placeholder="e.g. Rosium Elysium"
         wrapperClassName="sm:col-span-2"
       />
       <Select
@@ -140,7 +140,7 @@ export function ProjectBasicInfoFields({ values, errors, onChange }: FieldsProps
       />
       <div className="flex flex-col gap-1.5 sm:col-span-2">
         <label htmlFor="project-description" className="text-sm font-medium text-ink">
-          Description<span className="text-accent-600"> *</span>
+          Description<span className="text-danger-500"> *</span>
         </label>
         <textarea
           id="project-description"
