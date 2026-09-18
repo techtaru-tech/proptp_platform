@@ -1,4 +1,4 @@
-// ShreeRam Platform — CRM backend (Leads + Meta Lead Ads integration)
+// Rosium Platform — CRM, operations and HRMS on one database
 // Mirrors the shapes already used by the frontend mock layer (src/types/index.ts)
 // so migrating the frontend services from mock data to this API is a drop-in swap.
 
@@ -117,9 +117,9 @@ model Lead {
 
   /// What the buyer is after. Free text rather than enums: the sales team renames these
   /// faster than a migration can follow, and every one of them is a label on a dropdown.
-  purpose           String?
-  propertyType      String?
-  budgetRange       String?
+  purpose            String?
+  propertyType       String?
+  budgetRange        String?
   /// Plural: a buyer will happily look at Tonk Road *and* Ajmer Road, and forcing one of them
   /// only meant the agent typed the other into the notes.
   preferredLocations String[]
@@ -318,12 +318,12 @@ model LeadAssignmentHistoryEntry {
 /// are now `AutomationStep` rows instead, which is what lets an automation mix conditions, any
 /// action (not just assignment), and delays in one ordered sequence.
 model Automation {
-  id                   String           @id @default(cuid())
+  id                   String                       @id @default(cuid())
   name                 String
   description          String?
-  enabled              Boolean          @default(true)
+  enabled              Boolean                      @default(true)
   /// Skips firing this automation while Settings > Business Hours marks the office closed.
-  respectBusinessHours Boolean          @default(false)
+  respectBusinessHours Boolean                      @default(false)
   triggerType          String // lead_created | lead_stage_changed | lead_assigned | lead_score_threshold | tag_added | form_submitted | no_activity | manual
   /// Trigger-specific filter, shape depends on triggerType:
   ///  lead_stage_changed: { fromStageId?, toStageId? } (either blank = "any stage")
@@ -333,8 +333,8 @@ model Automation {
   ///  no_activity: { days }
   triggerConfig        Json?
   steps                AutomationStep[]
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
   runs                 AutomationRun[]
   assignmentCursors    AutomationAssignmentCursor[]
 }
@@ -1026,11 +1026,11 @@ model User {
 
   /// TOTP shared secret, base32, encrypted at rest the same way provider credentials are.
   /// Present but with no `twoFactorEnabledAt` means enrolment was started and never finished.
-  twoFactorSecret     String?
-  twoFactorEnabledAt  DateTime?
+  twoFactorSecret        String?
+  twoFactorEnabledAt     DateTime?
   /// SHA-256 of each unused recovery code. Hashed because they are password-equivalent, plain
   /// SHA-256 because they are 80 bits of server-generated randomness, not a chosen secret.
-  twoFactorRecoveryCodes String[] @default([])
+  twoFactorRecoveryCodes String[]  @default([])
 
   sessions Session[]
 
@@ -1095,6 +1095,10 @@ model User {
   propertyUnits PropertyUnit[]
 
   calls CallLog[]
+
+  tasksAssigned Task[]        @relation("TaskAssignee")
+  tasksCreated  Task[]        @relation("TaskCreator")
+  taskComments  TaskComment[] @relation("TaskCommentAuthor")
 
   @@index([role, status])
   @@index([sponsorId])
@@ -1314,7 +1318,7 @@ model AttendancePolicySettings {
 // ===========================================================================
 // PROJECTS & PROPERTIES
 //
-// ShreeRam sells land plots: a Project is a layout/scheme, a PropertyUnit is one
+// Rosium sells land plots: a Project is a layout/scheme, a PropertyUnit is one
 // plot inside it. Columns follow the real Laravel `projects` / `manage_properties`
 // tables (which the admin panel is already built against). The app doc's flatter
 // shape is produced by mapping, not by a second set of columns:
@@ -1894,9 +1898,9 @@ model LeaveType {
   code String @unique
 
   /// Days granted per person per year. Zero means unlimited-but-tracked, as unpaid leave is.
-  annualQuota Float @default(0)
+  annualQuota  Float   @default(0)
   /// Unpaid leave still needs approving and recording; it just costs a day's salary.
-  isPaid      Boolean @default(true)
+  isPaid       Boolean @default(true)
   /// Whether an unused balance survives into next year.
   carryForward Boolean @default(false)
   active       Boolean @default(true)
@@ -1913,11 +1917,11 @@ model LeaveType {
 model LeaveBalance {
   id String @id @default(cuid())
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId String
-  type   LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  type        LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
   leaveTypeId String
-  year   Int
+  year        Int
 
   /// Usually the type's annual quota, but overridable per person — a joiner mid-year gets less.
   allocated Float @default(0)
@@ -1931,9 +1935,9 @@ model LeaveBalance {
 model LeaveRequest {
   id String @id @default(cuid())
 
-  user   User   @relation("LeaveRequester", fields: [userId], references: [id], onDelete: Cascade)
-  userId String
-  type   LeaveType @relation(fields: [leaveTypeId], references: [id])
+  user        User      @relation("LeaveRequester", fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  type        LeaveType @relation(fields: [leaveTypeId], references: [id])
   leaveTypeId String
 
   startDate DateTime @db.Date
@@ -1941,7 +1945,7 @@ model LeaveRequest {
   /// Counted in days so a half day is 0.5. Stored rather than derived because the working-day
   /// rules that produced it may change later, and a decided request must not move.
   days      Float
-  halfDay   Boolean @default(false)
+  halfDay   Boolean  @default(false)
 
   reason String
 
@@ -1982,9 +1986,9 @@ model SalaryStructure {
   hra            Int @default(0)
   otherAllowance Int @default(0)
 
-  pfDeduction      Int @default(0)
-  professionalTax  Int @default(0)
-  otherDeduction   Int @default(0)
+  pfDeduction     Int @default(0)
+  professionalTax Int @default(0)
+  otherDeduction  Int @default(0)
 
   effectiveFrom DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -2016,9 +2020,9 @@ model PayrollRun {
 model Payslip {
   id String @id @default(cuid())
 
-  run   PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
-  runId String
-  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  run    PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  runId  String
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
 
   /// Days in the month the company expected work, and how they were accounted for.
@@ -2109,7 +2113,7 @@ model ReferralToggleSettings {
 /// Singletons behind Settings > Organization / Notifications.
 model OrganizationSettings {
   id           String   @id @default("singleton")
-  companyName  String   @default("Shree Ram Group")
+  companyName  String   @default("Rosium Developers")
   logoUrl      String   @default("")
   contactEmail String   @default("")
   contactPhone String   @default("")
@@ -2162,4 +2166,78 @@ model PanelRole {
   users        User[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Task management
+//
+// A general work-tracking module, separate from the CRM's LeadFollowUp: a follow-up is
+// always about one lead and lives on that lead's timeline, while a Task is standalone work
+// assigned to a person.
+//
+// Who may see and assign what is decided by `User.role` and resolved in exactly one place,
+// server/src/services/taskScope.ts, so the list, the board, the counters and every write
+// agree. There is deliberately no denormalised team column here: an agent's scope is
+// expressed as a filter on the assignee's own `teamId`, which cannot drift when somebody
+// changes teams.
+// ---------------------------------------------------------------------------
+
+enum TaskStatus {
+  todo
+  in_progress
+  blocked
+  done
+  cancelled
+}
+
+enum TaskPriority {
+  low
+  normal
+  high
+  urgent
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus   @default(todo)
+  priority    TaskPriority @default(normal)
+  /// Optional: plenty of real work has no deadline. When set, it is what "overdue" is measured against.
+  dueAt       DateTime?
+
+  /// Who has to do it. Required — a task with no assignee would be invisible under every
+  /// scope rule except an admin's, which is a good way to lose work.
+  assignee   User   @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  assigneeId String
+
+  /// Who raised it. Equal to the assignee when somebody creates a task for themselves.
+  createdBy   User   @relation("TaskCreator", fields: [createdById], references: [id])
+  createdById String
+
+  /// Stamped when the task first enters `done`, and cleared if it is reopened, so "completed
+  /// this week" counts the completion rather than the last edit.
+  completedAt DateTime?
+
+  comments TaskComment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([assigneeId, status])
+  @@index([status, dueAt])
+  @@index([createdById])
+}
+
+model TaskComment {
+  id       String @id @default(cuid())
+  task     Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId   String
+  author   User   @relation("TaskCommentAuthor", fields: [authorId], references: [id])
+  authorId String
+  body     String
+
+  createdAt DateTime @default(now())
+
+  @@index([taskId, createdAt])
 }

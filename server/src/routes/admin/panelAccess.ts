@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import type { UserRole } from '@prisma/client';
 import { prisma } from '../../prisma';
 import { hashPassword, type AuthedRequest } from '../../services/auth';
 import { requireFullAccess } from './auth';
@@ -10,6 +11,9 @@ import { writeAudit } from '../../services/audit';
  * so a manager can neither see nor widen the permission model they are governed by.
  */
 export const panelRolesRouter = Router();
+
+/** The account roles a panel user may be created as. `leader` and `agent` also lead/join teams. */
+const ACCOUNT_ROLES: UserRole[] = ['admin', 'employee', 'leader', 'agent'];
 export const panelUsersRouter = Router();
 
 /** The module catalogue the Roles screen renders its checkboxes from. */
@@ -147,6 +151,7 @@ const panelUserShape = (user: {
   email: string | null;
   phone: string;
   status: string;
+  role: string;
   avatarUrl: string | null;
   panelRoleId: string | null;
   panelRole?: { name: string; isFullAccess: boolean } | null;
@@ -157,6 +162,7 @@ const panelUserShape = (user: {
   email: user.email ?? '',
   phone: user.phone,
   status: user.status,
+  accountRole: user.role,
   avatarUrl: user.avatarUrl ?? undefined,
   panelRoleId: user.panelRoleId,
   roleName: user.panelRole?.name ?? 'Administrator',
@@ -167,7 +173,9 @@ const panelUserShape = (user: {
 panelUsersRouter.get('/', async (_req, res, next) => {
   try {
     const users = await prisma.user.findMany({
-      where: { role: 'admin' },
+      // Panel access is "is an admin, or has been given a panel role" (see canUsePanel) — an
+      // employee or agent who works in the panel belongs on this list too.
+      where: { OR: [{ role: 'admin' }, { panelRoleId: { not: null } }] },
       orderBy: { createdAt: 'asc' },
       include: { panelRole: { select: { name: true, isFullAccess: true } } },
     });
@@ -184,12 +192,20 @@ panelUsersRouter.post('/', async (req: AuthedRequest, res, next) => {
     const phone = String(req.body?.phone ?? '').trim();
     const password = String(req.body?.password ?? '');
     const panelRoleId = String(req.body?.panelRoleId ?? '').trim();
+    /**
+     * The account role, which is a different question from the panel role: the panel role
+     * decides which modules they see, this decides what they *are* — and modules like Tasks
+     * scope what a person may read by it. Defaults to admin, which is what every panel user
+     * was before this was a choice.
+     */
+    const accountRole = String(req.body?.accountRole ?? 'admin').trim() as UserRole;
 
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: 'A valid email address is required.' });
     if (!/^\d{10}$/.test(phone)) return res.status(400).json({ error: 'A 10-digit phone number is required.' });
     if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
     if (!panelRoleId) return res.status(400).json({ error: 'Select a role.' });
+    if (!ACCOUNT_ROLES.includes(accountRole)) return res.status(400).json({ error: 'Unknown account role.' });
 
     const role = await prisma.panelRole.findUnique({ where: { id: panelRoleId } });
     if (!role) return res.status(400).json({ error: 'That role no longer exists.' });
@@ -202,17 +218,18 @@ panelUsersRouter.post('/', async (req: AuthedRequest, res, next) => {
     if (emailClash) return res.status(409).json({ error: 'That email address already belongs to another account.' });
 
     const suffix = Date.now().toString(36).toUpperCase().slice(-6);
+    const codePrefix = `SR-${accountRole.toUpperCase()}-`;
     const created = await prisma.user.create({
       data: {
         name,
         email,
         phone,
-        role: 'admin',
+        role: accountRole,
         status: 'active',
         passwordHash: await hashPassword(password),
         panelRoleId: role.id,
-        partnerCode: `SR-ADMIN-${suffix}`,
-        referralCode: `SR-ADMIN-${suffix}`,
+        partnerCode: `${codePrefix}${suffix}`,
+        referralCode: `${codePrefix}${suffix}`,
       },
       include: { panelRole: { select: { name: true, isFullAccess: true } } },
     });
@@ -222,7 +239,7 @@ panelUsersRouter.post('/', async (req: AuthedRequest, res, next) => {
       action: 'Created panel user',
       recordId: created.id,
       recordLabel: created.name,
-      description: `Panel user "${created.name}" created with role "${role.name}".`,
+      description: `Panel user "${created.name}" created as ${accountRole} with role "${role.name}".`,
     });
     res.status(201).json(panelUserShape(created));
   } catch (err) {
@@ -233,7 +250,9 @@ panelUsersRouter.post('/', async (req: AuthedRequest, res, next) => {
 panelUsersRouter.patch('/:id', async (req: AuthedRequest, res, next) => {
   try {
     const existing = await prisma.user.findUnique({ where: { id: String(req.params.id) } });
-    if (!existing || existing.role !== 'admin') return res.status(404).json({ error: 'Panel user not found' });
+    if (!existing || !(existing.role === 'admin' || existing.panelRoleId)) {
+      return res.status(404).json({ error: 'Panel user not found' });
+    }
 
     const data: Record<string, unknown> = {};
     if (req.body?.name !== undefined) {
@@ -283,7 +302,9 @@ panelUsersRouter.patch('/:id', async (req: AuthedRequest, res, next) => {
 panelUsersRouter.delete('/:id', async (req: AuthedRequest, res, next) => {
   try {
     const existing = await prisma.user.findUnique({ where: { id: String(req.params.id) } });
-    if (!existing || existing.role !== 'admin') return res.status(404).json({ error: 'Panel user not found' });
+    if (!existing || !(existing.role === 'admin' || existing.panelRoleId)) {
+      return res.status(404).json({ error: 'Panel user not found' });
+    }
     if (existing.id === (req as AuthedRequest).auth?.sub) {
       return res.status(400).json({ error: 'You cannot delete your own account.' });
     }

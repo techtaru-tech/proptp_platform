@@ -5,6 +5,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
+import type { AccountRole } from '../../types';
 import { Badge } from '../../components/ui/Badge';
 import { Avatar } from '../../components/ui/Avatar';
 import { Drawer } from '../../components/ui/Drawer';
@@ -18,6 +19,19 @@ import {
 } from '../../services/panelAccessService';
 import { formatDate } from '../../utils/format';
 import type { PanelRole, PanelUser } from '../../types';
+
+const ACCOUNT_ROLE_LABEL: Record<AccountRole, string> = {
+  admin: 'Admin',
+  employee: 'Employee',
+  leader: 'Leader',
+  agent: 'Agent',
+};
+
+const ACCOUNT_ROLE_OPTIONS = (Object.keys(ACCOUNT_ROLE_LABEL) as AccountRole[]).map((value) => ({
+  value,
+  label: ACCOUNT_ROLE_LABEL[value],
+}));
+
 
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Active' },
@@ -67,7 +81,12 @@ export function PanelUsersSettings() {
     {
       key: 'role',
       header: 'Role',
-      render: (u) => <Badge tone={u.isFullAccess ? 'success' : 'navy'}>{u.roleName}</Badge>,
+      render: (u) => <Badge tone={u.isFullAccess ? 'success' : 'shell'}>{u.roleName}</Badge>,
+    },
+    {
+      key: 'accountRole',
+      header: 'Account',
+      render: (u) => <Badge tone="neutral">{ACCOUNT_ROLE_LABEL[u.accountRole] ?? u.accountRole}</Badge>,
     },
     { key: 'phone', header: 'Phone', render: (u) => u.phone },
     {
@@ -158,6 +177,9 @@ function UserDrawer({
   const [phone, setPhone] = useState(user?.phone ?? '');
   const [password, setPassword] = useState('');
   const [panelRoleId, setPanelRoleId] = useState(user?.panelRoleId ?? roles[0]?.id ?? '');
+  // Only set at creation: changing what an existing account *is* would move their bookings,
+  // payouts and team membership with it, which is a different operation entirely.
+  const [accountRole, setAccountRole] = useState<AccountRole>(user?.accountRole ?? 'admin');
   const [status, setStatus] = useState(user?.status ?? 'active');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -174,7 +196,7 @@ function UserDrawer({
         });
         toast({ title: 'Panel user updated', variant: 'success' });
       } else {
-        await createPanelUser({ name: name.trim(), email: email.trim(), phone: phone.trim(), password, panelRoleId });
+        await createPanelUser({ name: name.trim(), email: email.trim(), phone: phone.trim(), password, panelRoleId, accountRole });
         toast({ title: 'Panel user created', description: 'They can sign in with this email and password.', variant: 'success' });
       }
       onSaved();
@@ -220,6 +242,17 @@ function UserDrawer({
           placeholder={user ? 'Leave blank to keep the current one' : 'At least 8 characters'}
           leftIcon={<KeyRound size={14} />}
         />
+        {!user && (
+          <Select
+            label="Account role"
+            name="accountRole"
+            value={accountRole}
+            onChange={(e) => setAccountRole(e.target.value as AccountRole)}
+            options={ACCOUNT_ROLE_OPTIONS}
+            hint="Decides what this person is in the system. Modules like Tasks show an employee only their own work, an agent their team's, and an admin everyone's."
+          />
+        )}
+
         <Select
           label="Role"
           name="userRole"

@@ -1,4 +1,4 @@
-import type { ModuleKey, PanelRole, PanelUser } from '../types';
+import type { AccountRole, ModuleKey, PanelRole, PanelUser } from '../types';
 import { api } from './apiClient';
 
 /**
@@ -48,6 +48,8 @@ export interface PanelUserInput {
   phone: string;
   password: string;
   panelRoleId: string;
+  /** Defaults to `admin` server-side, which is what every panel user was before this existed. */
+  accountRole?: AccountRole;
 }
 
 export async function createPanelUser(input: PanelUserInput): Promise<PanelUser> {
