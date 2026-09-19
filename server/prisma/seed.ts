@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import { seedPlatform } from './seedPlatform';
 import { seedOperations } from './seedOperations';
+import { seedCrm } from './seedCrm';
+import { seedWorkplace } from './seedWorkplace';
 
 const prisma = new PrismaClient();
 
@@ -122,6 +124,10 @@ async function main() {
   const people = await seedPlatform(prisma);
   console.log('Seeding operations (bookings, attendance, payouts, tickets, notifications)...');
   await seedOperations(prisma, people);
+  console.log('Seeding CRM (leads, forms, automations, sequences, calls, WhatsApp)...');
+  await seedCrm(prisma, people);
+  console.log('Seeding workplace (tasks, leave, payroll, panel roles)...');
+  await seedWorkplace(prisma, people);
 
   console.log('');
   console.log('Done. Admin sign-in:');
