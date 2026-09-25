@@ -43,8 +43,8 @@ fi
 mkdir -p /home/ec2-user/logs "$APP_DIR/server/uploads"
 
 echo "==> nginx"
-if [ ! -f /etc/nginx/conf.d/rosium.conf ]; then
-  sudo cp "$APP_DIR/deploy/nginx-rosium.conf" /etc/nginx/conf.d/rosium.conf
+if [ ! -f /etc/nginx/conf.d/console-rosium.conf ]; then
+  sudo cp "$APP_DIR/deploy/nginx-console.conf" /etc/nginx/conf.d/console-rosium.conf
   sudo nginx -t && sudo systemctl reload nginx
   echo "    installed"
 else
@@ -58,8 +58,8 @@ cat <<'NEXT'
                         and generate fresh secrets:
                           openssl rand -hex 32   # JWT_SECRET
                           openssl rand -hex 32   # ENCRYPTION_KEY
-  2. .env.production  — VITE_API_BASE_URL=https://rosium.techtaru.in/api
+  2. .env.production  — VITE_API_BASE_URL=https://console.rosium.in/api
   3. ./deploy.sh      — first run builds and starts everything
-  4. TLS              — sudo certbot --nginx -d rosium.techtaru.in
+  4. TLS              — sudo certbot --nginx -d console.rosium.in
   5. pm2 on boot      — pm2 startup   (run the line it prints)   then   pm2 save
 NEXT

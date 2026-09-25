@@ -157,7 +157,7 @@ export async function seedCrm(
       source: 'web_form',
       name: 'Website — Enquiry Form',
       status: 'connected',
-      connectedAccountLabel: 'rosium.techtaru.in',
+      connectedAccountLabel: 'console.rosium.in',
       lastReceivedAt: hoursAgo(19),
     },
     {
@@ -245,7 +245,7 @@ export async function seedCrm(
         utmSource: isMeta ? 'facebook' : source === 'google_ads' ? 'google' : source === 'web_form' ? 'direct' : null,
         utmMedium: isMeta || source === 'google_ads' ? 'cpc' : null,
         utmCampaign: isMeta || source === 'google_ads' ? pick(CAMPAIGNS) : null,
-        landingPage: source === 'web_form' ? 'https://rosium.techtaru.in/enquiry' : null,
+        landingPage: source === 'web_form' ? 'https://console.rosium.in/enquiry' : null,
         status: status as never,
         priority: (chance(0.18) ? 'high' : chance(0.3) ? 'low' : 'normal') as never,
         leadScore: randInt(10, 98),
@@ -540,7 +540,7 @@ export async function seedCrm(
         data: { firstName: 'See lead', phone: 'See lead', budgetRange: pick(BUDGETS) },
         ipAddress: `49.36.${randInt(1, 254)}.${randInt(1, 254)}`,
         userAgent: 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36',
-        pageUrl: 'https://rosium.techtaru.in/enquiry',
+        pageUrl: 'https://console.rosium.in/enquiry',
         createdAt: lead.createdAt,
       },
     });

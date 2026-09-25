@@ -1,4 +1,4 @@
-# Deploying to rosium.techtaru.in
+# Deploying to console.rosium.in
 
 GitHub → `git pull` → `./deploy.sh`. This repo holds **both** halves — the React frontend and
 the Express API — so one deploy builds and ships both.
@@ -9,7 +9,7 @@ the Express API — so one deploy builds and ships both.
 | App directory | `/home/ec2-user/rosium` |
 | Backend port | `127.0.0.1:4300` (never exposed publicly) |
 | Process manager | pm2, app name `rosium-backend` |
-| Web server | nginx, `/etc/nginx/conf.d/rosium.conf` |
+| Web server | nginx, `/etc/nginx/conf.d/console-rosium.conf` |
 | Database | local PostgreSQL, database `rosium_platform` |
 | Frontend | built to `dist/`, served as static files by nginx |
 
@@ -21,7 +21,7 @@ neighbours. The memory note below is not optional advice.
 ## First time
 
 ```bash
-# 1. DNS — point rosium.techtaru.in at 65.2.106.176
+# 1. DNS — point console.rosium.in at 65.2.106.176
 # 2. GitHub → repo → Settings → Deploy keys → add the box's public key (read-only is enough)
 #    The box already holds keys for other repos, so give this one its own host alias in
 #    ~/.ssh/config:
@@ -44,11 +44,11 @@ Then, by hand:
 
 ```bash
 cp server/.env.example server/.env && nano server/.env   # DATABASE_URL + fresh secrets
-echo 'VITE_API_BASE_URL=https://rosium.techtaru.in/api' > .env.production
+echo 'VITE_API_BASE_URL=https://console.rosium.in/api' > .env.production
 
 ./deploy.sh                                # builds both halves and starts pm2
 cd server && npm run prisma:seed && cd ..   # first time only — creates the admin user
-sudo certbot --nginx -d rosium.techtaru.in  # TLS
+sudo certbot --nginx -d console.rosium.in  # TLS
 pm2 startup                                 # run the line it prints, then:
 pm2 save
 ```
@@ -91,4 +91,4 @@ four with their providers:
 
 The exact URLs are shown, with copy buttons, on each integration's settings screen.
 
-**Health check:** `https://rosium.techtaru.in/api/health` → `{"ok":true}`
+**Health check:** `https://console.rosium.in/api/health` → `{"ok":true}`
