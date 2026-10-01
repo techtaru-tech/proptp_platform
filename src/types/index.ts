@@ -1180,7 +1180,7 @@ export interface AdminSession {
 }
 
 export type ModuleKey =
-  | 'dashboard' | 'crm' | 'tasks' | 'projects' | 'construction' | 'properties' | 'bookings' | 'payments' | 'investments'
+  | 'dashboard' | 'crm' | 'tasks' | 'projects' | 'construction' | 'vendors' | 'vendor_portal' | 'properties' | 'bookings' | 'payments' | 'investments'
   | 'partners' | 'teams' | 'attendance' | 'payouts' | 'incentives' | 'support' | 'notifications'
   | 'reports' | 'settings';
 

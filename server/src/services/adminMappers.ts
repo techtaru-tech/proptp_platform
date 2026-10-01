@@ -41,8 +41,8 @@ import type {
 // ---------------------------------------------------------------------------
 
 /** 4 is new: the real system has no Team Leader, so the number is ours and appended, never reused. */
-export const ROLE_ID: Record<UserRole, 0 | 1 | 2 | 3 | 4> = { agent: 0, admin: 1, employee: 2, leader: 3, team_leader: 4 };
-export const ROLE_BY_ID: Record<number, UserRole> = { 0: 'agent', 1: 'admin', 2: 'employee', 3: 'leader', 4: 'team_leader' };
+export const ROLE_ID: Record<UserRole, 0 | 1 | 2 | 3 | 4 | 5> = { agent: 0, admin: 1, employee: 2, leader: 3, team_leader: 4, vendor: 5 };
+export const ROLE_BY_ID: Record<number, UserRole> = { 0: 'agent', 1: 'admin', 2: 'employee', 3: 'leader', 4: 'team_leader', 5: 'vendor' };
 
 /** Real `bookings.paymant_mode` (sic): 0=Bank Transfer, 1=Cash, 2=Cheque, 3=Other. 4=Online is new. */
 export const PAYMENT_MODE_ID: Record<PaymentMode, 0 | 1 | 2 | 3 | 4> = {

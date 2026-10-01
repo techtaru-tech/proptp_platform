@@ -357,7 +357,7 @@ adminConstructionRouter.get('/people', async (_req, res, next) => {
   try {
     res.json(
       await prisma.user.findMany({
-        where: { status: 'active', role: { in: ['employee', 'team_leader', 'leader', 'admin'] } },
+        where: { status: 'active', role: { in: ['employee', 'team_leader', 'leader', 'admin', 'vendor'] } },
         select: { id: true, name: true, role: true },
         orderBy: { name: 'asc' },
         take: 500,

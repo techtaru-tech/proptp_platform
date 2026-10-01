@@ -113,6 +113,8 @@ function useBookingHits(query: string): SearchHit[] {
 export function Header() {
   const { toggleSidebar, setMobileSidebarOpen } = useUI();
   const { session, logout } = useAuth();
+  // A vendor's portal has no partner directory or cross-module shortcuts to search or jump to.
+  const isVendor = (session?.accountRole as string | undefined) === 'vendor';
   const location = useLocation();
   const navigate = useNavigate();
   const crumb = resolveBreadcrumb(location.pathname);
@@ -171,7 +173,7 @@ export function Header() {
       </div>
 
       <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-        <div ref={searchRef} className="relative">
+        <div ref={searchRef} className={isVendor ? 'hidden' : 'relative'}>
           <div className="relative hidden md:block">
             <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
             <input
@@ -218,7 +220,7 @@ export function Header() {
           )}
         </div>
 
-        <div ref={quickRef} className="relative hidden sm:block">
+        <div ref={quickRef} className={isVendor ? 'hidden' : 'relative hidden sm:block'}>
           <button
             type="button"
             onClick={() => setQuickOpen((v) => !v)}

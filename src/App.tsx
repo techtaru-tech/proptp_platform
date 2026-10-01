@@ -79,6 +79,13 @@ import { TeamHierarchy } from './pages/crm/TeamHierarchy';
 import { ConstructionHome } from './pages/construction/ConstructionHome';
 import { ConstructionProject } from './pages/construction/ConstructionProject';
 import { ReviewUpdates } from './pages/construction/ReviewUpdates';
+import { Vendors } from './pages/vendors/Vendors';
+import { VendorDetail } from './pages/vendors/VendorDetail';
+import { Materials } from './pages/vendors/Materials';
+import { VendorBills } from './pages/vendors/VendorBills';
+import { PortalHome } from './pages/vendorPortal/PortalHome';
+import { PortalMaterial } from './pages/vendorPortal/PortalMaterial';
+import { PortalBills } from './pages/vendorPortal/PortalBills';
 import { SiteIssues } from './pages/construction/SiteIssues';
 import { UserDetail } from './pages/users/UserDetail';
 
@@ -171,6 +178,13 @@ function App() {
                 <Route path="/crm/automation" element={<Automations />} />
                 <Route path="/crm/automation/new" element={<AutomationBuilder />} />
                 <Route path="/crm/automation/:id/edit" element={<AutomationBuilder />} />
+                <Route path="/vendors" element={<Vendors />} />
+                <Route path="/vendors/material" element={<Materials />} />
+                <Route path="/vendors/bills" element={<VendorBills />} />
+                <Route path="/vendors/:id" element={<VendorDetail />} />
+                <Route path="/vendor-portal" element={<PortalHome />} />
+                <Route path="/vendor-portal/material" element={<PortalMaterial />} />
+                <Route path="/vendor-portal/bills" element={<PortalBills />} />
                 <Route path="/construction" element={<ConstructionHome />} />
                 <Route path="/construction/reviews" element={<ReviewUpdates />} />
                 <Route path="/construction/issues" element={<SiteIssues />} />

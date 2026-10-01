@@ -149,7 +149,8 @@ adminUsersRouter.get('/leaders', async (req, res, next) => {
 adminUsersRouter.get('/', async (req, res, next) => {
   try {
     const roleParam = String(req.query.role ?? '').trim();
-    const where: Prisma.UserWhereInput = {};
+    // Vendors are listed under Vendors, not among the partners.
+    const where: Prisma.UserWhereInput = { role: { not: 'vendor' } };
     if (['agent', 'employee', 'leader', 'team_leader', 'admin'].includes(roleParam)) where.role = roleParam as UserRole;
     const users = await prisma.user.findMany({ where, include: userInclude, orderBy: { name: 'asc' } });
     const stats = await statsFor(users);
@@ -296,7 +297,7 @@ adminKycRouter.get('/', async (req, res, next) => {
     const query = parseListQuery(req);
     const status = String(req.query.status ?? 'all');
 
-    const where: Prisma.UserWhereInput = { role: { not: 'admin' } };
+    const where: Prisma.UserWhereInput = { role: { notIn: ['admin', 'vendor'] } };
     if (status !== 'all' && status !== '') where.kycStatus = Number(status);
     if (query.search) {
       where.OR = [

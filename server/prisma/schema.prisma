@@ -992,6 +992,9 @@ enum UserRole {
   /// Sits between a Leader and the Employees under them. The CRM's lead visibility follows
   /// the reporting chain — see services/hierarchy.ts.
   team_leader
+  /// An outside contractor or supplier with a restricted portal login. Sits outside the CRM
+  /// reporting tree and sees nothing but their own work (routes/vendorPortal.ts).
+  vendor
 }
 
 enum UserAccountStatus {
@@ -1106,6 +1109,9 @@ model User {
   progressReviewed   ProgressUpdate[]       @relation("ProgressReviewer")
   issuesOwned        SiteIssue[]            @relation("IssueOwner")
   issuesRaised       SiteIssue[]            @relation("IssueRaiser")
+  vendorProfile      Vendor?                @relation("VendorLogin")
+  materialCreated    MaterialEntry[]        @relation("MaterialCreator")
+  materialIssued     MaterialIssue[]        @relation("MaterialIssuer")
 
   tasksAssigned Task[]        @relation("TaskAssignee")
   tasksCreated  Task[]        @relation("TaskCreator")
@@ -1406,6 +1412,9 @@ model Project {
 
   constructionActivities ConstructionActivity[]
   siteIssues             SiteIssue[]
+  materialEntries        MaterialEntry[]
+  materialIssues         MaterialIssue[]
+  workOrders             WorkOrder[]
 
   files   ProjectFile[]
   units   PropertyUnit[]
@@ -2451,4 +2460,189 @@ model BuyerProgressMessage {
   createdAt DateTime @default(now())
 
   @@index([bookingId])
+}
+
+// ---------------------------------------------------------------------------
+// Vendors, stakeholders & material
+//
+// A vendor is a record (contractor, supplier, architect, consultant, agency) that may also have
+// a login: a User with role `vendor`, confined to /vendor-portal and to rows carrying their own
+// vendor id. Stock is never stored: it is verified receipts minus issues (services/material.ts).
+// ---------------------------------------------------------------------------
+
+enum VendorCategory {
+  contractor
+  supplier
+  architect
+  consultant
+  agency
+}
+
+enum MaterialEntryStatus {
+  pending
+  verified
+  rejected
+}
+
+enum BillStatus {
+  submitted
+  approved
+  rejected
+  paid
+}
+
+model Vendor {
+  id            String         @id @default(cuid())
+  name          String
+  category      VendorCategory
+  contactPerson String?
+  phone         String?
+  email         String?
+  address       String?
+  gstin         String?
+  /// Agreed contract value in whole rupees.
+  contractValue Int            @default(0)
+  active        Boolean        @default(true)
+  notes         String?
+  /// The portal login, when they have one.
+  user          User?          @relation("VendorLogin", fields: [userId], references: [id], onDelete: SetNull)
+  userId        String?        @unique
+
+  documents       VendorDocument[]
+  workOrders      WorkOrder[]
+  materialEntries MaterialEntry[]
+  bills           VendorBill[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+}
+
+model VendorDocument {
+  id        String    @id @default(cuid())
+  vendor    Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  vendorId  String
+  title     String
+  url       String
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([vendorId])
+}
+
+model WorkOrder {
+  id          String   @id @default(cuid())
+  number      String   @unique
+  vendor      Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  vendorId    String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   String
+  description String
+  /// Whole rupees. Bills against it cannot add up to more than this.
+  amount      Int
+  createdAt   DateTime @default(now())
+
+  bills VendorBill[]
+
+  @@index([vendorId])
+  @@index([projectId])
+}
+
+model VendorBill {
+  id              String     @id @default(cuid())
+  vendor          Vendor     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  vendorId        String
+  workOrder       WorkOrder  @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  workOrderId     String
+  billNumber      String
+  amount          Int
+  billDate        DateTime
+  fileUrl         String?
+  status          BillStatus @default(submitted)
+  rejectionReason String?
+  reviewedById    String?
+  reviewedAt      DateTime?
+  paidAt          DateTime?
+  paymentRef      String?
+  createdAt       DateTime   @default(now())
+
+  @@unique([vendorId, billNumber])
+  @@index([workOrderId])
+  @@index([status])
+}
+
+/// A material as a named thing with a unit, shared across sites so stock can be summed.
+model MaterialItem {
+  id      String          @id @default(cuid())
+  name    String
+  unit    String
+  entries MaterialEntry[]
+  issues  MaterialIssue[]
+
+  @@unique([name, unit])
+}
+
+model MaterialEntry {
+  id          String       @id @default(cuid())
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   String
+  material    MaterialItem @relation(fields: [materialId], references: [id])
+  materialId  String
+  vendor      Vendor?      @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  vendorId    String?
+  quantity    Float
+  challanNo   String
+  vehicleNo   String
+  receivedBy  String
+  receivedOn  DateTime
+  /// When the vendor promised it, so on-time delivery can be measured.
+  expectedOn  DateTime?
+  createdBy   User         @relation("MaterialCreator", fields: [createdById], references: [id])
+  createdById String
+  clientId    String?      @unique
+
+  status          MaterialEntryStatus @default(pending)
+  rejectionReason String?
+  verifiedById    String?
+  verifiedAt      DateTime?
+
+  photos MaterialPhoto[]
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId, materialId, status])
+  @@index([vendorId])
+}
+
+model MaterialPhoto {
+  id        String        @id @default(cuid())
+  entry     MaterialEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  entryId   String
+  /// material | challan | vehicle — all three are required on every entry.
+  kind      String
+  url       String
+  takenAt   DateTime
+  latitude  Float
+  longitude Float
+
+  @@index([entryId])
+}
+
+model MaterialIssue {
+  id         String       @id @default(cuid())
+  project    Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId  String
+  material   MaterialItem @relation(fields: [materialId], references: [id])
+  materialId String
+  quantity   Float
+  /// What it was used for.
+  purpose    String
+  issuedTo   String?
+  issuedBy   User         @relation("MaterialIssuer", fields: [issuedById], references: [id])
+  issuedById String
+  issuedOn   DateTime
+  createdAt  DateTime     @default(now())
+
+  @@index([projectId, materialId])
 }

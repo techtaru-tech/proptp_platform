@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Router } from 'express';
+import { Router, type NextFunction, type Response } from 'express';
 import { prisma } from '../../prisma';
 import { requireAuth, type AuthedRequest } from '../../services/auth';
 import { publicUrl, upload, UPLOAD_DIR } from '../../services/upload';
@@ -20,7 +20,7 @@ appConstructionRouter.use(requireAuth);
 
 const fail = (res: any, status: number, code: string, message: string) => res.status(status).json({ error: { code, message } });
 
-appConstructionRouter.get('/activities', async (req: AuthedRequest, res, next) => {
+export async function listMyActivities(req: AuthedRequest, res: Response, next: NextFunction) {
   try {
     const rows = await prisma.constructionActivity.findMany({
       where: { assigneeId: req.auth!.sub },
@@ -47,12 +47,14 @@ appConstructionRouter.get('/activities', async (req: AuthedRequest, res, next) =
   } catch (err) {
     next(err);
   }
-});
+}
 
-const removeFiles = (files: Express.Multer.File[]) =>
+appConstructionRouter.get('/activities', listMyActivities);
+
+export const removeFiles = (files: Express.Multer.File[]) =>
   files.forEach((f) => fs.unlink(path.join(UPLOAD_DIR, f.filename), () => undefined));
 
-appConstructionRouter.post('/updates', upload.array('photos', 10), async (req: AuthedRequest, res, next) => {
+export async function postProgressUpdate(req: AuthedRequest, res: Response, next: NextFunction) {
   const files = (req.files ?? []) as Express.Multer.File[];
   try {
     const b = req.body ?? {};
@@ -112,7 +114,9 @@ appConstructionRouter.post('/updates', upload.array('photos', 10), async (req: A
     removeFiles(files);
     next(err);
   }
-});
+}
+
+appConstructionRouter.post('/updates', upload.array('photos', 10), postProgressUpdate);
 
 appConstructionRouter.get('/updates', async (req: AuthedRequest, res, next) => {
   try {

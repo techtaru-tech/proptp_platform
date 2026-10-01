@@ -17,6 +17,8 @@ export const MODULES = [
   { key: 'tasks', label: 'Task Management' },
   { key: 'projects', label: 'Projects' },
   { key: 'construction', label: 'Construction' },
+  { key: 'vendors', label: 'Vendors & Material' },
+  { key: 'vendor_portal', label: 'Vendor Portal (a vendor\'s own work)' },
   { key: 'properties', label: 'Properties' },
   { key: 'bookings', label: 'Bookings' },
   { key: 'payments', label: 'Payments / Transactions' },
@@ -65,6 +67,9 @@ const PATH_MODULE_ENTRIES = [
 
   { prefix: '/projects', module: 'projects' },
   { prefix: '/construction', module: 'construction' },
+  { prefix: '/vendors', module: 'vendors' },
+  { prefix: '/materials', module: 'vendors' },
+  { prefix: '/vendor-portal', module: 'vendor_portal' },
   { prefix: '/units', module: 'properties' },
   { prefix: '/plot-holds', module: 'properties' },
   { prefix: '/project-maps', module: 'properties' },

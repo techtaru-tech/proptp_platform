@@ -49,6 +49,7 @@ export const ALLOWED_MANAGER_ROLES: Record<UserRole, UserRole[]> = {
   // already wired (the app registers them under a Leader); it is not a dead path.
   employee: ['team_leader', 'leader'],
   agent: ['employee', 'team_leader', 'leader'],
+  vendor: [],
 };
 
 export const ROLE_LABEL: Record<UserRole, string> = {
@@ -57,6 +58,7 @@ export const ROLE_LABEL: Record<UserRole, string> = {
   team_leader: 'Team Leader',
   employee: 'Employee',
   agent: 'Agent',
+  vendor: 'Vendor',
 };
 
 /** Roles that manage other people, and so may have a tree beneath them. */

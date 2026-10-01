@@ -186,7 +186,7 @@ panelUsersRouter.get('/', async (_req, res, next) => {
     const users = await prisma.user.findMany({
       // Panel access is "is an admin, or has been given a panel role" (see canUsePanel) — an
       // employee or agent who works in the panel belongs on this list too.
-      where: { OR: [{ role: 'admin' }, { panelRoleId: { not: null } }] },
+      where: { OR: [{ role: 'admin' }, { panelRoleId: { not: null } }], role: { not: 'vendor' } },
       orderBy: { createdAt: 'asc' },
       include: panelUserInclude,
     });

@@ -17,6 +17,8 @@ import {
   TrendingUp,
   Gift,
   HardHat,
+  Truck,
+  Briefcase,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -29,7 +31,7 @@ export interface NavChild {
 
 /** Matches the module keys the server enforces — see server/src/services/permissions.ts. */
 export type ModuleKey =
-  | 'dashboard' | 'crm' | 'tasks' | 'projects' | 'construction' | 'properties' | 'bookings' | 'payments' | 'investments'
+  | 'dashboard' | 'crm' | 'tasks' | 'projects' | 'construction' | 'vendors' | 'vendor_portal' | 'properties' | 'bookings' | 'payments' | 'investments'
   | 'partners' | 'teams' | 'attendance' | 'payouts' | 'incentives' | 'support' | 'notifications'
   | 'reports' | 'settings';
 
@@ -90,6 +92,28 @@ export const NAV_ITEMS: NavItem[] = [
       { label: 'Progress', to: '/construction' },
       { label: 'Review Updates', to: '/construction/reviews' },
       { label: 'Site Issues', to: '/construction/issues' },
+    ],
+  },
+  {
+    label: 'Vendors & Material',
+    to: '/vendors',
+    icon: Truck,
+    module: 'vendors',
+    children: [
+      { label: 'Directory', to: '/vendors' },
+      { label: 'Material', to: '/vendors/material' },
+      { label: 'Bills', to: '/vendors/bills' },
+    ],
+  },
+  {
+    label: 'My Work',
+    to: '/vendor-portal',
+    icon: Briefcase,
+    module: 'vendor_portal',
+    children: [
+      { label: 'Work & updates', to: '/vendor-portal' },
+      { label: 'Material', to: '/vendor-portal/material' },
+      { label: 'Bills', to: '/vendor-portal/bills' },
     ],
   },
   {
