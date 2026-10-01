@@ -79,6 +79,7 @@ import { TeamHierarchy } from './pages/crm/TeamHierarchy';
 import { ConstructionHome } from './pages/construction/ConstructionHome';
 import { ConstructionProject } from './pages/construction/ConstructionProject';
 import { ReviewUpdates } from './pages/construction/ReviewUpdates';
+import { OpsRules } from './pages/automation/OpsRules';
 import { LegalFiles } from './pages/legal/LegalFiles';
 import { LegalFileDetail } from './pages/legal/LegalFileDetail';
 import { Compliance } from './pages/legal/Compliance';
@@ -184,6 +185,7 @@ function App() {
                 <Route path="/crm/automation" element={<Automations />} />
                 <Route path="/crm/automation/new" element={<AutomationBuilder />} />
                 <Route path="/crm/automation/:id/edit" element={<AutomationBuilder />} />
+                <Route path="/ops-rules" element={<OpsRules />} />
                 <Route path="/legal" element={<LegalFiles />} />
                 <Route path="/legal/files/:id" element={<LegalFileDetail />} />
                 <Route path="/legal/compliance" element={<Compliance />} />

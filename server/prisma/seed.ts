@@ -8,6 +8,7 @@ import { seedHierarchy } from './seedHierarchy';
 import { seedConstruction } from './seedConstruction';
 import { seedVendors } from './seedVendors';
 import { seedLegal } from './seedLegal';
+import { seedOpsRules } from './seedOpsRules';
 
 const prisma = new PrismaClient();
 
@@ -139,6 +140,7 @@ async function main() {
   await seedConstruction(prisma);
   await seedVendors(prisma);
   await seedLegal(prisma);
+  await seedOpsRules(prisma);
 
   console.log('');
   console.log('Done. Admin sign-in:');

@@ -37,7 +37,7 @@ function summarise(f: any) {
   const states = f.milestones.map((m: any) => milestoneState(m));
   return {
     id: f.id, bookingId: f.bookingId, buyerName: f.buyerName, phone: f.phone, projectId: f.projectId, projectName: f.project.projectName,
-    unitId: f.unitId, agreedValue: f.agreedValue, openedAt: f.openedAt.toISOString(),
+    unitId: f.unitId, agreedValue: f.agreedValue, openedAt: f.openedAt.toISOString(), closedAt: f.closedAt?.toISOString() ?? null,
     agreementStage: stage, registryStatus: f.registry?.status ?? 'pending',
     outstanding: states.reduce((s: number, x: any) => s + x.outstanding, 0),
     overdueMilestones: states.filter((x: any) => x.status === 'overdue').length,

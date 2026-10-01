@@ -44,6 +44,7 @@ export function LegalFileDetail() {
     <div>
       <PageHeader title={f.buyerName} description={`${f.projectName} · plot ${f.unit} · ${f.reference} · ${formatCurrency(f.agreedValue)}`}
         breadcrumb={[{ label: 'Legal files', to: '/legal' }, { label: f.buyerName }]}
+        {...(f.closedAt ? { description: `${f.projectName} · plot ${f.unit} · ${f.reference} · file closed ${formatDate(f.closedAt)}` } : {})}
         actions={<Link to={`/bookings/${f.bookingId}`} className="rounded-lg border border-line px-3 py-1.5 text-sm font-medium focus-ring">View booking</Link>} />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">

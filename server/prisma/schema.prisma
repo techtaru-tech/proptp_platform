@@ -2696,17 +2696,19 @@ enum MutationStatus {
 }
 
 model LegalFile {
-  id          String   @id @default(cuid())
-  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  bookingId   String   @unique
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  booking     Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId   String    @unique
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId   String
   unitId      String
   buyerName   String
   phone       String
   /// The agreed value at the moment the file opened, so a later price edit cannot move a signed deal.
   agreedValue Int
-  openedAt    DateTime @default(now())
+  openedAt    DateTime  @default(now())
+  /// Set when the registry is completed and the buyer's file is wrapped up.
+  closedAt    DateTime?
 
   documents  LegalDocument[]
   stages     AgreementStep[]
@@ -2844,4 +2846,50 @@ model LegalTemplate {
   title     String
   body      String
   updatedAt DateTime     @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Operations rules (automation across construction, vendors, legal and inventory)
+//
+// A rule is a trigger plus timed steps, all configured by an admin: who is told, on which
+// channel, after how long. The engine (services/opsRules.ts) scans for subjects that match a
+// trigger, and records every action it takes in OpsRuleFire, whose unique key is what stops a
+// step firing twice for the same subject.
+// ---------------------------------------------------------------------------
+
+model OpsRule {
+  id        String    @id @default(cuid())
+  name      String
+  /// Key from the trigger catalogue, e.g. payment_overdue.
+  trigger   String
+  enabled   Boolean   @default(false)
+  /// When it was last switched on. A rule only acts on conditions from this moment on, so
+  /// enabling one never fires for everything that was already overdue yesterday.
+  enabledAt DateTime?
+  /// Trigger parameters, e.g. { minDaysBehind: 3 }.
+  config    Json      @default("{}")
+  /// Ordered steps: [{ delayHours, repeatEveryHours?, action: {...} }].
+  steps     Json      @default("[]")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  fires OpsRuleFire[]
+}
+
+model OpsRuleFire {
+  id           String   @id @default(cuid())
+  rule         OpsRule  @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  ruleId       String
+  subjectKey   String
+  subjectLabel String
+  stepIndex    Int
+  /// 0 for a one-off step; the n-th repeat for a step that reminds until the condition clears.
+  occurrence   Int      @default(0)
+  /// sent | skipped | failed
+  status       String
+  detail       String   @default("")
+  firedAt      DateTime @default(now())
+
+  @@unique([ruleId, subjectKey, stepIndex, occurrence])
+  @@index([ruleId, firedAt])
 }

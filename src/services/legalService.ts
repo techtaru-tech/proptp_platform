@@ -10,7 +10,7 @@ export const label = (s: string) => s.replace(/_/g, ' ').replace(/^./, (c) => c.
 
 export interface LegalFileRow {
   id: string; bookingId: string; buyerName: string; phone: string; projectId: string; projectName: string; unitId: string; agreedValue: number;
-  openedAt: string; agreementStage: AgreementStage | null; registryStatus: RegistryStatus; outstanding: number; overdueMilestones: number; hasPlan: boolean;
+  openedAt: string; closedAt: string | null; agreementStage: AgreementStage | null; registryStatus: RegistryStatus; outstanding: number; overdueMilestones: number; hasPlan: boolean;
 }
 export interface MilestoneRow {
   id: string; name: string; dueOn: string; amount: number; demandedAt: string | null; paid: number; outstanding: number;
