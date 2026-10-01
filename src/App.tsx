@@ -22,6 +22,7 @@ import { Forms } from './pages/crm/Forms';
 import { FormBuilder } from './pages/crm/FormBuilder';
 import { FormView } from './pages/crm/FormView';
 import { PublicForm } from './pages/public/PublicForm';
+import { PublicPlotMap } from './pages/public/PublicPlotMap';
 import { ReportCenter } from './pages/crm/reports/ReportCenter';
 import { LeadActivities } from './pages/crm/LeadActivities';
 import { Automations } from './pages/crm/Automations';
@@ -53,6 +54,8 @@ import { PropertyList } from './pages/properties/PropertyList';
 import { AddProperty } from './pages/properties/AddProperty';
 import { PlotHoldList } from './pages/properties/PlotHoldList';
 import { BulkPriceUpdate } from './pages/properties/BulkPriceUpdate';
+import { PlotMapSelect } from './pages/properties/PlotMapSelect';
+import { PlotMap } from './pages/properties/PlotMap';
 
 import { BookingList } from './pages/bookings/BookingList';
 import { BookingDetail } from './pages/bookings/BookingDetail';
@@ -130,6 +133,8 @@ function App() {
               <Route path="/login" element={<Login />} />
               {/* Visitor-facing lead capture — no auth, no admin chrome. */}
               <Route path="/f/:slug" element={<PublicForm />} />
+              {/* A plot map shared with a buyer. No session, so it sits outside the admin layout. */}
+              <Route path="/m/:token" element={<PublicPlotMap />} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
               <Route
@@ -190,6 +195,8 @@ function App() {
                 <Route path="/properties/booked" element={<PropertyList filter="booked" />} />
                 <Route path="/properties/new" element={<AddProperty />} />
                 <Route path="/properties/holds" element={<PlotHoldList />} />
+                <Route path="/properties/map" element={<PlotMapSelect />} />
+                <Route path="/properties/map/:projectId" element={<PlotMap />} />
                 <Route path="/properties/bulk-price-update" element={<BulkPriceUpdate />} />
 
                 <Route path="/bookings" element={<BookingList />} />

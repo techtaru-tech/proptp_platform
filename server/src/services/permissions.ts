@@ -64,6 +64,7 @@ const PATH_MODULE_ENTRIES = [
   { prefix: '/projects', module: 'projects' },
   { prefix: '/units', module: 'properties' },
   { prefix: '/plot-holds', module: 'properties' },
+  { prefix: '/project-maps', module: 'properties' },
   { prefix: '/bookings', module: 'bookings' },
   { prefix: '/funds', module: 'payments' },
   { prefix: '/kyc', module: 'payments' },

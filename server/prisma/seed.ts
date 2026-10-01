@@ -3,6 +3,7 @@ import { seedPlatform } from './seedPlatform';
 import { seedOperations } from './seedOperations';
 import { seedCrm } from './seedCrm';
 import { seedWorkplace } from './seedWorkplace';
+import { seedPlotMap } from './seedPlotMap';
 
 const prisma = new PrismaClient();
 
@@ -128,6 +129,8 @@ async function main() {
   await seedCrm(prisma, people);
   console.log('Seeding workplace (tasks, leave, payroll, panel roles)...');
   await seedWorkplace(prisma, people);
+  console.log('Seeding plot maps (layouts for the inventory board)...');
+  await seedPlotMap(prisma);
 
   console.log('');
   console.log('Done. Admin sign-in:');

@@ -38,6 +38,7 @@ import { adminUsersRouter, adminKycRouter } from './routes/admin/users';
 import { adminTeamsRouter } from './routes/admin/teams';
 import { adminProjectsRouter, adminUnitsRouter } from './routes/admin/projects';
 import { adminPlotHoldsRouter } from './routes/admin/plotHolds';
+import { adminProjectMapsRouter, publicPlotMapRouter } from './routes/admin/projectMaps';
 import { adminBookingsRouter } from './routes/admin/bookings';
 import { adminInvestmentsRouter } from './routes/admin/investments';
 import { adminFundsRouter, adminIncentivesRouter } from './routes/admin/wallet';
@@ -108,6 +109,8 @@ app.use('/api/webhook', express.urlencoded({ extended: true }));
 app.use('/api/webhook', webhookRouter);
 // Opened from an email client by a person with no session — public by necessity.
 app.use('/api/unsubscribe', unsubscribeRouter);
+// A plot map shared with a buyer on WhatsApp. Same reasoning: no session to check.
+app.use('/api/plot-map', publicPlotMapRouter);
 
 app.use(express.json({ limit: '2mb' }));
 // Multipart endpoints (registration, booking KYC, uploads) also receive plain form fields.
@@ -179,6 +182,7 @@ app.use('/api/teams', adminTeamsRouter);
 app.use('/api/projects', adminProjectsRouter);
 app.use('/api/units', adminUnitsRouter);
 app.use('/api/plot-holds', adminPlotHoldsRouter);
+app.use('/api/project-maps', adminProjectMapsRouter);
 app.use('/api/bookings', adminBookingsRouter);
 app.use('/api/investments', adminInvestmentsRouter);
 app.use('/api/funds', adminFundsRouter);

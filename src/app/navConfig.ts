@@ -97,6 +97,7 @@ export const NAV_ITEMS: NavItem[] = [
       { label: 'Sold Out Properties', to: '/properties/sold-out' },
       { label: 'Booked Properties', to: '/properties/booked' },
       { label: 'Add Property', to: '/properties/new' },
+      { label: 'Plot Map', to: '/properties/map' },
       { label: 'Plot Holds', to: '/properties/holds' },
       { label: 'Bulk Price Update', to: '/properties/bulk-price-update' },
     ],

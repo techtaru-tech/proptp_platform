@@ -307,6 +307,8 @@ const PUBLIC_PATTERNS = [
   // An unsubscribe link is clicked from an email client, with no session.
   /^\/unsubscribe(\/|$)/,
   /^\/forms\/public(\/|$)/,
+  // A plot map link shared with a buyer, opened with no session.
+  /^\/plot-map(\/|$)/,
   /^\/v1\/app(\/|$)/,
 ];
 

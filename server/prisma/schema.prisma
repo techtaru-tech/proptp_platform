@@ -1392,8 +1392,9 @@ model Project {
   /// Extra image URLs beyond banner/thumbnail — the app's `gallery`.
   gallery    String[] @default([])
 
-  files ProjectFile[]
-  units PropertyUnit[]
+  files   ProjectFile[]
+  units   PropertyUnit[]
+  plotMap ProjectMap?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1474,6 +1475,7 @@ model PropertyUnit {
   bookedById String?
 
   facings       PlotFacing[]
+  mapShapes     PlotShape[]
   holds         PlotHold[]
   bookings      Booking[]
   investments   Investment[]
@@ -2240,4 +2242,69 @@ model TaskComment {
   createdAt DateTime @default(now())
 
   @@index([taskId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Plot map — the project layout turned into a live inventory board
+//
+// The map stores WHERE each plot sits on the layout and nothing about its state. Status
+// is derived from the unit's own `bookingStatus` plus any live PlotHold, through
+// services/derive.ts, exactly as every other surface does it — so a booking taken in the
+// CRM colours the map on the next read with nobody updating anything twice.
+// ---------------------------------------------------------------------------
+
+model ProjectMap {
+  id        String  @id @default(cuid())
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  /// One live map per project. A revision replaces the image and bumps `version`.
+  projectId String  @unique
+
+  imageUrl    String
+  /// Natural pixel size of the upload, so normalised points can be drawn at any scale.
+  imageWidth  Int
+  imageHeight Int
+
+  /// draft until the shapes have been reviewed. Only a live map reaches sales or buyers.
+  status  String @default("draft")
+  /// Bumped on every re-upload. Shapes survive it, so plot records and booking history
+  /// are never lost to a revised layout — which is the whole point of keeping them apart.
+  version Int    @default(1)
+
+  /// Customer-facing view. Opaque, rotatable, and off until somebody turns it on.
+  publicToken   String  @unique @default(cuid())
+  publicEnabled Boolean @default(false)
+
+  shapes PlotShape[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PlotShape {
+  id    String     @id @default(cuid())
+  map   ProjectMap @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  mapId String
+
+  /// The plot this outline is. Null while a shape has been drawn or detected but not yet
+  /// matched to a unit — the review step exists to close exactly that gap.
+  unit   PropertyUnit? @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  unitId String?
+
+  /// Polygon as [[x, y], ...] in 0..1 of the image's width and height. Normalised rather
+  /// than pixels so a re-upload at a different resolution leaves every shape where it was.
+  points Json
+
+  /// What was read off the layout before the shape was linked to a unit.
+  label String?
+
+  /// manual | detected — a detector's proposals land here and go through the same review
+  /// and confirmation as a hand-drawn one, so adding one later changes no other code.
+  source    String  @default("manual")
+  confirmed Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([mapId, unitId])
+  @@index([mapId])
 }

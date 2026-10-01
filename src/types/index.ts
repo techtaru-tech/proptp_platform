@@ -1931,3 +1931,87 @@ export interface TaskAssignee {
   avatarUrl?: string;
   teamId: string | null;
 }
+
+// ---------------------------------------------------------------------------
+// Plot map (server/src/routes/admin/projectMaps.ts)
+// ---------------------------------------------------------------------------
+
+/** The four states a plot can be in — derived server-side, never stored on the map. */
+export type PlotMapStatus = 'available' | 'onHold' | 'booked' | 'soldOut';
+
+/** A point as [x, y], each 0..1 of the layout image's width and height. */
+export type PlotMapPoint = [number, number];
+
+export interface PlotMapPlot {
+  shapeId: string;
+  /** Null while an outline is drawn but not yet matched to a plot. */
+  unitId: string | null;
+  points: PlotMapPoint[];
+  source: 'manual' | 'detected';
+  confirmed: boolean;
+  status: PlotMapStatus | null;
+  label: string;
+  plotNumber: string | null;
+  area: string | null;
+  areaValue: number | null;
+  facing: string | null;
+  roadWidth: string | null;
+  isCorner: boolean;
+  price: number;
+  holdUntil: string | null;
+}
+
+export interface PlotMapCounts {
+  available: number;
+  onHold: number;
+  booked: number;
+  soldOut: number;
+  unmapped: number;
+  total: number;
+  value: { available: number; onHold: number; booked: number; soldOut: number; total: number };
+}
+
+export interface PlotMapMeta {
+  id: string;
+  imageUrl: string;
+  imageWidth: number;
+  imageHeight: number;
+  status: 'draft' | 'live';
+  version: number;
+  publicEnabled: boolean;
+  publicToken: string | null;
+  updatedAt: string;
+}
+
+export interface PlotMapUnitOption {
+  id: string;
+  propertyNumber: string;
+  area: string;
+}
+
+export interface PlotMapBundle {
+  project: { id: string; projectName: string; projectLocation: string };
+  map: PlotMapMeta | null;
+  plots: PlotMapPlot[];
+  counts: PlotMapCounts | null;
+  unmappedUnits: PlotMapUnitOption[];
+}
+
+/** What a customer opening a shared link is allowed to see — no price, no buyer, no holds. */
+export interface PublicPlotMapPlot {
+  id: string;
+  points: PlotMapPoint[];
+  label: string;
+  area: string | null;
+  facing: string | null;
+  roadWidth: string | null;
+  isCorner: boolean;
+  available: boolean;
+}
+
+export interface PublicPlotMap {
+  project: { name: string; location: string };
+  image: { url: string; width: number; height: number };
+  plots: PublicPlotMapPlot[];
+  summary: { available: number; total: number };
+}
