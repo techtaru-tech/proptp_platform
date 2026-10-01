@@ -7,7 +7,7 @@ import { approvedLeaveInMonth, presentDaysInMonth, workingDaysInMonth } from '..
 
 export const adminPayrollRouter = Router();
 
-const STAFF_ROLES = ['employee', 'leader', 'admin'];
+const STAFF_ROLES = ['employee', 'leader', 'team_leader', 'admin'];
 
 // ---------------------------------------------------------------------------
 // Salary structures

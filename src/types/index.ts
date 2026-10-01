@@ -8,22 +8,25 @@ export const RoleId = {
   Admin: 1,
   Employee: 2,
   Leader: 3,
+  /** Ours, not the real system's: sits between a Leader and the Employees under them. */
+  TeamLeader: 4,
 } as const;
 export type RoleId = (typeof RoleId)[keyof typeof RoleId];
 
-export type RoleName = 'Agent' | 'Admin' | 'Employee' | 'Leader';
+export type RoleName = 'Agent' | 'Admin' | 'Employee' | 'Leader' | 'Team Leader';
 
 export const ROLE_NAME_BY_ID: Record<RoleId, RoleName> = {
   [RoleId.Agent]: 'Agent',
   [RoleId.Admin]: 'Admin',
   [RoleId.Employee]: 'Employee',
   [RoleId.Leader]: 'Leader',
+  [RoleId.TeamLeader]: 'Team Leader',
 };
 
 export type AccountStatus = 'active' | 'inactive' | 'suspended';
 
 /** `User.role` as the API spells it. Distinct from the numeric `RoleId` the older screens use. */
-export type AccountRole = 'admin' | 'employee' | 'leader' | 'agent';
+export type AccountRole = 'admin' | 'employee' | 'leader' | 'team_leader' | 'agent';
 
 /**
  * Real `funds` table (`Admin\PaymentLogController`) — manual wallet-deposit requests that need
@@ -505,6 +508,9 @@ export interface BaseUser {
   /** Real `users.balance` — spendable wallet balance. */
   walletBalance: number;
   kycStatus: KycStatus;
+  /** Who this person reports to in the CRM hierarchy (Leader → Team Leader → Employee → Agent). */
+  managerId?: string;
+  managerName?: string;
 }
 
 export interface Agent extends BaseUser {
@@ -531,7 +537,16 @@ export interface Leader extends BaseUser {
   attendanceStatusToday: AttendanceStatus;
 }
 
-export type PartnerUser = Agent | Employee | Leader;
+export interface TeamLeader extends BaseUser {
+  role: typeof RoleId.TeamLeader;
+  teamId?: string;
+  teamSize: number;
+  employeeCount: number;
+  agentCount: number;
+  attendanceStatusToday: AttendanceStatus;
+}
+
+export type PartnerUser = Agent | Employee | Leader | TeamLeader;
 
 // ============================================================================
 // Teams / Referrals
@@ -577,7 +592,7 @@ export interface AttendanceRecord {
   id: string;
   userId: string;
   userName: string;
-  role: typeof RoleId.Employee | typeof RoleId.Leader;
+  role: typeof RoleId.Employee | typeof RoleId.Leader | typeof RoleId.TeamLeader;
   date: string; // ISO date
   checkInAt?: string;
   checkOutAt?: string;
@@ -1048,7 +1063,7 @@ export type AutomationConditionType =
   | 'assigned_to'
   | 'unassigned';
 
-export type AssignmentMode = 'specific' | 'round_robin' | 'team' | 'sequence';
+export type AssignmentMode = 'specific' | 'round_robin' | 'team' | 'sequence' | 'hierarchy';
 
 /** One stop on a distribution rota: this person takes `count` leads before the turn moves on. */
 export interface AssignSequenceEntry {
@@ -1154,11 +1169,18 @@ export interface AdminSession {
   isFullAccess?: boolean;
   /** Module keys this user may open — mirrors what the server enforces. */
   modules?: ModuleKey[];
+  /** What this account is (`User.role`) — where they sit in the CRM hierarchy. */
+  accountRole?: AccountRole;
+  managerId?: string | null;
+  /** How much CRM data they may see: everything, their own tree, or only their own. */
+  scope?: 'all' | 'tree' | 'own';
+  /** Whether they may hand leads to others. The server refuses it otherwise; this hides the buttons. */
+  canAssign?: boolean;
   token: string;
 }
 
 export type ModuleKey =
-  | 'dashboard' | 'crm' | 'projects' | 'properties' | 'bookings' | 'payments' | 'investments'
+  | 'dashboard' | 'crm' | 'tasks' | 'projects' | 'properties' | 'bookings' | 'payments' | 'investments'
   | 'partners' | 'teams' | 'attendance' | 'payouts' | 'incentives' | 'support' | 'notifications'
   | 'reports' | 'settings';
 
@@ -1189,6 +1211,9 @@ export interface PanelUser {
    */
   accountRole: AccountRole;
   isFullAccess: boolean;
+  /** The reporting manager, when they have one. */
+  managerId?: string | null;
+  managerName?: string | null;
   createdAt: string;
 }
 

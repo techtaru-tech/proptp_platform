@@ -3,6 +3,7 @@ import { prisma } from '../prisma';
 import {
   NOT_CONFIGURED_NOTE, enrollLead, evaluateEligibility, handOff, logMessage, stopEnrollment,
 } from '../services/aiSdrEngine';
+import { leadIdsInScope, leadScopeWhere, scopeOf } from '../services/hierarchy';
 
 export const aiSdrRouter = Router();
 
@@ -41,13 +42,15 @@ aiSdrRouter.get('/capabilities', (_req, res) => {
   res.json({ aiProviderConfigured: false, messagingProviderConfigured: false, note: NOT_CONFIGURED_NOTE });
 });
 
-aiSdrRouter.get('/', async (_req, res) => {
+aiSdrRouter.get('/', async (req, res) => {
+  const scope = await scopeOf(req);
+  const mine = scope.kind === 'all' ? {} : { lead: leadScopeWhere(scope) };
   const agents = await prisma.aiSdrAgent.findMany({
     orderBy: { createdAt: 'desc' },
-    include: { _count: { select: { enrollments: true } } },
+    include: { _count: { select: { enrollments: { where: mine } } } },
   });
 
-  const activeCounts = await prisma.aiSdrEnrollment.groupBy({ by: ['agentId'], where: { status: 'active' }, _count: { _all: true } });
+  const activeCounts = await prisma.aiSdrEnrollment.groupBy({ by: ['agentId'], where: { status: 'active', ...mine }, _count: { _all: true } });
   const activeByAgent = new Map(activeCounts.map((c) => [c.agentId, c._count._all]));
 
   res.json(
@@ -60,9 +63,10 @@ aiSdrRouter.get('/', async (_req, res) => {
 });
 
 aiSdrRouter.get('/:id', async (req, res) => {
+  const scope = await scopeOf(req);
   const agent = await prisma.aiSdrAgent.findUnique({
     where: { id: req.params.id },
-    include: { _count: { select: { enrollments: true } } },
+    include: { _count: { select: { enrollments: { where: scope.kind === 'all' ? {} : { lead: leadScopeWhere(scope) } } } } },
   });
   if (!agent) return res.status(404).json({ error: 'Agent not found' });
   const { _count, ...rest } = agent;
@@ -103,8 +107,10 @@ aiSdrRouter.delete('/:id', async (req, res) => {
 // ---------------------------------------------------------------------------
 
 aiSdrRouter.post('/:id/enroll', async (req, res) => {
-  const { leadIds } = req.body as { leadIds?: string[] };
-  if (!Array.isArray(leadIds) || leadIds.length === 0) return res.status(400).json({ error: 'leadIds is required.' });
+  const requested = (req.body as { leadIds?: string[] }).leadIds;
+  if (!Array.isArray(requested) || requested.length === 0) return res.status(400).json({ error: 'leadIds is required.' });
+  // Only leads the caller can see; the rest are skipped rather than enrolled on their say-so.
+  const leadIds = await leadIdsInScope(await scopeOf(req), requested);
 
   const results = await Promise.all(leadIds.map(async (leadId) => ({ leadId, ...(await enrollLead(req.params.id, leadId)) })));
   res.json({
@@ -118,8 +124,9 @@ aiSdrRouter.get('/:id/enrollments', async (req, res) => {
   const agent = await prisma.aiSdrAgent.findUnique({ where: { id: req.params.id } });
   if (!agent) return res.status(404).json({ error: 'Agent not found' });
 
+  const scope = await scopeOf(req);
   const enrollments = await prisma.aiSdrEnrollment.findMany({
-    where: { agentId: agent.id },
+    where: { agentId: agent.id, ...(scope.kind === 'all' ? {} : { lead: leadScopeWhere(scope) }) },
     orderBy: { createdAt: 'desc' },
     include: {
       lead: { select: { id: true, firstName: true, lastName: true, phone: true, email: true, assignedUserId: true } },
@@ -144,6 +151,22 @@ aiSdrRouter.get('/:id/enrollments', async (req, res) => {
 // One enrollment's thread and lifecycle actions. Mounted on the same router under
 // /enrollments/... so the frontend only needs one base path.
 // ---------------------------------------------------------------------------
+
+// Anything on one enrollment is checked against the lead's owner first.
+aiSdrRouter.use('/enrollments/:enrollmentId', async (req, res, next) => {
+  try {
+    const scope = await scopeOf(req);
+    if (scope.kind !== 'all') {
+      const visible = await prisma.aiSdrEnrollment.count({
+        where: { id: String(req.params.enrollmentId), lead: leadScopeWhere(scope) },
+      });
+      if (!visible) return res.status(404).json({ error: 'Enrollment not found' });
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 aiSdrRouter.get('/enrollments/:enrollmentId/messages', async (req, res) => {
   const messages = await prisma.aiSdrMessage.findMany({

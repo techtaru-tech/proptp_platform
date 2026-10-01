@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Bot, Download, Filter, GitBranch, MailPlus, MoonStar, Plus, Star, Tag as TagIcon, Trash2, Upload, UserCog, X, Zap } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
@@ -27,6 +27,7 @@ import {
   LEAD_PRIORITY_OPTIONS,
 } from '../../services/leadService';
 import { listManualAutomations, runAutomationOnLeads } from '../../services/leadAutomationService';
+import { mayAssignLeads, mayUnassignLeads } from '../../data/referenceData';
 import { enrollLeadsInSdrAgent, listSdrAgents } from '../../services/aiSdrService';
 import { enrollLeadsInSequence, listEmailSequences } from '../../services/emailSequenceService';
 import { usePipelineReferenceData } from '../../hooks/usePipelineReferenceData';
@@ -39,6 +40,8 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
 export function LeadList() {
   const navigate = useNavigate();
+  // The Team Leaders and Hierarchy pages link here with `?assignedUserId=` to show one person's leads.
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { pipelines, tags, stageById, stagesForPipeline } = usePipelineReferenceData();
 
@@ -54,7 +57,7 @@ export function LeadList() {
   const [source, setSource] = useState('all');
   const [pipelineId, setPipelineId] = useState('all');
   const [stageId, setStageId] = useState('all');
-  const [assignedUserId, setAssignedUserId] = useState('all');
+  const [assignedUserId, setAssignedUserId] = useState(searchParams.get('assignedUserId') || 'all');
   const [starredOnly, setStarredOnly] = useState(false);
   const [campaignName, setCampaignName] = useState('all');
   const [adName, setAdName] = useState('all');
@@ -136,7 +139,7 @@ export function LeadList() {
     source !== 'all' && { key: 'source', label: `Source: ${listSourceOptions().find((s) => s.value === source)?.label ?? source}`, clear: () => setSource('all') },
     pipelineId !== 'all' && { key: 'pipeline', label: `Pipeline: ${pipelines.find((p) => p.id === pipelineId)?.name}`, clear: () => { setPipelineId('all'); setStageId('all'); } },
     stageId !== 'all' && { key: 'stage', label: `Stage: ${stageById(stageId)?.name}`, clear: () => setStageId('all') },
-    assignedUserId !== 'all' && { key: 'assignee', label: `Assigned: ${assignableUsers.find((u) => u.id === assignedUserId)?.name}`, clear: () => setAssignedUserId('all') },
+    assignedUserId !== 'all' && { key: 'assignee', label: `Assigned: ${assignedUserId === 'none' ? 'Unassigned' : assignableUsers.find((u) => u.id === assignedUserId)?.name ?? '…'}`, clear: () => setAssignedUserId('all') },
     starredOnly && { key: 'starred', label: 'Starred only', clear: () => setStarredOnly(false) },
     campaignName !== 'all' && { key: 'campaign', label: `Campaign: ${campaignName}`, clear: () => setCampaignName('all') },
     adName !== 'all' && { key: 'ad', label: `Ad: ${adName}`, clear: () => setAdName('all') },
@@ -221,8 +224,12 @@ export function LeadList() {
   const runBulkAction = async () => {
     const ids = Array.from(selectedIds);
     if (bulkModal === 'assign' && bulkValue) {
-      await bulkAssign(ids, bulkValue);
-      toast({ title: `${ids.length} lead(s) assigned`, variant: 'success' });
+      const { assigned, skipped } = await bulkAssign(ids, bulkValue);
+      toast({
+        title: `${assigned} lead(s) assigned`,
+        description: skipped > 0 ? `${skipped} were outside your team and left alone.` : undefined,
+        variant: 'success',
+      });
     } else if (bulkModal === 'status' && bulkValue) {
       await bulkChangeStatus(ids, bulkValue as LeadStatus);
       toast({ title: `${ids.length} lead(s) status updated`, variant: 'success' });
@@ -470,9 +477,11 @@ export function LeadList() {
               Clear selection
             </button>
           )}
-          <Button variant="outline" size="sm" leftIcon={<UserCog size={13} />} onClick={() => openBulkModal('assign')}>
-            Assign
-          </Button>
+          {mayAssignLeads() && (
+            <Button variant="outline" size="sm" leftIcon={<UserCog size={13} />} onClick={() => openBulkModal('assign')}>
+              Assign
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => openBulkModal('status')}>
             Change Status
           </Button>
@@ -631,9 +640,14 @@ export function LeadList() {
           />
           <Select
             label="Assigned To"
+            name="assignedUserId"
             value={assignedUserId}
             onChange={(e) => { setAssignedUserId(e.target.value); setPage(1); }}
-            options={[{ value: 'all', label: 'Anyone' }, ...assignableUsers.map((u) => ({ value: u.id, label: u.name }))]}
+            options={[
+              { value: 'all', label: 'Anyone' },
+              ...(mayUnassignLeads() ? [{ value: 'none', label: 'Unassigned' }] : []),
+              ...assignableUsers.map((u) => ({ value: u.id, label: u.name })),
+            ]}
           />
           <div className="space-y-2 border-t border-line pt-4">
             <p className="text-sm font-medium text-ink">Created</p>

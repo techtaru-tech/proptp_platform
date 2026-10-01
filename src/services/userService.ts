@@ -1,4 +1,4 @@
-import { RoleId, type AccountStatus, type Agent, type Employee, type Leader, type PartnerUser } from '../types';
+import { RoleId, ROLE_NAME_BY_ID, type AccountRole, type AccountStatus, type Agent, type Employee, type Leader, type PartnerUser, type TeamLeader } from '../types';
 import { api, toQueryString } from './apiClient';
 import type { ListParams, ListResult } from './mockClient';
 import type { AttendanceRecord, BookingRow, PayoutRequest } from '../types';
@@ -14,6 +14,20 @@ export async function listAgents(params: UserListParams = {}): Promise<ListResul
 
 export async function listEmployees(params: UserListParams = {}): Promise<ListResult<Employee>> {
   return api.get<ListResult<Employee>>(`/users/employees${toQueryString(params)}`);
+}
+
+export async function listTeamLeaders(params: UserListParams = {}): Promise<ListResult<TeamLeader>> {
+  return api.get<ListResult<TeamLeader>>(`/users/team-leaders${toQueryString(params)}`);
+}
+
+/**
+ * Moves somebody in the reporting tree — a new manager, a new role, or both. Checked server-side
+ * as one placement, so a promotion cannot leave somebody under the wrong kind of manager.
+ */
+export async function updateUserHierarchy(id: string, input: { role?: AccountRole; managerId?: string | null }): Promise<PartnerUser> {
+  const updated = await api.patch<PartnerUser>(`/users/${id}/hierarchy`, input);
+  await loadReferenceData(true).catch(() => {});
+  return updated;
 }
 
 export async function listLeaders(params: UserListParams = {}): Promise<ListResult<Leader>> {
@@ -67,5 +81,5 @@ export async function updateUserStatus(id: string, status: AccountStatus): Promi
 }
 
 export function roleLabel(role: RoleId): string {
-  return { [RoleId.Agent]: 'Agent', [RoleId.Admin]: 'Admin', [RoleId.Employee]: 'Employee', [RoleId.Leader]: 'Leader' }[role];
+  return ROLE_NAME_BY_ID[role];
 }

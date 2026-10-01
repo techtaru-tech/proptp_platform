@@ -1,4 +1,4 @@
-import { RoleId, type AddressOption, type Agent, type Employee, type Leader, type PartnerUser, type Project, type PropertyTypeOption, type Team } from '../types';
+import { RoleId, type AddressOption, type Agent, type Employee, type Leader, type PartnerUser, type Project, type PropertyTypeOption, type Team, type TeamLeader } from '../types';
 import { api } from '../services/apiClient';
 
 /**
@@ -15,10 +15,45 @@ import { api } from '../services/apiClient';
  * pre-joined display names that the list endpoints now return.
  */
 
+/** What the assignee list carries: enough to put a name in a dropdown or on a card. */
+export interface AssigneeUser {
+  id: string;
+  name: string;
+  role: RoleId;
+  avatarUrl?: string;
+  managerId?: string;
+}
+
+const ROLE_ID_BY_NAME: Record<string, RoleId> = {
+  agent: RoleId.Agent,
+  admin: RoleId.Admin,
+  employee: RoleId.Employee,
+  leader: RoleId.Leader,
+  team_leader: RoleId.TeamLeader,
+};
+
+/** Whether the signed-in person may hand leads on. Set when the assignee list loads. */
+let canAssignLeads = false;
+let canUnassignLeads = false;
+export function mayAssignLeads(): boolean {
+  return canAssignLeads;
+}
+/** Taking an owner off a lead is only offered where the lead stays visible to the person doing it. */
+export function mayUnassignLeads(): boolean {
+  return canUnassignLeads;
+}
+
 export const refUsers: PartnerUser[] = [];
 export const refAgents: Agent[] = [];
 export const refEmployees: Employee[] = [];
 export const refLeaders: Leader[] = [];
+export const refTeamLeaders: TeamLeader[] = [];
+/**
+ * Who the signed-in person may assign a lead to — their own hierarchy, or everybody for an
+ * administrator. Served by `/leads/assignees`, which needs only the CRM module, unlike the
+ * partner directory above.
+ */
+export const refAssignees: AssigneeUser[] = [];
 export const refProjects: Project[] = [];
 export const refTeams: Team[] = [];
 
@@ -44,7 +79,10 @@ export function loadReferenceData(force = false): Promise<void> {
   if (inFlight) return inFlight;
 
   inFlight = (async () => {
-    const [{ users }, projects, { teams }, lookups] = await Promise.all([
+    // Each piece is allowed to fail on its own. A sales user's panel role has no Partners,
+    // Projects or Teams module, so those three answer 403 for them — which must not take the
+    // assignee list (the one thing they do need) down with it.
+    const [usersR, projectsR, teamsR, lookupsR, assigneesR] = await Promise.allSettled([
       api.get<{ users: PartnerUser[] }>('/users'),
       api.get<{ items: Project[] }>('/projects?pageSize=200'),
       api.get<{ teams: Team[] }>('/teams'),
@@ -54,19 +92,49 @@ export function loadReferenceData(force = false): Promise<void> {
         addresses: AddressOption[];
         cities: string[];
       }>('/projects/lookups'),
+      api.get<{ canAssign: boolean; canUnassign: boolean; users: { id: string; name: string; role: string; avatarUrl?: string; reportingLeaderId?: string | null }[] }>('/leads/assignees'),
     ]);
+
+    const assignees: AssigneeUser[] =
+      assigneesR.status === 'fulfilled'
+        ? assigneesR.value.users.map((u) => ({
+            id: u.id,
+            name: u.name,
+            role: ROLE_ID_BY_NAME[u.role] ?? RoleId.Employee,
+            avatarUrl: u.avatarUrl ?? undefined,
+            managerId: u.reportingLeaderId ?? undefined,
+          }))
+        : [];
+    canAssignLeads = assigneesR.status === 'fulfilled' && assigneesR.value.canAssign;
+    canUnassignLeads = assigneesR.status === 'fulfilled' && assigneesR.value.canUnassign;
+    replace(refAssignees, assignees);
+
+    // The full partner directory when the role allows it; otherwise the people the assignee
+    // list does give us, so a name on a lead or a note still resolves instead of showing a dash.
+    const users: PartnerUser[] =
+      usersR.status === 'fulfilled'
+        ? usersR.value.users
+        : (assignees.map((a) => ({ ...a, status: 'active', phone: '', email: '' })) as unknown as PartnerUser[]);
 
     replace(refUsers, users);
     replace(refAgents, users.filter((u): u is Agent => u.role === RoleId.Agent));
     replace(refEmployees, users.filter((u): u is Employee => u.role === RoleId.Employee));
     replace(refLeaders, users.filter((u): u is Leader => u.role === RoleId.Leader));
-    replace(refProjects, projects.items);
-    replace(refTeams, teams);
+    replace(refTeamLeaders, users.filter((u): u is TeamLeader => u.role === RoleId.TeamLeader));
+    replace(refProjects, projectsR.status === 'fulfilled' ? projectsR.value.items : []);
+    replace(refTeams, teamsR.status === 'fulfilled' ? teamsR.value.teams : []);
 
-    amenities = lookups.amenities;
-    propertyTypes = lookups.propertyTypes;
-    addresses = lookups.addresses;
-    cities = lookups.cities;
+    if (lookupsR.status === 'fulfilled') {
+      amenities = lookupsR.value.amenities;
+      propertyTypes = lookupsR.value.propertyTypes;
+      addresses = lookupsR.value.addresses;
+      cities = lookupsR.value.cities;
+    }
+    // Sign-in is only ever blocked by something that is not a permission: if every request
+    // failed there is nothing useful to show and the caller's retry should run.
+    if ([usersR, projectsR, teamsR, lookupsR, assigneesR].every((r) => r.status === 'rejected')) {
+      throw (assigneesR as PromiseRejectedResult).reason;
+    }
     loaded = true;
   })().finally(() => {
     inFlight = null;
@@ -77,9 +145,11 @@ export function loadReferenceData(force = false): Promise<void> {
 
 /** Clears the caches on sign-out, so a different admin never sees the previous one's data. */
 export function resetReferenceData(): void {
-  [refUsers, refAgents, refEmployees, refLeaders, refProjects, refTeams].forEach((arr) => {
+  [refUsers, refAgents, refEmployees, refLeaders, refTeamLeaders, refAssignees, refProjects, refTeams].forEach((arr) => {
     arr.length = 0;
   });
+  canAssignLeads = false;
+  canUnassignLeads = false;
   amenities = [];
   propertyTypes = [];
   addresses = [];
@@ -137,7 +207,7 @@ export function cityOptions(): string[] {
   return cities;
 }
 
-/** Assignable owners for CRM lead assignment and form ownership. */
-export function assignableUsers(): PartnerUser[] {
-  return [...refEmployees, ...refLeaders];
+/** Assignable owners for CRM lead assignment and form ownership — the caller's own hierarchy. */
+export function assignableUsers(): AssigneeUser[] {
+  return refAssignees;
 }

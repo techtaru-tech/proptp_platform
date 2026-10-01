@@ -1,8 +1,15 @@
 import { Router } from 'express';
 import { prisma } from '../prisma';
 import type { Prisma } from '@prisma/client';
+import { actorNameOf, canAssignTo, followUpScopeWhere, inLeadScope, scopeOf, type Scope } from '../services/hierarchy';
 
 export const followUpsRouter = Router();
+
+const followUpScope = followUpScopeWhere;
+
+async function findFollowUpInScope(scope: Scope, id: string) {
+  return prisma.leadFollowUp.findFirst({ where: { AND: [{ id }, followUpScope(scope)] } });
+}
 
 function bucketRange() {
   const now = new Date();
@@ -18,6 +25,7 @@ followUpsRouter.get('/', async (req, res) => {
   const pageNum = Math.max(1, Number(page) || 1);
   const size = Math.max(1, Number(pageSize) || 10);
 
+  const scope = await scopeOf(req);
   const where: Prisma.LeadFollowUpWhereInput = {};
   if (status && status !== 'all') where.status = status;
   if (priority && priority !== 'all') where.priority = priority as any;
@@ -31,15 +39,17 @@ followUpsRouter.get('/', async (req, res) => {
     if (bucket === 'upcoming') Object.assign(where, isOpen, { dueAt: { gt: todayEnd } });
   }
 
+  const scoped: Prisma.LeadFollowUpWhereInput = { AND: [where, followUpScope(scope)] };
+
   const [items, total] = await Promise.all([
     prisma.leadFollowUp.findMany({
-      where,
+      where: scoped,
       orderBy: { dueAt: sortBy === 'dueAt' ? 'asc' : 'asc' },
       skip: (pageNum - 1) * size,
       take: size,
       include: { lead: { select: { firstName: true, lastName: true } } },
     }),
-    prisma.leadFollowUp.count({ where }),
+    prisma.leadFollowUp.count({ where: scoped }),
   ]);
 
   res.json({
@@ -69,13 +79,14 @@ followUpsRouter.get('/calendar', async (req, res) => {
   const spanDays = (toDate.getTime() - fromDate.getTime()) / 86_400_000;
   if (spanDays > 92) return res.status(400).json({ error: 'Range must not exceed 92 days.' });
 
+  const scope = await scopeOf(req);
   const where: Prisma.LeadFollowUpWhereInput = { dueAt: { gte: fromDate, lte: toDate } };
   if (status && status !== 'all') where.status = status;
   if (priority && priority !== 'all') where.priority = priority as any;
   if (assignedUserId && assignedUserId !== 'all') where.assignedUserId = assignedUserId;
 
   const items = await prisma.leadFollowUp.findMany({
-    where,
+    where: { AND: [where, followUpScope(scope)] },
     orderBy: { dueAt: 'asc' },
     include: { lead: { select: { firstName: true, lastName: true } } },
   });
@@ -84,7 +95,7 @@ followUpsRouter.get('/calendar', async (req, res) => {
 });
 
 followUpsRouter.get('/:id', async (req, res) => {
-  const row = await prisma.leadFollowUp.findUnique({ where: { id: req.params.id } });
+  const row = await findFollowUpInScope(await scopeOf(req), req.params.id);
   if (!row) return res.status(404).json({ error: 'Follow-up not found' });
   res.json(row);
 });
@@ -102,6 +113,16 @@ followUpsRouter.post('/', async (req, res) => {
   };
   if (!leadId || !title?.trim() || !dueAt) return res.status(400).json({ error: 'leadId, title and dueAt are required.' });
 
+  // A follow-up goes on a lead the caller can see, and may only be handed to somebody they
+  // may assign to. Both answer as "not found" / forbidden rather than confirming a lead exists.
+  const scope = await scopeOf(req);
+  if (scope.kind !== 'all' && !(await prisma.lead.count({ where: inLeadScope({ id: leadId }, scope) }))) {
+    return res.status(404).json({ error: 'Lead not found' });
+  }
+  if (assignedUserId && assignedUserId !== scope.userId && !(await canAssignTo(scope, assignedUserId))) {
+    return res.status(403).json({ error: 'You can only assign follow-ups to people in your own team.' });
+  }
+
   const created = await prisma.leadFollowUp.create({
     data: {
       leadId,
@@ -118,6 +139,7 @@ followUpsRouter.post('/', async (req, res) => {
 
 followUpsRouter.post('/:id/status', async (req, res) => {
   const { status } = req.body as { status: string };
+  if (!(await findFollowUpInScope(await scopeOf(req), req.params.id))) return res.status(404).json({ error: 'Follow-up not found' });
   const updated = await prisma.leadFollowUp
     .update({
       where: { id: req.params.id },
@@ -131,13 +153,19 @@ followUpsRouter.post('/:id/status', async (req, res) => {
   if (!updated) return res.status(404).json({ error: 'Follow-up not found' });
 
   await prisma.leadActivity.create({
-    data: { leadId: updated.leadId, type: 'note_added', description: `Follow-up "${updated.title}" marked as ${status}.` },
+    data: {
+      leadId: updated.leadId,
+      type: 'note_added',
+      description: `Follow-up "${updated.title}" marked as ${status}.`,
+      userName: await actorNameOf(req),
+    },
   });
   res.json(updated);
 });
 
 followUpsRouter.post('/:id/reschedule', async (req, res) => {
   const { dueAt } = req.body as { dueAt: string };
+  if (!(await findFollowUpInScope(await scopeOf(req), req.params.id))) return res.status(404).json({ error: 'Follow-up not found' });
   const updated = await prisma.leadFollowUp
     .update({ where: { id: req.params.id }, data: { dueAt: new Date(dueAt), status: 'rescheduled', completed: false, completedAt: null } })
     .catch(() => null);

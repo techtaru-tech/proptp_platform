@@ -16,7 +16,7 @@ function asDate(input: unknown): Date | null {
   return new Date(Date.UTC(y, m - 1, d));
 }
 
-const STAFF_ROLES = ['employee', 'leader', 'admin'] as const;
+const STAFF_ROLES = ['employee', 'leader', 'team_leader', 'admin'] as const;
 
 // ---------------------------------------------------------------------------
 // Types

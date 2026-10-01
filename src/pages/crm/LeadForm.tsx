@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { listSourceOptions, listAssignableUsers } from '../../services/leadService';
+import { mayAssignLeads, mayUnassignLeads } from '../../data/referenceData';
 import { usePipelineReferenceData } from '../../hooks/usePipelineReferenceData';
 import {
   asOptions, BUDGET_RANGE_OPTIONS, PREFERRED_LOCATION_OPTIONS, PROPERTY_TYPE_OPTIONS, PURPOSE_OPTIONS,
@@ -216,12 +217,20 @@ export function LeadDetailsFields({ values, onChange, isNewLead }: Omit<FieldsPr
           { value: 'urgent', label: 'Urgent' },
         ]}
       />
-      <Select
-        label="Assigned to"
-        value={values.assignedUserId}
-        onChange={(e) => onChange({ assignedUserId: e.target.value })}
-        options={[{ value: '', label: 'Unassigned' }, ...listAssignableUsers().map((u) => ({ value: u.id, label: u.name }))]}
-      />
+      {mayAssignLeads() ? (
+        <Select
+          label="Assigned to"
+          value={values.assignedUserId}
+          onChange={(e) => onChange({ assignedUserId: e.target.value })}
+          options={[
+            ...(mayUnassignLeads() ? [{ value: '', label: 'Unassigned' }] : [{ value: '', label: 'Me' }]),
+            ...listAssignableUsers().map((u) => ({ value: u.id, label: u.name })),
+          ]}
+        />
+      ) : (
+        // An Employee's leads are their own; there is nobody they may hand one to.
+        <div />
+      )}
       <div />
       <Select
         label="Pipeline"

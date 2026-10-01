@@ -41,7 +41,7 @@ async function findAgentByNumber(number?: string | null) {
 /** Reachable staff, in a stable order so round-robin actually rotates. */
 function callableAgents() {
   return prisma.user.findMany({
-    where: { status: 'active', role: { in: ['admin', 'leader', 'employee'] } },
+    where: { status: 'active', role: { in: ['admin', 'leader', 'team_leader', 'employee'] } },
     orderBy: { createdAt: 'asc' },
     select: { id: true, name: true, phone: true, callExtension: true },
   });

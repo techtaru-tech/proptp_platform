@@ -18,7 +18,12 @@ export function usePermissions() {
     const modules = (session?.modules ?? []) as ModuleKey[];
 
     const can = (module: ModuleKey) => isFullAccess || modules.includes(module);
-    const navItems: NavItem[] = NAV_ITEMS.filter((item) => can(item.module));
+    // Team pages are for people who manage somebody. An Employee or Agent — `scope: 'own'` —
+    // has no team to look at, so the entries are left out rather than opening an empty page.
+    const hasTeam = isFullAccess || session?.scope !== 'own';
+    const navItems: NavItem[] = NAV_ITEMS.filter((item) => can(item.module)).map((item) =>
+      item.children ? { ...item, children: item.children.filter((c) => !c.teamOnly || hasTeam) } : item
+    );
 
     return {
       isFullAccess,

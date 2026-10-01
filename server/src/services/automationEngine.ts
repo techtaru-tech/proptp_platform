@@ -4,6 +4,7 @@ import { isWithinBusinessHours } from './businessHours';
 import { enrollLead } from './aiSdrEngine';
 import { deliverLeadEmail, renderPlaceholders } from './email';
 import { enrollLeads as enrollInSequence } from './emailSequenceEngine';
+import { descendantIds } from './hierarchy';
 
 // ---------------------------------------------------------------------------
 // The automation engine: trigger -> ordered steps (condition / action / delay), run
@@ -132,6 +133,12 @@ interface ActionContext {
    */
   automationId?: string;
   stepIndex?: number;
+  /**
+   * Set when a person, not a trigger, started the run: assignment may only land on somebody in
+   * that person's hierarchy, whatever the saved rule says. Without it a Team Leader could run an
+   * automation built by an administrator and hand leads to a peer's team.
+   */
+  allowedAssigneeIds?: string[];
 }
 
 export interface AssignSequenceEntry {
@@ -189,6 +196,39 @@ async function logActivity(leadId: string, type: string, description: string, me
   await prisma.leadActivity.create({ data: { leadId, type, description, metadata: metadata as any } });
 }
 
+/** Whichever candidate was assigned a lead longest ago (or never) goes next. */
+async function leastRecentlyAssigned(candidates: string[]): Promise<string | undefined> {
+  let best: string | undefined = candidates[0];
+  let bestTime = Infinity;
+  for (const candidate of candidates) {
+    const entry = await prisma.leadAssignmentHistoryEntry.findFirst({ where: { toUserId: candidate }, orderBy: { createdAt: 'desc' } });
+    const t = entry ? entry.createdAt.getTime() : 0;
+    if (t < bestTime) {
+      bestTime = t;
+      best = candidate;
+    }
+  }
+  return best;
+}
+
+/**
+ * The people under a manager, looked up when the rule runs rather than saved with it. That is
+ * the point of the mode: add an Employee to Anoop's team tomorrow and the next lead the rule
+ * deals can already go to them, with nobody editing the automation.
+ */
+async function hierarchyCandidates(config: any): Promise<string[]> {
+  const managerId = String(config.assignManagerId ?? '');
+  if (!managerId) return [];
+  const ids =
+    config.assignDepth === 'all'
+      ? await descendantIds(managerId)
+      : (await prisma.user.findMany({ where: { reportingLeaderId: managerId }, select: { id: true } })).map((u) => u.id);
+  const pool = config.includeManager ? [managerId, ...ids] : ids;
+  const active = await prisma.user.findMany({ where: { id: { in: pool }, status: 'active' }, select: { id: true } });
+  const activeIds = new Set(active.map((u) => u.id));
+  return pool.filter((id) => activeIds.has(id));
+}
+
 async function actionAssignLead(config: any, lead: LeadWithRelations, ctx: ActionContext): Promise<ActionResult> {
   const assignUserIds: string[] = config.assignUserIds ?? [];
   let toUserId: string | undefined;
@@ -196,18 +236,14 @@ async function actionAssignLead(config: any, lead: LeadWithRelations, ctx: Actio
   if (config.assignMode === 'specific') {
     toUserId = assignUserIds[0];
   } else if (config.assignMode === 'round_robin' && assignUserIds.length > 0) {
-    // Whichever candidate was assigned longest ago (or never) goes next.
-    let best = assignUserIds[0];
-    let bestTime = Infinity;
-    for (const candidate of assignUserIds) {
-      const entry = await prisma.leadAssignmentHistoryEntry.findFirst({ where: { toUserId: candidate }, orderBy: { createdAt: 'desc' } });
-      const t = entry ? entry.createdAt.getTime() : 0;
-      if (t < bestTime) {
-        bestTime = t;
-        best = candidate;
-      }
+    toUserId = await leastRecentlyAssigned(assignUserIds);
+  } else if (config.assignMode === 'hierarchy') {
+    let candidates = await hierarchyCandidates(config);
+    if (ctx.allowedAssigneeIds) candidates = candidates.filter((id) => ctx.allowedAssigneeIds!.includes(id));
+    if (candidates.length === 0) {
+      return { ok: false, message: 'Nobody is currently available under the chosen manager for this rule.' };
     }
-    toUserId = best;
+    toUserId = await leastRecentlyAssigned(candidates);
   } else if (config.assignMode === 'sequence') {
     if (!ctx.automationId || ctx.stepIndex === undefined) {
       return { ok: false, message: 'A sequential rota can only run as a saved automation step.' };
@@ -227,6 +263,9 @@ async function actionAssignLead(config: any, lead: LeadWithRelations, ctx: Actio
   }
 
   if (!toUserId) return { ok: false, message: 'No eligible assignee was found for this rule.' };
+  if (ctx.allowedAssigneeIds && !ctx.allowedAssigneeIds.includes(toUserId)) {
+    return { ok: false, message: 'That rule assigns outside your own team, so it was not applied.' };
+  }
   if (lead.assignedUserId && !config.overwrite) {
     return { ok: false, message: 'Lead already has an owner and the rule does not allow overwriting.' };
   }
@@ -345,6 +384,7 @@ async function executeAction(config: any, lead: LeadWithRelations, ctx: ActionCo
 
 interface RunOptions {
   teamMemberIds?: string[];
+  allowedAssigneeIds?: string[];
 }
 
 async function executeSteps(
@@ -376,6 +416,7 @@ async function executeSteps(
       const result = await executeAction(step.config, lead, {
         automationName: automation.name,
         teamMemberIds: options.teamMemberIds,
+        allowedAssigneeIds: options.allowedAssigneeIds,
         automationId: automation.id,
         stepIndex: i,
       }).catch(
@@ -439,7 +480,12 @@ export async function fireTrigger(
 
 /** Manual runs still originate from the frontend's explicit "Run automation" action — kept
  * separate from `fireTrigger` because only this path can carry `teamMemberIds`. */
-export async function runAutomationManually(automationId: string, leadIds: string[], teamMemberIds?: string[]): Promise<{ queued: number; skipped: number }> {
+export async function runAutomationManually(
+  automationId: string,
+  leadIds: string[],
+  teamMemberIds?: string[],
+  allowedAssigneeIds?: string[]
+): Promise<{ queued: number; skipped: number }> {
   const automation = await prisma.automation.findUnique({ where: { id: automationId }, include: { steps: { orderBy: { sortOrder: 'asc' } } } });
   if (!automation) return { queued: 0, skipped: leadIds.length };
 
@@ -447,7 +493,7 @@ export async function runAutomationManually(automationId: string, leadIds: strin
   let skipped = 0;
   for (const leadId of leadIds) {
     const before = await prisma.automationRun.count({ where: { automationId, leadId } });
-    await startRun(automation, leadId, { teamMemberIds });
+    await startRun(automation, leadId, { teamMemberIds, allowedAssigneeIds });
     const after = await prisma.automationRun.findFirst({ where: { automationId, leadId }, orderBy: { ranAt: 'desc' } });
     if (after?.status === 'success' || after?.status === 'waiting') queued += 1;
     else skipped += 1;

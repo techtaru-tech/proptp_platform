@@ -6,6 +6,7 @@ import { parseListQuery } from '../services/list';
 import { encrypt } from '../services/crypto';
 import { writeAudit } from '../services/audit';
 import type { AuthedRequest } from '../services/auth';
+import { inLeadScope, leadScopeWhere, scopeOf, type Scope } from '../services/hierarchy';
 import {
   clickToCall, dialCall, getExtensionStatus, getSettings, normalizeNumber, testConnection, TelephonyError,
 } from '../services/airphone';
@@ -20,6 +21,16 @@ const callInclude = {
 } satisfies Prisma.CallLogInclude;
 
 type CallRow = Prisma.CallLogGetPayload<{ include: typeof callInclude }>;
+
+/**
+ * A call belongs to whoever owns its lead, and to whoever took it. The second half matters for
+ * the calls that match no lead (an unknown number ringing in): they would otherwise be visible
+ * to nobody but an administrator, including the person who answered.
+ */
+function callScope(scope: Scope): Prisma.CallLogWhereInput {
+  if (scope.kind === 'all') return {};
+  return { OR: [{ lead: leadScopeWhere(scope) }, { agentUserId: { in: scope.userIds } }] };
+}
 
 function serialize(call: CallRow) {
   return {
@@ -68,6 +79,7 @@ callsRouter.get('/', async (req, res, next) => {
     const status = String(req.query.status ?? 'all');
     const agentUserId = String(req.query.agentUserId ?? 'all');
 
+    const scope = await scopeOf(req);
     const where: Prisma.CallLogWhereInput = {};
     if (direction !== 'all' && direction) where.direction = direction;
     if (status !== 'all' && status) where.status = status;
@@ -89,9 +101,10 @@ callsRouter.get('/', async (req, res, next) => {
     };
     const orderBy = (query.sortBy && SORTABLE[query.sortBy]) || { startedAt: 'desc' as const };
 
+    const scoped: Prisma.CallLogWhereInput = { AND: [where, callScope(scope)] };
     const [items, total] = await Promise.all([
-      prisma.callLog.findMany({ where, include: callInclude, orderBy, skip: query.skip, take: query.take }),
-      prisma.callLog.count({ where }),
+      prisma.callLog.findMany({ where: scoped, include: callInclude, orderBy, skip: query.skip, take: query.take }),
+      prisma.callLog.count({ where: scoped }),
     ]);
 
     res.json({ items: items.map(serialize), total, page: query.page, pageSize: query.pageSize });
@@ -102,7 +115,11 @@ callsRouter.get('/', async (req, res, next) => {
 
 callsRouter.get('/:id', async (req, res, next) => {
   try {
-    const call = await prisma.callLog.findUnique({ where: { id: String(req.params.id) }, include: callInclude });
+    const scope = await scopeOf(req);
+    const call = await prisma.callLog.findFirst({
+      where: { AND: [{ id: String(req.params.id) }, callScope(scope)] },
+      include: callInclude,
+    });
     if (!call) return res.status(404).json({ error: 'Call not found' });
     res.json({ ...serialize(call), rawPayload: call.rawPayload ?? undefined });
   } catch (err) {
@@ -121,7 +138,10 @@ callsRouter.get('/:id', async (req, res, next) => {
 callsRouter.post('/click-to-call', async (req: AuthedRequest, res, next) => {
   try {
     const leadId = req.body?.leadId ? String(req.body.leadId) : null;
-    const lead = leadId ? await prisma.lead.findUnique({ where: { id: leadId }, select: { id: true, phone: true } }) : null;
+    const lead = leadId
+      ? await prisma.lead.findFirst({ where: inLeadScope({ id: leadId }, await scopeOf(req)), select: { id: true, phone: true } })
+      : null;
+    if (leadId && !lead) return res.status(404).json({ error: 'Lead not found' });
     const caller = normalizeNumber(req.body?.caller ?? lead?.phone);
     if (caller.length < 10) return res.status(400).json({ error: 'A valid 10-digit customer number is required.' });
 
@@ -237,7 +257,7 @@ callsRouter.get('/extensions/status', async (_req, res, next) => {
 // and because setting one also repairs the calls already logged against that extension.
 // ---------------------------------------------------------------------------
 
-const AGENT_ROLES = ['admin', 'leader', 'employee'];
+const AGENT_ROLES = ['admin', 'leader', 'team_leader', 'employee'];
 
 callsRouter.get('/extensions/mapping', async (_req, res, next) => {
   try {

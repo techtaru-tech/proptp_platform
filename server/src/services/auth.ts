@@ -158,6 +158,7 @@ const ROLE_PREFIX: Record<UserRole, string> = {
   admin: 'ADM',
   employee: 'EMP',
   leader: 'LDR',
+  team_leader: 'TLD',
 };
 
 /**

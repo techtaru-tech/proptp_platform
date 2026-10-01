@@ -7,11 +7,15 @@ import { attendanceStatus, adminAttendance, adminBooking, adminPayout, adminUser
 import { listResult, parseListQuery } from '../../services/list';
 import { dayKey } from '../../services/dates';
 import { businessSummaryFor, downlineFor } from '../../services/derive';
+import { ROLE_LABEL, validateReporting } from '../../services/hierarchy';
 
 export const adminUsersRouter = Router();
 export const adminKycRouter = Router();
 
-const userInclude = { bankAccounts: true } satisfies Prisma.UserInclude;
+const userInclude = {
+  bankAccounts: true,
+  reportingLeader: { select: { name: true } },
+} satisfies Prisma.UserInclude;
 
 /**
  * The per-role extras the frontend's Agent/Employee/Leader types carry. All derived —
@@ -62,10 +66,10 @@ async function statsFor(users: { id: string; role: UserRole }[]) {
         base.totalBookings = bookingsBy.get(user.id) ?? 0;
         base.totalReferrals = referralsBy.get(user.id) ?? 0;
       }
-      if (user.role === 'employee' || user.role === 'leader') {
+      if (user.role === 'employee' || user.role === 'leader' || user.role === 'team_leader') {
         base.attendanceStatusToday = attendanceBy.get(user.id) ?? 'not_checked_in';
       }
-      if (user.role === 'leader') {
+      if (user.role === 'leader' || user.role === 'team_leader') {
         base.teamSize = tally.total;
         base.employeeCount = tally.employees;
         base.agentCount = tally.agents;
@@ -121,6 +125,14 @@ adminUsersRouter.get('/employees', async (req, res, next) => {
   }
 });
 
+adminUsersRouter.get('/team-leaders', async (req, res, next) => {
+  try {
+    res.json(await listByRole(req, 'team_leader'));
+  } catch (err) {
+    next(err);
+  }
+});
+
 adminUsersRouter.get('/leaders', async (req, res, next) => {
   try {
     res.json(await listByRole(req, 'leader'));
@@ -138,7 +150,7 @@ adminUsersRouter.get('/', async (req, res, next) => {
   try {
     const roleParam = String(req.query.role ?? '').trim();
     const where: Prisma.UserWhereInput = {};
-    if (['agent', 'employee', 'leader', 'admin'].includes(roleParam)) where.role = roleParam as UserRole;
+    if (['agent', 'employee', 'leader', 'team_leader', 'admin'].includes(roleParam)) where.role = roleParam as UserRole;
     const users = await prisma.user.findMany({ where, include: userInclude, orderBy: { name: 'asc' } });
     const stats = await statsFor(users);
     res.json({ users: users.map((u) => adminUser(u, stats.get(u.id) ?? {})) });
@@ -203,6 +215,48 @@ adminUsersRouter.get('/:id', async (req, res, next) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
     const stats = await statsFor([user]);
     res.json(adminUser(user, stats.get(user.id) ?? {}));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Moves somebody within the reporting tree: a new manager, a new role, or both.
+ *
+ * Checked as one placement rather than two edits, because the pair has to hold together — an
+ * Employee promoted to Team Leader must end up under a Leader, not still under the Team Leader
+ * they were reporting to a moment ago. Their leads do not move; what changes is who can see them.
+ */
+adminUsersRouter.patch('/:id/hierarchy', async (req: AuthedRequest, res, next) => {
+  try {
+    const id = String(req.params.id);
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.role === 'admin') return res.status(400).json({ error: 'Administrators sit outside the reporting tree.' });
+
+    const role = (req.body?.role ?? user.role) as UserRole;
+    if (!['leader', 'team_leader', 'employee', 'agent'].includes(role)) {
+      return res.status(400).json({ error: 'role must be leader, team_leader, employee or agent.' });
+    }
+    const managerId = req.body?.managerId === undefined ? user.reportingLeaderId : String(req.body.managerId || '') || null;
+
+    const error = await validateReporting(user.id, role, managerId);
+    if (error) return res.status(400).json({ error });
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: { role, reportingLeaderId: managerId },
+      include: userInclude,
+    });
+    await writeAudit(req, {
+      module: 'Users',
+      action: 'Changed reporting line',
+      recordId: updated.id,
+      recordLabel: updated.name,
+      description: `${updated.name} is now a ${ROLE_LABEL[role]}${updated.reportingLeader ? ` reporting to ${updated.reportingLeader.name}` : ' with no manager'}.`,
+    });
+    const stats = await statsFor([updated]);
+    res.json(adminUser(updated, stats.get(updated.id) ?? {}));
   } catch (err) {
     next(err);
   }

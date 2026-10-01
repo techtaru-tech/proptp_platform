@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '../prisma';
 import { enrollLeads, runEmailSequenceTick, stopEnrollment } from '../services/emailSequenceEngine';
 import { isEmailConfigured } from '../services/email';
+import { leadIdsInScope, leadScopeWhere, scopeOf, type Scope } from '../services/hierarchy';
 
 export const emailSequencesRouter = Router();
 
@@ -47,10 +48,10 @@ const listInclude = {
 } satisfies Prisma.EmailSequenceInclude;
 
 /** Enrollment tallies are counted per status in one grouped query rather than per row. */
-async function enrollmentCounts(sequenceIds: string[]) {
+async function enrollmentCounts(sequenceIds: string[], scope: Scope) {
   const grouped = await prisma.emailSequenceEnrollment.groupBy({
     by: ['sequenceId', 'status'],
-    where: { sequenceId: { in: sequenceIds } },
+    where: { sequenceId: { in: sequenceIds }, ...(scope.kind === 'all' ? {} : { lead: leadScopeWhere(scope) }) },
     _count: { _all: true },
   });
   const map = new Map<string, { active: number; completed: number; stopped: number }>();
@@ -70,10 +71,10 @@ emailSequencesRouter.get('/capabilities', async (_req, res, next) => {
   }
 });
 
-emailSequencesRouter.get('/', async (_req, res, next) => {
+emailSequencesRouter.get('/', async (req, res, next) => {
   try {
     const sequences = await prisma.emailSequence.findMany({ include: listInclude, orderBy: { createdAt: 'desc' } });
-    const counts = await enrollmentCounts(sequences.map((s) => s.id));
+    const counts = await enrollmentCounts(sequences.map((s) => s.id), await scopeOf(req));
     res.json(
       sequences.map((s) => {
         const tally = counts.get(s.id)!;
@@ -104,7 +105,7 @@ emailSequencesRouter.get('/:id', async (req, res, next) => {
       include: { steps: { orderBy: { sortOrder: 'asc' } }, ...listInclude },
     });
     if (!sequence) return res.status(404).json({ error: 'Sequence not found' });
-    const tally = (await enrollmentCounts([sequence.id])).get(sequence.id)!;
+    const tally = (await enrollmentCounts([sequence.id], await scopeOf(req))).get(sequence.id)!;
     res.json({
       id: sequence.id,
       name: sequence.name,
@@ -199,7 +200,9 @@ emailSequencesRouter.delete('/:id', async (req, res, next) => {
 
 emailSequencesRouter.post('/:id/enroll', async (req, res, next) => {
   try {
-    const leadIds = Array.isArray(req.body?.leadIds) ? req.body.leadIds.map(String) : [];
+    // Only leads the caller can see may be enrolled — a sequence would otherwise email a lead
+    // from outside their team on their say-so.
+    const leadIds = await leadIdsInScope(await scopeOf(req), req.body?.leadIds);
     if (leadIds.length === 0) return res.status(400).json({ error: 'leadIds is required.' });
     res.json(await enrollLeads(String(req.params.id), leadIds));
   } catch (err) {
@@ -209,8 +212,9 @@ emailSequencesRouter.post('/:id/enroll', async (req, res, next) => {
 
 emailSequencesRouter.get('/:id/enrollments', async (req, res, next) => {
   try {
+    const scope = await scopeOf(req);
     const rows = await prisma.emailSequenceEnrollment.findMany({
-      where: { sequenceId: String(req.params.id) },
+      where: { sequenceId: String(req.params.id), ...(scope.kind === 'all' ? {} : { lead: leadScopeWhere(scope) }) },
       include: {
         lead: { select: { id: true, firstName: true, lastName: true, email: true, status: true } },
         _count: { select: { sends: true } },
@@ -232,6 +236,22 @@ emailSequencesRouter.get('/:id/enrollments', async (req, res, next) => {
         createdAt: r.createdAt.toISOString(),
       }))
     );
+  } catch (err) {
+    next(err);
+  }
+});
+
+// An enrollment is its lead's: anything on one is checked against the caller's hierarchy first.
+emailSequencesRouter.use('/enrollments/:enrollmentId', async (req, res, next) => {
+  try {
+    const scope = await scopeOf(req);
+    if (scope.kind !== 'all') {
+      const visible = await prisma.emailSequenceEnrollment.count({
+        where: { id: String(req.params.enrollmentId), lead: leadScopeWhere(scope) },
+      });
+      if (!visible) return res.status(404).json({ error: 'Enrollment not found' });
+    }
+    next();
   } catch (err) {
     next(err);
   }

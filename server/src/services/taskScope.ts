@@ -1,23 +1,18 @@
 import type { Prisma, UserRole } from '@prisma/client';
 import { prisma } from '../prisma';
+import { resolveScope } from './hierarchy';
 
 /**
  * Who may see and assign which tasks.
  *
- * This is the only place the rule is written. The list, the board, the counters, the
- * assignee dropdown and every write all resolve their scope here, so none of them can
- * disagree about whether a given task belongs to the caller.
+ * Tasks follow the same reporting tree as leads (services/hierarchy.ts) — this file only maps
+ * that scope onto the shape the task routes were written against, so the list, the board, the
+ * counters, the assignee dropdown and every write still resolve their scope in exactly one
+ * place and cannot disagree about whether a task belongs to the caller.
  *
- * The rule, by `User.role`:
- *
- *   admin     every task, and may assign to anybody
- *   leader    their own plus their team's, and may assign within that team
- *   agent     their own plus their team's, and may assign within that team
- *   employee  their own only, and may only assign to themselves
- *
- * A team is `User.teamId` — the Team row a person belongs to, the same grouping the
- * Teams / Referrals screen shows. Someone with no team sees only their own tasks, which is
- * what "my team" means when you are not in one.
+ *   admin                  every task, and may assign to anybody
+ *   leader / team leader   their own plus everyone beneath them, and may assign within that tree
+ *   employee / agent       their own only, and may only assign to themselves
  */
 
 export type TaskScopeKind = 'all' | 'team' | 'own';
@@ -26,24 +21,14 @@ export interface TaskScope {
   kind: TaskScopeKind;
   userId: string;
   role: UserRole;
-  /** Null for an admin (irrelevant) and for anyone not in a team. */
-  teamId: string | null;
+  /** The caller plus everyone beneath them. Meaningful for `team`; just the caller for `own`. */
+  userIds: string[];
 }
 
-const TEAM_ROLES: UserRole[] = ['agent', 'leader'];
-
 export async function resolveTaskScope(userId: string): Promise<TaskScope> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, role: true, teamId: true },
-  });
-  if (!user) return { kind: 'own', userId, role: 'employee', teamId: null };
-
-  if (user.role === 'admin') return { kind: 'all', userId, role: user.role, teamId: null };
-
-  // A team role with no team has nobody to see but themselves.
-  const kind: TaskScopeKind = TEAM_ROLES.includes(user.role) && user.teamId ? 'team' : 'own';
-  return { kind, userId, role: user.role, teamId: user.teamId };
+  const scope = await resolveScope(userId);
+  const kind: TaskScopeKind = scope.kind === 'all' ? 'all' : scope.kind === 'tree' ? 'team' : 'own';
+  return { kind, userId, role: scope.role, userIds: scope.userIds };
 }
 
 /**
@@ -59,7 +44,7 @@ export function taskScopeWhere(scope: TaskScope): Prisma.TaskWhereInput {
   const own: Prisma.TaskWhereInput[] = [{ assigneeId: scope.userId }, { createdById: scope.userId }];
   if (scope.kind === 'own') return { OR: own };
 
-  return { OR: [...own, { assignee: { teamId: scope.teamId } }] };
+  return { OR: [...own, { assigneeId: { in: scope.userIds } }] };
 }
 
 /** The users this scope may assign a task to, newest-irrelevant, ordered for a dropdown. */
@@ -68,7 +53,7 @@ export async function assignableUsers(scope: TaskScope) {
     scope.kind === 'all'
       ? { status: 'active' }
       : scope.kind === 'team'
-        ? { status: 'active', OR: [{ id: scope.userId }, { teamId: scope.teamId }] }
+        ? { status: 'active', id: { in: scope.userIds } }
         : { id: scope.userId };
 
   return prisma.user.findMany({
@@ -87,8 +72,7 @@ export async function canAssignTo(scope: TaskScope, assigneeId: string): Promise
   if (assigneeId === scope.userId) return true;
   if (scope.kind === 'own') return false;
 
-  const target = await prisma.user.findUnique({ where: { id: assigneeId }, select: { teamId: true } });
-  return !!target?.teamId && target.teamId === scope.teamId;
+  return scope.userIds.includes(assigneeId);
 }
 
 /**

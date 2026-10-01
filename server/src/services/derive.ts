@@ -220,7 +220,7 @@ export interface DownlineMember {
 
 /** Leaders (and admins) see real phone numbers; agents and employees see masked ones. */
 export function seesFullPhoneNumbers(role: UserRole): boolean {
-  return role === 'leader' || role === 'admin';
+  return role === 'leader' || role === 'team_leader' || role === 'admin';
 }
 
 export function maskPhone(phone: string): string {

@@ -1,3 +1,4 @@
+import { mayAssignLeads, mayUnassignLeads, userDisplayName } from '../../data/referenceData';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
@@ -396,7 +397,7 @@ export function LeadDetail() {
                 <Card>
                   <CardHeader title="Lead Management" subtitle="Ownership, stage and status" />
                   <div className="space-y-3">
-                    <ManagementRow icon={UserCog} label="Assigned To" value={assignee?.name ?? lead.assignedTo ?? 'Unassigned'} onClick={() => { setAssignValue(lead.assignedUserId ?? ''); setAssignOpen(true); }} />
+                    <ManagementRow icon={UserCog} label="Assigned To" value={assignee?.name ?? (lead.assignedUserId ? userDisplayName(lead.assignedUserId) : lead.assignedTo ?? 'Unassigned')} onClick={mayAssignLeads() ? () => { setAssignValue(lead.assignedUserId ?? ''); setAssignOpen(true); } : undefined} />
                     <ManagementRow icon={GitBranch} label="Pipeline Stage" value={stage ? `${pipeline?.name} · ${stage.name}` : 'Unassigned'} onClick={() => { setStagePipeline(lead.pipelineId ?? pipelines[0]?.id ?? ""); setStageValue(lead.pipelineStageId ?? ''); setStageOpen(true); }} />
                     <ManagementRow icon={Flag} label="Status" value={<StatusBadge kind="leadStatus" status={lead.status} dot={false} />} onClick={() => { setStatusValue(lead.status); setLostReason(lead.lostReason ?? ''); setStatusOpen(true); }} />
                   </div>
@@ -651,7 +652,7 @@ export function LeadDetail() {
           </>
         }
       >
-        <Select label="Assigned to" value={assignValue} onChange={(e) => setAssignValue(e.target.value)} options={[{ value: '', label: 'Unassigned' }, ...assignableUsers.map((u) => ({ value: u.id, label: u.name }))]} />
+        <Select label="Assigned to" value={assignValue} onChange={(e) => setAssignValue(e.target.value)} options={[...(mayUnassignLeads() ? [{ value: '', label: 'Unassigned' }] : []), ...assignableUsers.map((u) => ({ value: u.id, label: u.name }))]} />
       </Modal>
 
       {/* Stage modal */}
@@ -818,7 +819,20 @@ function Row({ label, value, hint }: { label: string; value: ReactNode; hint?: s
   );
 }
 
-function ManagementRow({ icon: Icon, label, value, onClick }: { icon: typeof UserCog; label: string; value: ReactNode; onClick: () => void }) {
+function ManagementRow({ icon: Icon, label, value, onClick }: { icon: typeof UserCog; label: string; value: ReactNode; onClick?: () => void }) {
+  // Without a handler the row is information, not a control — an Employee can read who owns a
+  // lead but has no way to hand it on, so it must not look like it opens something.
+  if (!onClick) {
+    return (
+      <div className="flex w-full items-center justify-between gap-3 rounded-lg border border-line px-3.5 py-2.5">
+        <span className="flex items-center gap-2.5 text-sm text-ink-muted">
+          <Icon size={15} className="text-ink-faint" />
+          {label}
+        </span>
+        <span className="text-sm font-medium text-ink">{value}</span>
+      </div>
+    );
+  }
   return (
     <button onClick={onClick} className="flex w-full items-center justify-between gap-3 rounded-lg border border-line px-3.5 py-2.5 text-left hover:border-brand-300 focus-ring">
       <span className="flex items-center gap-2.5 text-sm text-ink-muted">

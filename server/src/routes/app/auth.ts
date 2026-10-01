@@ -107,7 +107,7 @@ appAuthRouter.get('/sponsor', async (req, res, next) => {
 appAuthRouter.get('/leaders', async (_req, res, next) => {
   try {
     const leaders = await prisma.user.findMany({
-      where: { role: 'leader', status: 'active' },
+      where: { role: { in: ['leader', 'team_leader'] }, status: 'active' },
       orderBy: { name: 'asc' },
       select: { id: true, name: true, partnerCode: true, area: true },
     });
@@ -183,7 +183,7 @@ appAuthRouter.post('/register', upload.fields(KYC_FIELDS), async (req, res, next
     const reportingLeaderId = String(body.reporting_leader_id ?? '').trim() || null;
     if (role === 'employee' && reportingLeaderId) {
       const leader = await prisma.user.findFirst({
-        where: { id: reportingLeaderId, role: 'leader', status: 'active' },
+        where: { id: reportingLeaderId, role: { in: ['leader', 'team_leader'] }, status: 'active' },
         select: { id: true },
       });
       if (!leader) return fail(res, 400, 'invalid_reporting_leader', 'That reporting leader does not exist.');

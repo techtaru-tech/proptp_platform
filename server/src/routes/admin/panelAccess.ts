@@ -5,6 +5,7 @@ import { hashPassword, type AuthedRequest } from '../../services/auth';
 import { requireFullAccess } from './auth';
 import { MODULES, getAdministratorRole, resolveAccess, sanitizeModules } from '../../services/permissions';
 import { writeAudit } from '../../services/audit';
+import { ROLE_LABEL, validateReporting } from '../../services/hierarchy';
 
 /**
  * Roles and the panel users assigned to them. Everything here is behind `requireFullAccess`,
@@ -13,7 +14,7 @@ import { writeAudit } from '../../services/audit';
 export const panelRolesRouter = Router();
 
 /** The account roles a panel user may be created as. `leader` and `agent` also lead/join teams. */
-const ACCOUNT_ROLES: UserRole[] = ['admin', 'employee', 'leader', 'agent'];
+const ACCOUNT_ROLES: UserRole[] = ['admin', 'employee', 'leader', 'team_leader', 'agent'];
 export const panelUsersRouter = Router();
 
 /** The module catalogue the Roles screen renders its checkboxes from. */
@@ -155,6 +156,8 @@ const panelUserShape = (user: {
   avatarUrl: string | null;
   panelRoleId: string | null;
   panelRole?: { name: string; isFullAccess: boolean } | null;
+  reportingLeaderId?: string | null;
+  reportingLeader?: { name: string } | null;
   createdAt: Date;
 }) => ({
   id: user.id,
@@ -167,8 +170,16 @@ const panelUserShape = (user: {
   panelRoleId: user.panelRoleId,
   roleName: user.panelRole?.name ?? 'Administrator',
   isFullAccess: user.panelRole?.isFullAccess ?? true,
+  managerId: user.reportingLeaderId ?? null,
+  managerName: user.reportingLeader?.name ?? null,
   createdAt: user.createdAt,
 });
+
+/** What a panel-user query loads so the list can show who each person reports to. */
+const panelUserInclude = {
+  panelRole: { select: { name: true, isFullAccess: true } },
+  reportingLeader: { select: { name: true } },
+} as const;
 
 panelUsersRouter.get('/', async (_req, res, next) => {
   try {
@@ -177,7 +188,7 @@ panelUsersRouter.get('/', async (_req, res, next) => {
       // employee or agent who works in the panel belongs on this list too.
       where: { OR: [{ role: 'admin' }, { panelRoleId: { not: null } }] },
       orderBy: { createdAt: 'asc' },
-      include: { panelRole: { select: { name: true, isFullAccess: true } } },
+      include: panelUserInclude,
     });
     res.json(users.map(panelUserShape));
   } catch (err) {
@@ -199,6 +210,7 @@ panelUsersRouter.post('/', async (req: AuthedRequest, res, next) => {
      * was before this was a choice.
      */
     const accountRole = String(req.body?.accountRole ?? 'admin').trim() as UserRole;
+    const managerId = String(req.body?.managerId ?? '').trim() || null;
 
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: 'A valid email address is required.' });
@@ -206,6 +218,10 @@ panelUsersRouter.post('/', async (req: AuthedRequest, res, next) => {
     if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
     if (!panelRoleId) return res.status(400).json({ error: 'Select a role.' });
     if (!ACCOUNT_ROLES.includes(accountRole)) return res.status(400).json({ error: 'Unknown account role.' });
+    // A Team Leader reports to a Leader, an Employee to a Team Leader, and so on — the same
+    // placement rule everywhere somebody is put into the tree.
+    const placement = await validateReporting(null, accountRole, managerId);
+    if (placement) return res.status(400).json({ error: placement });
 
     const role = await prisma.panelRole.findUnique({ where: { id: panelRoleId } });
     if (!role) return res.status(400).json({ error: 'That role no longer exists.' });
@@ -228,10 +244,11 @@ panelUsersRouter.post('/', async (req: AuthedRequest, res, next) => {
         status: 'active',
         passwordHash: await hashPassword(password),
         panelRoleId: role.id,
+        reportingLeaderId: managerId,
         partnerCode: `${codePrefix}${suffix}`,
         referralCode: `${codePrefix}${suffix}`,
       },
-      include: { panelRole: { select: { name: true, isFullAccess: true } } },
+      include: panelUserInclude,
     });
 
     await writeAudit(req, {
@@ -239,7 +256,7 @@ panelUsersRouter.post('/', async (req: AuthedRequest, res, next) => {
       action: 'Created panel user',
       recordId: created.id,
       recordLabel: created.name,
-      description: `Panel user "${created.name}" created as ${accountRole} with role "${role.name}".`,
+      description: `Panel user "${created.name}" created as ${ROLE_LABEL[accountRole]} with role "${role.name}"${created.reportingLeader ? `, reporting to ${created.reportingLeader.name}` : ''}.`,
     });
     res.status(201).json(panelUserShape(created));
   } catch (err) {
@@ -274,6 +291,18 @@ panelUsersRouter.patch('/:id', async (req: AuthedRequest, res, next) => {
       }
       data.status = status;
     }
+    // Placement is validated as a pair — role and manager together — so neither can be changed
+    // into a combination the tree does not allow. Admins sit outside the tree.
+    if (req.body?.accountRole !== undefined || req.body?.managerId !== undefined) {
+      const nextRole = (req.body?.accountRole ?? existing.role) as UserRole;
+      if (!ACCOUNT_ROLES.includes(nextRole)) return res.status(400).json({ error: 'Unknown account role.' });
+      const nextManager =
+        req.body?.managerId === undefined ? existing.reportingLeaderId : String(req.body.managerId || '').trim() || null;
+      const placement = await validateReporting(existing.id, nextRole, nextManager);
+      if (placement) return res.status(400).json({ error: placement });
+      data.role = nextRole;
+      data.reportingLeaderId = nextManager;
+    }
     if (req.body?.password) {
       const password = String(req.body.password);
       if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
@@ -283,7 +312,7 @@ panelUsersRouter.patch('/:id', async (req: AuthedRequest, res, next) => {
     const updated = await prisma.user.update({
       where: { id: existing.id },
       data: data as never,
-      include: { panelRole: { select: { name: true, isFullAccess: true } } },
+      include: panelUserInclude,
     });
 
     await writeAudit(req, {

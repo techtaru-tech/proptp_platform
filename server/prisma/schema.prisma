@@ -989,6 +989,9 @@ enum UserRole {
   admin
   employee
   leader
+  /// Sits between a Leader and the Employees under them. The CRM's lead visibility follows
+  /// the reporting chain — see services/hierarchy.ts.
+  team_leader
 }
 
 enum UserAccountStatus {
@@ -1056,6 +1059,8 @@ model User {
   // Employee / Leader profile
   designation       String?
   area              String?
+  /// The reporting manager — one edge of the CRM hierarchy (Leader → Team Leader → Employee →
+  /// Agent). Lead visibility is derived from this chain at query time, never stored per lead.
   reportingLeader   User?   @relation("ReportsTo", fields: [reportingLeaderId], references: [id])
   reportingLeaderId String?
   reports           User[]  @relation("ReportsTo")
@@ -1102,6 +1107,7 @@ model User {
 
   @@index([role, status])
   @@index([sponsorId])
+  @@index([reportingLeaderId])
 }
 
 /// OTP-only partner login (app doc §1.1/§1.2). The code itself is stored hashed;

@@ -52,6 +52,7 @@ export const ASSIGN_MODE_OPTIONS: { value: AssignmentMode; label: string }[] = [
   { value: 'round_robin', label: 'Round Robin (whoever waited longest)' },
   { value: 'sequence', label: 'Distribution Order (N each, in turn)' },
   { value: 'team', label: 'Team' },
+  { value: 'hierarchy', label: "A manager's team (rotates through whoever reports to them)" },
 ];
 
 export const UPDATE_FIELD_OPTIONS = [

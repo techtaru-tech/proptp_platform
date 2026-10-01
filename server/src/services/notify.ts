@@ -12,10 +12,10 @@ import { sendPush } from './push';
  */
 
 const ROLE_FOR_AUDIENCE: Record<Exclude<NotificationAudience, 'custom'>, UserRole[]> = {
-  all: ['agent', 'employee', 'leader'],
+  all: ['agent', 'employee', 'leader', 'team_leader'],
   agents: ['agent'],
   employees: ['employee'],
-  leaders: ['leader'],
+  leaders: ['leader', 'team_leader'],
 };
 
 /**

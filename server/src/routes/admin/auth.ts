@@ -17,6 +17,20 @@ import { generateRecoveryCodes, generateSecret, hashRecoveryCode, otpauthUri, ve
 import { decrypt, encrypt } from '../../services/crypto';
 import { adminUser } from '../../services/adminMappers';
 import { isAlwaysAllowed, moduleForPath, resolveAccess } from '../../services/permissions';
+import { resolveScope } from '../../services/hierarchy';
+
+/**
+ * Where this person sits in the CRM hierarchy, for the panel to shape itself around — which
+ * assignment controls to show, whether there is a team to look at. The server enforces all of
+ * it regardless; this only stops the UI offering what would be refused.
+ */
+async function hierarchyProfile(userId: string) {
+  const [user, scope] = await Promise.all([
+    prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { role: true, reportingLeaderId: true } }),
+    resolveScope(userId),
+  ]);
+  return { accountRole: user.role, managerId: user.reportingLeaderId, scope: scope.kind, canAssign: scope.canAssign };
+}
 
 /**
  * Admin-panel sign-in. Admins are the only accounts with a password; partners are
@@ -75,6 +89,7 @@ async function sessionResponse(userId: string, req: Request) {
     roleName: access.roleName ?? undefined,
     isFullAccess: access.isFullAccess,
     modules: access.modules,
+    ...(await hierarchyProfile(user.id)),
     token: signToken({ sub: user.id, role: user.role, sid: sessionId }),
   };
 }
@@ -133,6 +148,7 @@ adminAuthRouter.get('/me', requireAuth, async (req: AuthedRequest, res, next) =>
       roleName: access.roleName ?? undefined,
       isFullAccess: access.isFullAccess,
       modules: access.modules,
+      ...(await hierarchyProfile(user.id)),
     });
   } catch (err) {
     next(err);

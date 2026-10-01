@@ -34,6 +34,7 @@ import type {
   AssignSequenceEntry, Automation, AutomationConditionType, AutomationRunEntry, AutomationStep,
   AutomationStepType, AutomationTriggerType,
 } from '../../types';
+import { RoleId } from '../../types';
 
 function initialValues(existing?: Automation): AutomationInput {
   return {
@@ -617,7 +618,7 @@ function ActionConfigFields({
 }: {
   config: Record<string, unknown>;
   onChange: (patch: Record<string, unknown>) => void;
-  assignableUsers: { id: string; name: string }[];
+  assignableUsers: { id: string; name: string; role?: number }[];
   tags: { id: string; name: string }[];
   stagesForConfig: { id: string; name: string; pipelineId: string }[];
   sdrAgents: { id: string; name: string }[];
@@ -640,6 +641,32 @@ function ActionConfigFields({
               onChange={(e) => onChange({ assignTeamId: e.target.value })}
               options={refTeams.map((t) => ({ value: t.id, label: t.name }))}
             />
+          ) : config.assignMode === 'hierarchy' ? (
+            <>
+              <Select
+                label="Manager"
+                name="assignManagerId"
+                required
+                value={(config.assignManagerId as string) ?? ''}
+                onChange={(e) => onChange({ assignManagerId: e.target.value })}
+                options={[UNSET, ...assignableUsers.filter((u) => u.role === RoleId.TeamLeader || u.role === RoleId.Leader).map((u) => ({ value: u.id, label: u.name }))]}
+              />
+              <Select
+                label="Who gets leads"
+                name="assignDepth"
+                value={(config.assignDepth as string) ?? 'direct'}
+                onChange={(e) => onChange({ assignDepth: e.target.value })}
+                options={[
+                  { value: 'direct', label: 'People who report to them directly' },
+                  { value: 'all', label: 'Everyone beneath them' },
+                ]}
+              />
+              <Toggle label="Include the manager in the rotation" checked={!!config.includeManager} onChange={(v) => onChange({ includeManager: v })} />
+              <p className="text-xs text-ink-faint">
+                Looked up each time the rule runs, so someone added to this team tomorrow starts receiving leads without
+                this automation being edited.
+              </p>
+            </>
           ) : config.assignMode === 'sequence' ? (
             <DistributionOrder
               entries={(config.assignSequence as AssignSequenceEntry[]) ?? []}

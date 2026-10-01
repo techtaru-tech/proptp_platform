@@ -73,6 +73,9 @@ import { IncentiveRequestList } from './pages/incentives/IncentiveRequestList';
 import { AgentList } from './pages/users/AgentList';
 import { EmployeeList } from './pages/users/EmployeeList';
 import { LeaderList } from './pages/users/LeaderList';
+import { TeamLeaderList } from './pages/users/TeamLeaderList';
+import { TeamLeaders } from './pages/crm/TeamLeaders';
+import { TeamHierarchy } from './pages/crm/TeamHierarchy';
 import { UserDetail } from './pages/users/UserDetail';
 
 import { TeamsOverview } from './pages/teams/TeamsOverview';
@@ -164,6 +167,8 @@ function App() {
                 <Route path="/crm/automation" element={<Automations />} />
                 <Route path="/crm/automation/new" element={<AutomationBuilder />} />
                 <Route path="/crm/automation/:id/edit" element={<AutomationBuilder />} />
+                <Route path="/crm/team-leaders" element={<TeamLeaders />} />
+                <Route path="/crm/hierarchy" element={<TeamHierarchy />} />
                 <Route path="/crm/sdr-agents" element={<AiSdrAgents />} />
                 <Route path="/crm/sdr-agents/new" element={<AiSdrAgentBuilder />} />
                 <Route path="/crm/sdr-agents/:id" element={<AiSdrAgentDetail />} />
@@ -221,6 +226,7 @@ function App() {
                 <Route path="/users/agents" element={<AgentList />} />
                 <Route path="/users/employees" element={<EmployeeList />} />
                 <Route path="/users/leaders" element={<LeaderList />} />
+                <Route path="/users/team-leaders" element={<TeamLeaderList />} />
                 <Route path="/users/:id" element={<UserDetail />} />
 
                 <Route path="/teams" element={<TeamsOverview />} />

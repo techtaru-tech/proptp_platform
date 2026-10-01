@@ -40,8 +40,9 @@ import type {
 // Enum bridges — the DB stores names, the admin panel speaks the real numeric codes.
 // ---------------------------------------------------------------------------
 
-export const ROLE_ID: Record<UserRole, 0 | 1 | 2 | 3> = { agent: 0, admin: 1, employee: 2, leader: 3 };
-export const ROLE_BY_ID: Record<number, UserRole> = { 0: 'agent', 1: 'admin', 2: 'employee', 3: 'leader' };
+/** 4 is new: the real system has no Team Leader, so the number is ours and appended, never reused. */
+export const ROLE_ID: Record<UserRole, 0 | 1 | 2 | 3 | 4> = { agent: 0, admin: 1, employee: 2, leader: 3, team_leader: 4 };
+export const ROLE_BY_ID: Record<number, UserRole> = { 0: 'agent', 1: 'admin', 2: 'employee', 3: 'leader', 4: 'team_leader' };
 
 /** Real `bookings.paymant_mode` (sic): 0=Bank Transfer, 1=Cash, 2=Cheque, 3=Other. 4=Online is new. */
 export const PAYMENT_MODE_ID: Record<PaymentMode, 0 | 1 | 2 | 3 | 4> = {
@@ -95,7 +96,10 @@ function maskAccount(accounts: BankAccount[]): { masked?: string; ifsc?: string 
   return { masked: `•••• •••• ${primary.accountNumber.slice(-4)}`, ifsc: primary.ifsc };
 }
 
-export function adminUser(user: User & { bankAccounts?: BankAccount[] }, stats: UserStats = {}) {
+export function adminUser(
+  user: User & { bankAccounts?: BankAccount[]; reportingLeader?: { name: string } | null },
+  stats: UserStats = {}
+) {
   const bank = maskAccount(user.bankAccounts ?? []);
   return {
     id: user.id,
@@ -120,6 +124,9 @@ export function adminUser(user: User & { bankAccounts?: BankAccount[] }, stats: 
     // what the Agent/Employee/Leader union in the frontend expects.
     teamId: user.teamId ?? undefined,
     leaderId: user.reportingLeaderId ?? undefined,
+    /** The same edge under its CRM name: who this person reports to. */
+    managerId: user.reportingLeaderId ?? undefined,
+    managerName: user.reportingLeader?.name,
     designation: user.designation ?? undefined,
     area: user.area ?? undefined,
     ...stats,

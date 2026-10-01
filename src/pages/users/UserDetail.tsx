@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { UserCog } from 'lucide-react';
+import { Network, UserCog } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card, CardHeader } from '../../components/ui/Card';
 import { Avatar } from '../../components/ui/Avatar';
@@ -22,6 +22,7 @@ import { useToast } from '../../context/ToastContext';
 import * as userService from '../../services/userService';
 import * as teamService from '../../services/teamService';
 import { findUserById, refAgents, refEmployees } from '../../data/referenceData';
+import { ReportingLineModal } from './ReportingLineModal';
 import { formatCurrency, formatDate, formatDateTime } from '../../utils/format';
 import { RoleId, type AccountStatus, type Agent, type BookingRow, type PayoutRequest, type AttendanceRecord, type TeamTreeNode } from '../../types';
 
@@ -39,6 +40,8 @@ function listPathForRole(role: RoleId): string {
       return '/users/employees';
     case RoleId.Leader:
       return '/users/leaders';
+    case RoleId.TeamLeader:
+      return '/users/team-leaders';
     default:
       return '/users/agents';
   }
@@ -52,6 +55,8 @@ function listLabelForRole(role: RoleId): string {
       return 'Employees';
     case RoleId.Leader:
       return 'Leaders';
+    case RoleId.TeamLeader:
+      return 'Team Leaders';
     default:
       return 'Users';
   }
@@ -94,6 +99,7 @@ export function UserDetail() {
 
   const [refreshKey, setRefreshKey] = useState(0);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [reportingOpen, setReportingOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [newStatus, setNewStatus] = useState<AccountStatus>('active');
 
@@ -105,7 +111,8 @@ export function UserDetail() {
   );
   const user = detail?.user;
 
-  const isLeader = user?.role === RoleId.Leader;
+  // A Team Leader runs a team the same way a Leader does — they differ in who they report to.
+  const isLeader = user?.role === RoleId.Leader || user?.role === RoleId.TeamLeader;
   const isEmployee = user?.role === RoleId.Employee;
   const isAgent = user?.role === RoleId.Agent;
   const agentTeamId = isAgent ? (user as Agent).teamId : undefined;
@@ -220,9 +227,14 @@ export function UserDetail() {
         title={user.name}
         breadcrumb={[{ label: listLabelForRole(user.role), to: listPathForRole(user.role) }, { label: user.name }]}
         actions={
-          <Button variant="outline" leftIcon={<UserCog size={15} />} onClick={openStatusModal}>
-            Change Status
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" leftIcon={<Network size={15} />} onClick={() => setReportingOpen(true)}>
+              Reporting line
+            </Button>
+            <Button variant="outline" leftIcon={<UserCog size={15} />} onClick={openStatusModal}>
+              Change Status
+            </Button>
+          </div>
         }
       />
 
@@ -255,6 +267,18 @@ export function UserDetail() {
                   <DetailField label="City" value={user.city} />
                   <DetailField label="Address" value={user.address} />
                   <DetailField label="Created On" value={formatDate(user.createdAt)} />
+                  <DetailField
+                    label="Reports to"
+                    value={
+                      user.managerId ? (
+                        <Link to={`/users/${user.managerId}`} className="font-medium text-brand-600 hover:text-brand-700 focus-ring rounded">
+                          {user.managerName ?? findUserById(user.managerId)?.name ?? user.managerId}
+                        </Link>
+                      ) : (
+                        'Nobody'
+                      )
+                    }
+                  />
                   <DetailField label="Bank Account" value={user.bankAccountMasked} />
                   <DetailField label="Bank IFSC" value={user.bankIfsc} />
                   <DetailField label="PAN" value={user.panMasked} />
@@ -483,6 +507,18 @@ export function UserDetail() {
         variant={newStatus === 'suspended' ? 'danger' : 'primary'}
         audited
       />
+
+      {reportingOpen && (
+        <ReportingLineModal
+          user={user}
+          onClose={() => setReportingOpen(false)}
+          onSaved={() => {
+            setReportingOpen(false);
+            setRefreshKey((k) => k + 1);
+            toast({ title: 'Reporting line updated', variant: 'success' });
+          }}
+        />
+      )}
     </div>
   );
 }

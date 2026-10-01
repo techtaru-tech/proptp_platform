@@ -5,8 +5,21 @@ import type { Prisma } from '@prisma/client';
 import { encrypt, decrypt } from '../services/crypto';
 import { outsideBusinessHoursFlag } from '../services/businessHours';
 import { fireTrigger } from '../services/automationEngine';
+import { canAssignTo, leadScopeWhere, scopeOf, type Scope } from '../services/hierarchy';
 
 export const formsRouter = Router();
+
+/** Submissions are a team's own when the lead they produced is. */
+function submissionScope(scope: Scope): Prisma.LeadFormSubmissionWhereInput {
+  return scope.kind === 'all' ? {} : { lead: leadScopeWhere(scope) };
+}
+
+/** Where a form sends the leads it captures has to be somebody the form's editor may assign to. */
+async function assigneeAllowed(req: Parameters<typeof scopeOf>[0], assignedUserId: unknown): Promise<boolean> {
+  if (!assignedUserId) return true;
+  const scope = await scopeOf(req);
+  return scope.kind === 'all' || (await canAssignTo(scope, String(assignedUserId)));
+}
 
 const FIELD_TYPES = ['short_text', 'long_text', 'email', 'phone', 'number', 'date', 'dropdown', 'checkbox', 'gdpr_consent'] as const;
 type FieldType = (typeof FIELD_TYPES)[number];
@@ -342,7 +355,10 @@ formsRouter.post('/public/:slug/submit', async (req, res) => {
 formsRouter.get('/:id', async (req, res) => {
   const form = await prisma.leadForm.findUnique({
     where: { id: req.params.id },
-    include: { fields: { orderBy: { sortOrder: 'asc' } }, _count: { select: { submissions: true } } },
+    include: {
+      fields: { orderBy: { sortOrder: 'asc' } },
+      _count: { select: { submissions: { where: submissionScope(await scopeOf(req)) } } },
+    },
   });
   if (!form) return res.status(404).json({ error: 'Form not found' });
   const { _count, ...rest } = form;
@@ -353,16 +369,17 @@ formsRouter.get('/:id/submissions', async (req, res) => {
   const { page = '1', pageSize = '20' } = req.query as Record<string, string>;
   const pageNum = Math.max(1, Number(page) || 1);
   const size = Math.max(1, Number(pageSize) || 20);
+  const mine = submissionScope(await scopeOf(req));
 
   const [items, total] = await Promise.all([
     prisma.leadFormSubmission.findMany({
-      where: { formId: req.params.id },
+      where: { formId: req.params.id, ...mine },
       orderBy: { createdAt: 'desc' },
       skip: (pageNum - 1) * size,
       take: size,
       include: { lead: { select: { id: true, firstName: true, lastName: true, phone: true, email: true } } },
     }),
-    prisma.leadFormSubmission.count({ where: { formId: req.params.id } }),
+    prisma.leadFormSubmission.count({ where: { formId: req.params.id, ...mine } }),
   ]);
 
   res.json({
@@ -387,14 +404,15 @@ formsRouter.get('/:id/analytics', async (req, res) => {
   since.setHours(0, 0, 0, 0);
   since.setDate(since.getDate() - (days - 1));
 
+  const mine = submissionScope(await scopeOf(req));
   const [total, inRange, withLead] = await Promise.all([
-    prisma.leadFormSubmission.count({ where: { formId: form.id } }),
+    prisma.leadFormSubmission.count({ where: { formId: form.id, ...mine } }),
     prisma.leadFormSubmission.findMany({
-      where: { formId: form.id, createdAt: { gte: since } },
+      where: { formId: form.id, createdAt: { gte: since }, ...mine },
       select: { createdAt: true },
       orderBy: { createdAt: 'asc' },
     }),
-    prisma.leadFormSubmission.count({ where: { formId: form.id, leadId: { not: null } } }),
+    prisma.leadFormSubmission.count({ where: { formId: form.id, leadId: { not: null }, ...mine } }),
   ]);
 
   // One bucket per day, zeros included — a chart with holes in it reads as missing data.
@@ -422,6 +440,9 @@ formsRouter.post('/', async (req, res) => {
   if (error) return res.status(400).json({ error });
 
   const data = formWriteData(req.body);
+  if (!(await assigneeAllowed(req, data.assignedUserId))) {
+    return res.status(403).json({ error: 'You can only route leads to people in your own team.' });
+  }
   const taken = await prisma.leadForm.findUnique({ where: { slug: data.slug } });
   if (taken) return res.status(409).json({ error: `Slug "${data.slug}" is already in use.` });
 
@@ -444,6 +465,9 @@ formsRouter.patch('/:id', async (req, res) => {
   if (error) return res.status(400).json({ error });
 
   const data = formWriteData(req.body);
+  if (data.assignedUserId !== existing.assignedUserId && !(await assigneeAllowed(req, data.assignedUserId))) {
+    return res.status(403).json({ error: 'You can only route leads to people in your own team.' });
+  }
   const taken = await prisma.leadForm.findFirst({ where: { slug: data.slug, id: { not: existing.id } } });
   if (taken) return res.status(409).json({ error: `Slug "${data.slug}" is already in use.` });
 

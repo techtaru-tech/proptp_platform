@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../prisma';
+import { followUpScopeWhere, inLeadScope, leadScopeWhere, scopeOf, visibleLeadIds } from '../services/hierarchy';
 
 export const reportsRouter = Router();
 
@@ -15,20 +16,24 @@ function daysAgo(n: number): Date {
   return d;
 }
 
-reportsRouter.get('/dashboard-stats', async (_req, res) => {
+reportsRouter.get('/dashboard-stats', async (req, res) => {
+  // Every figure on the CRM dashboards is counted over the caller's own hierarchy, in the query
+  // itself — an employee's "total leads" is their leads, a leader's is the whole team's.
+  const scope = await scopeOf(req);
+  const inScope = (where: Prisma.LeadWhereInput = {}) => inLeadScope(where, scope);
   const todayStart = startOfDay(new Date());
   const weekStart = daysAgo(7);
   const monthStart = daysAgo(30);
 
   const [totalLeads, newToday, newThisWeek, newThisMonth, won, lost, activeInPipeline, wonAgg] = await Promise.all([
-    prisma.lead.count(),
-    prisma.lead.count({ where: { createdAt: { gte: todayStart } } }),
-    prisma.lead.count({ where: { createdAt: { gte: weekStart } } }),
-    prisma.lead.count({ where: { createdAt: { gte: monthStart } } }),
-    prisma.lead.count({ where: { status: 'won' } }),
-    prisma.lead.count({ where: { status: 'lost' } }),
-    prisma.lead.count({ where: { status: { notIn: ['won', 'lost'] } } }),
-    prisma.lead.aggregate({ where: { status: 'won' }, _sum: { wonValue: true } }),
+    prisma.lead.count({ where: inScope() }),
+    prisma.lead.count({ where: inScope({ createdAt: { gte: todayStart } }) }),
+    prisma.lead.count({ where: inScope({ createdAt: { gte: weekStart } }) }),
+    prisma.lead.count({ where: inScope({ createdAt: { gte: monthStart } }) }),
+    prisma.lead.count({ where: inScope({ status: 'won' }) }),
+    prisma.lead.count({ where: inScope({ status: 'lost' }) }),
+    prisma.lead.count({ where: inScope({ status: { notIn: ['won', 'lost'] } }) }),
+    prisma.lead.aggregate({ where: inScope({ status: 'won' }), _sum: { wonValue: true } }),
   ]);
 
   const closed = won + lost;
@@ -49,7 +54,10 @@ reportsRouter.get('/dashboard-stats', async (_req, res) => {
 reportsRouter.get('/lead-trend', async (req, res) => {
   const days = Math.max(1, Number(req.query.days) || 14);
   const since = startOfDay(daysAgo(days - 1));
-  const rows = await prisma.lead.findMany({ where: { createdAt: { gte: since } }, select: { createdAt: true } });
+  const rows = await prisma.lead.findMany({
+    where: inLeadScope({ createdAt: { gte: since } }, await scopeOf(req)),
+    select: { createdAt: true },
+  });
 
   const counts = new Map<string, number>();
   rows.forEach((r) => {
@@ -65,17 +73,18 @@ reportsRouter.get('/lead-trend', async (req, res) => {
   res.json(points);
 });
 
-reportsRouter.get('/status-breakdown', async (_req, res) => {
-  const groups = await prisma.lead.groupBy({ by: ['status'], _count: { _all: true } });
+reportsRouter.get('/status-breakdown', async (req, res) => {
+  const groups = await prisma.lead.groupBy({ by: ['status'], where: inLeadScope({}, await scopeOf(req)), _count: { _all: true } });
   const order = ['new', 'contacted', 'qualified', 'won', 'lost'];
   const byStatus = new Map(groups.map((g) => [g.status, g._count._all]));
   res.json(order.map((s) => ({ name: s.charAt(0).toUpperCase() + s.slice(1), value: byStatus.get(s as any) ?? 0 })));
 });
 
-reportsRouter.get('/source-performance', async (_req, res) => {
+reportsRouter.get('/source-performance', async (req, res) => {
+  const scope = await scopeOf(req);
   const [totals, wonBySource] = await Promise.all([
-    prisma.lead.groupBy({ by: ['source'], _count: { _all: true } }),
-    prisma.lead.groupBy({ by: ['source'], where: { status: 'won' }, _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['source'], where: inLeadScope({}, scope), _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['source'], where: inLeadScope({ status: 'won' }, scope), _count: { _all: true } }),
   ]);
   const wonMap = new Map(wonBySource.map((g) => [g.source, g._count._all]));
   const rows = totals
@@ -96,16 +105,21 @@ reportsRouter.get('/stage-distribution', async (req, res) => {
   if (!pipeline) return res.json([]);
 
   const stages = await prisma.pipelineStage.findMany({ where: { pipelineId: pipeline.id }, orderBy: { sortOrder: 'asc' } });
-  const counts = await prisma.lead.groupBy({ by: ['pipelineStageId'], where: { pipelineStageId: { in: stages.map((s) => s.id) } }, _count: { _all: true } });
+  const counts = await prisma.lead.groupBy({
+    by: ['pipelineStageId'],
+    where: inLeadScope({ pipelineStageId: { in: stages.map((s) => s.id) } }, await scopeOf(req)),
+    _count: { _all: true },
+  });
   const countMap = new Map(counts.map((c) => [c.pipelineStageId, c._count._all]));
   res.json(stages.map((s) => ({ name: s.name, value: countMap.get(s.id) ?? 0, color: s.color })));
 });
 
-reportsRouter.get('/assignee-performance', async (_req, res) => {
+reportsRouter.get('/assignee-performance', async (req, res) => {
+  const scope = await scopeOf(req);
   const [totals, won, lost] = await Promise.all([
-    prisma.lead.groupBy({ by: ['assignedUserId'], where: { assignedUserId: { not: null } }, _count: { _all: true } }),
-    prisma.lead.groupBy({ by: ['assignedUserId'], where: { assignedUserId: { not: null }, status: 'won' }, _count: { _all: true } }),
-    prisma.lead.groupBy({ by: ['assignedUserId'], where: { assignedUserId: { not: null }, status: 'lost' }, _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['assignedUserId'], where: inLeadScope({ assignedUserId: { not: null } }, scope), _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['assignedUserId'], where: inLeadScope({ assignedUserId: { not: null }, status: 'won' }, scope), _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['assignedUserId'], where: inLeadScope({ assignedUserId: { not: null }, status: 'lost' }, scope), _count: { _all: true } }),
   ]);
   const wonMap = new Map(won.map((g) => [g.assignedUserId, g._count._all]));
   const lostMap = new Map(lost.map((g) => [g.assignedUserId, g._count._all]));
@@ -120,13 +134,15 @@ reportsRouter.get('/assignee-performance', async (_req, res) => {
   res.json(rows);
 });
 
-reportsRouter.get('/followup-performance', async (_req, res) => {
+reportsRouter.get('/followup-performance', async (req, res) => {
+  const mine = followUpScopeWhere(await scopeOf(req));
+  const count = (status?: string) => prisma.leadFollowUp.count({ where: { AND: [status ? { status } : {}, mine] } });
   const [total, completed, missed, pending, rescheduled] = await Promise.all([
-    prisma.leadFollowUp.count(),
-    prisma.leadFollowUp.count({ where: { status: 'completed' } }),
-    prisma.leadFollowUp.count({ where: { status: 'missed' } }),
-    prisma.leadFollowUp.count({ where: { status: 'pending' } }),
-    prisma.leadFollowUp.count({ where: { status: 'rescheduled' } }),
+    count(),
+    count('completed'),
+    count('missed'),
+    count('pending'),
+    count('rescheduled'),
   ]);
   const completionRate = total > 0 ? Math.round((completed / total) * 1000) / 10 : 0;
   res.json({ total, completed, missed, pending, rescheduled, completionRate });
@@ -140,7 +156,7 @@ reportsRouter.get('/lead-rows', async (req, res) => {
     if (dateFrom) (where.createdAt as any).gte = new Date(dateFrom);
     if (dateTo) (where.createdAt as any).lte = new Date(dateTo);
   }
-  const rows = await prisma.lead.findMany({ where, orderBy: { createdAt: 'desc' } });
+  const rows = await prisma.lead.findMany({ where: inLeadScope(where, await scopeOf(req)), orderBy: { createdAt: 'desc' } });
   res.json(
     rows.map((l) => ({
       id: l.id,
@@ -207,7 +223,7 @@ reportsRouter.get('/lead-volume', async (req, res) => {
     ];
   }
 
-  const rows = await prisma.lead.findMany({ where, select: { createdAt: true } });
+  const rows = await prisma.lead.findMany({ where: inLeadScope(where, await scopeOf(req)), select: { createdAt: true } });
   const keyFor = groupBy === 'week' ? localWeekKey : groupBy === 'month' ? localMonthKey : localDateKey;
 
   const counts = new Map<string, number>();
@@ -224,11 +240,12 @@ reportsRouter.get('/source-performance-report', async (req, res) => {
   if (Object.keys(dateRange).length > 0) where.createdAt = dateRange;
   if (source?.trim()) where.source = { contains: source.trim(), mode: 'insensitive' };
 
+  const scope = await scopeOf(req);
   const [totals, won, lost, wonValueAgg] = await Promise.all([
-    prisma.lead.groupBy({ by: ['source'], where, _count: { _all: true } }),
-    prisma.lead.groupBy({ by: ['source'], where: { ...where, status: 'won' }, _count: { _all: true } }),
-    prisma.lead.groupBy({ by: ['source'], where: { ...where, status: 'lost' }, _count: { _all: true } }),
-    prisma.lead.groupBy({ by: ['source'], where: { ...where, status: 'won' }, _sum: { wonValue: true } }),
+    prisma.lead.groupBy({ by: ['source'], where: inLeadScope(where, scope), _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['source'], where: inLeadScope({ ...where, status: 'won' }, scope), _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['source'], where: inLeadScope({ ...where, status: 'lost' }, scope), _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['source'], where: inLeadScope({ ...where, status: 'won' }, scope), _sum: { wonValue: true } }),
   ]);
   const wonMap = new Map(won.map((g) => [g.source, g._count._all]));
   const lostMap = new Map(lost.map((g) => [g.source, g._count._all]));
@@ -256,7 +273,10 @@ reportsRouter.get('/source-attribution', async (req, res) => {
   const where: Record<string, unknown> = {};
   if (Object.keys(dateRange).length > 0) where.createdAt = dateRange;
 
-  const rows = await prisma.lead.findMany({ where, select: { utmSource: true, utmMedium: true, utmCampaign: true, source: true } });
+  const rows = await prisma.lead.findMany({
+    where: inLeadScope(where, await scopeOf(req)),
+    select: { utmSource: true, utmMedium: true, utmCampaign: true, source: true },
+  });
 
   const bySourceMap = new Map<string, number>();
   const byCampaignMap = new Map<string, number>();
@@ -293,7 +313,7 @@ reportsRouter.get('/pipeline-funnel', async (req, res) => {
   const where: Record<string, unknown> = { pipelineStageId: { in: stages.map((s) => s.id) } };
   if (Object.keys(dateRange).length > 0) where.createdAt = dateRange;
 
-  const counts = await prisma.lead.groupBy({ by: ['pipelineStageId'], where, _count: { _all: true } });
+  const counts = await prisma.lead.groupBy({ by: ['pipelineStageId'], where: inLeadScope(where, await scopeOf(req)), _count: { _all: true } });
   const countMap = new Map(counts.map((c) => [c.pipelineStageId, c._count._all]));
 
   /**
@@ -326,7 +346,7 @@ reportsRouter.get('/pipeline-bottlenecks', async (req, res) => {
 
   const stages = await prisma.pipelineStage.findMany({ where: { pipelineId: pipeline.id }, orderBy: { sortOrder: 'asc' } });
   const leads = await prisma.lead.findMany({
-    where: { pipelineStageId: { in: stages.map((s) => s.id) } },
+    where: inLeadScope({ pipelineStageId: { in: stages.map((s) => s.id) } }, await scopeOf(req)),
     select: { pipelineStageId: true, stageEnteredAt: true, createdAt: true },
   });
 
@@ -356,11 +376,12 @@ reportsRouter.get('/agent-performance-report', async (req, res) => {
   const base: Record<string, unknown> = { assignedUserId: { not: null } };
   if (Object.keys(dateRange).length > 0) base.createdAt = dateRange;
 
+  const scope = await scopeOf(req);
   const [totals, won, lost, wonValueAgg] = await Promise.all([
-    prisma.lead.groupBy({ by: ['assignedUserId'], where: base, _count: { _all: true } }),
-    prisma.lead.groupBy({ by: ['assignedUserId'], where: { ...base, status: 'won' }, _count: { _all: true } }),
-    prisma.lead.groupBy({ by: ['assignedUserId'], where: { ...base, status: 'lost' }, _count: { _all: true } }),
-    prisma.lead.groupBy({ by: ['assignedUserId'], where: { ...base, status: 'won' }, _sum: { wonValue: true } }),
+    prisma.lead.groupBy({ by: ['assignedUserId'], where: inLeadScope(base, scope), _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['assignedUserId'], where: inLeadScope({ ...base, status: 'won' }, scope), _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['assignedUserId'], where: inLeadScope({ ...base, status: 'lost' }, scope), _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['assignedUserId'], where: inLeadScope({ ...base, status: 'won' }, scope), _sum: { wonValue: true } }),
   ]);
   const wonMap = new Map(won.map((g) => [g.assignedUserId, g._count._all]));
   const lostMap = new Map(lost.map((g) => [g.assignedUserId, g._count._all]));
@@ -394,6 +415,10 @@ reportsRouter.get('/agent-performance-report/:userId/leads', async (req, res, ne
   try {
     const userId = String(req.params.userId);
     const dateRange = parseDateRange(req.query as Record<string, string>);
+
+    const scope = await scopeOf(req);
+    // A rep outside the caller's hierarchy is not a row they could have clicked on.
+    if (scope.kind !== 'all' && !scope.userIds.includes(userId)) return res.status(404).json({ error: 'Not found.' });
 
     const where: Prisma.LeadWhereInput = { assignedUserId: userId };
     if (Object.keys(dateRange).length > 0) where.createdAt = dateRange;
@@ -449,9 +474,10 @@ reportsRouter.get('/revenue-by-rep', async (req, res) => {
   const where: Record<string, unknown> = { status: 'won' };
   if (Object.keys(dateRange).length > 0) where.wonAt = dateRange;
 
+  const scope = await scopeOf(req);
   const [totals, valueAgg] = await Promise.all([
-    prisma.lead.groupBy({ by: ['assignedUserId'], where, _count: { _all: true } }),
-    prisma.lead.groupBy({ by: ['assignedUserId'], where, _sum: { wonValue: true } }),
+    prisma.lead.groupBy({ by: ['assignedUserId'], where: inLeadScope(where, scope), _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['assignedUserId'], where: inLeadScope(where, scope), _sum: { wonValue: true } }),
   ]);
   const valueMap = new Map(valueAgg.map((g) => [g.assignedUserId, g._sum.wonValue ?? 0]));
 
@@ -469,6 +495,10 @@ reportsRouter.get('/automation-stats', async (req, res) => {
   const dateRange = parseDateRange(req.query as Record<string, string>);
   const where: Record<string, unknown> = {};
   if (Object.keys(dateRange).length > 0) where.ranAt = dateRange;
+
+  // Runs carry a bare lead id, so the scope is applied as the set of leads the caller can see.
+  const visible = await visibleLeadIds(await scopeOf(req));
+  if (visible) where.leadId = { in: visible };
 
   const runs = await prisma.automationRun.findMany({ where, select: { automationId: true, automationName: true, status: true } });
   const byAutomation = new Map<string, { name: string; success: number; failed: number; skipped: number }>();
@@ -501,7 +531,10 @@ reportsRouter.get('/response-time', async (req, res) => {
   if (Object.keys(dateRange).length > 0) where.createdAt = dateRange;
   if (source?.trim()) where.source = { contains: source.trim(), mode: 'insensitive' };
 
-  const leads = await prisma.lead.findMany({ where, select: { source: true, createdAt: true, contactedAt: true } });
+  const leads = await prisma.lead.findMany({
+    where: inLeadScope(where, await scopeOf(req)),
+    select: { source: true, createdAt: true, contactedAt: true },
+  });
   const contacted = leads.filter((l) => l.contactedAt);
   const minutesFor = (l: (typeof contacted)[number]) => (l.contactedAt!.getTime() - l.createdAt.getTime()) / 60_000;
 
@@ -528,11 +561,17 @@ reportsRouter.get('/response-time', async (req, res) => {
 
 reportsRouter.get('/form-analytics-summary', async (req, res) => {
   const dateRange = parseDateRange(req.query as Record<string, string>);
-  const submissionWhere: Record<string, unknown> = Object.keys(dateRange).length > 0 ? { createdAt: dateRange } : {};
+  const scope = await scopeOf(req);
+  // Submissions are counted through the lead they produced, so a team sees only its own.
+  const mine: Prisma.LeadFormSubmissionWhereInput = scope.kind === 'all' ? {} : { lead: leadScopeWhere(scope) };
+  const submissionWhere: Prisma.LeadFormSubmissionWhereInput = {
+    ...mine,
+    ...(Object.keys(dateRange).length > 0 ? { createdAt: dateRange } : {}),
+  };
 
   const forms = await prisma.leadForm.findMany({
     include: {
-      _count: { select: { submissions: true } },
+      _count: { select: { submissions: { where: mine } } },
       submissions: { where: submissionWhere, select: { leadId: true } },
     },
     orderBy: { createdAt: 'desc' },

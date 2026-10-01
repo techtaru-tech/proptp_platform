@@ -5,6 +5,7 @@ import { prisma } from '../prisma';
 import { encrypt } from '../services/crypto';
 import { writeAudit } from '../services/audit';
 import type { AuthedRequest } from '../services/auth';
+import { canAssignTo, leadScopeWhere, scopeOf, type Scope } from '../services/hierarchy';
 import {
   canSendFreeform, normalizeWaNumber, sendTemplate, sendText, windowExpiresAt, WhatsAppError,
 } from '../services/whatsapp';
@@ -12,6 +13,15 @@ import {
 export const whatsappRouter = Router();
 
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || 'http://localhost:4000';
+
+/**
+ * A conversation follows its lead, or the person it was handed to. One with neither — a
+ * stranger who messaged the number — is nobody's yet, so only an administrator sees it.
+ */
+function conversationScope(scope: Scope): Prisma.WhatsAppConversationWhereInput {
+  if (scope.kind === 'all') return {};
+  return { OR: [{ lead: leadScopeWhere(scope) }, { assignedUserId: { in: scope.userIds } }] };
+}
 
 function fail(err: unknown, res: any, next: (e?: unknown) => void) {
   if (err instanceof WhatsAppError) return res.status(err.httpStatus).json({ error: err.message });
@@ -45,8 +55,9 @@ function serializeAccount(account: AccountRow, unread = 0) {
   };
 }
 
-whatsappRouter.get('/accounts', async (_req, res, next) => {
+whatsappRouter.get('/accounts', async (req, res, next) => {
   try {
+    const scope = await scopeOf(req);
     const accounts = await prisma.whatsAppAccount.findMany({
       include: { _count: { select: { conversations: true } } },
       orderBy: { createdAt: 'asc' },
@@ -54,7 +65,7 @@ whatsappRouter.get('/accounts', async (_req, res, next) => {
     // Unread totals in one grouped query rather than one per account.
     const unread = await prisma.whatsAppConversation.groupBy({
       by: ['accountId'],
-      where: { unreadCount: { gt: 0 } },
+      where: { AND: [{ unreadCount: { gt: 0 } }, conversationScope(scope)] },
       _sum: { unreadCount: true },
     });
     const byAccount = new Map(unread.map((u) => [u.accountId, u._sum.unreadCount ?? 0]));
@@ -189,13 +200,31 @@ whatsappRouter.get('/conversations', async (req, res, next) => {
       ];
     }
 
+    const scope = await scopeOf(req);
     const rows = await prisma.whatsAppConversation.findMany({
-      where,
+      where: { AND: [where, conversationScope(scope)] },
       include: conversationInclude,
       orderBy: { lastMessageAt: 'desc' },
       take: 200,
     });
     res.json(rows.map(serializeConversation));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Every route on one conversation — read, messages, send, read-receipt, reassign — is checked
+// here first, so none of them can be reached by guessing an id from outside the caller's team.
+whatsappRouter.use('/conversations/:id', async (req, res, next) => {
+  try {
+    const scope = await scopeOf(req);
+    if (scope.kind !== 'all') {
+      const visible = await prisma.whatsAppConversation.count({
+        where: { AND: [{ id: String(req.params.id) }, conversationScope(scope)] },
+      });
+      if (!visible) return res.status(404).json({ error: 'Conversation not found' });
+    }
+    next();
   } catch (err) {
     next(err);
   }
@@ -266,7 +295,14 @@ whatsappRouter.patch('/conversations/:id', async (req, res, next) => {
   try {
     const body = req.body ?? {};
     const data: Prisma.WhatsAppConversationUncheckedUpdateInput = {};
-    if (body.assignedUserId !== undefined) data.assignedUserId = String(body.assignedUserId) || null;
+    if (body.assignedUserId !== undefined) {
+      const target = String(body.assignedUserId) || null;
+      const scope = await scopeOf(req);
+      if (target ? !(await canAssignTo(scope, target)) : !scope.canAssign) {
+        return res.status(403).json({ error: 'You can only assign conversations to people in your own team.' });
+      }
+      data.assignedUserId = target;
+    }
     if (body.archived !== undefined) data.archived = !!body.archived;
     const updated = await prisma.whatsAppConversation.update({
       where: { id: String(req.params.id) },

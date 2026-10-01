@@ -1,5 +1,5 @@
 import type { Lead, LeadPriority, LeadSource, LeadStatus } from '../types';
-import { refEmployees, refLeaders } from '../data/referenceData';
+import { refAssignees } from '../data/referenceData';
 import { api, toQueryString } from './apiClient';
 import type { ListParams, ListResult } from './mockClient';
 
@@ -107,8 +107,9 @@ export async function getLeadHistory(id: string): Promise<{ stageHistory: LeadSt
   return api.get(`/leads/${id}/history`);
 }
 
+/** The people the signed-in user may assign a lead to: their hierarchy, or everybody for an admin. */
 export function listAssignableUsers() {
-  return [...refEmployees, ...refLeaders];
+  return refAssignees;
 }
 
 /** Enum sources merged with any free-text/custom sources already used, mirroring the real Filament Select. */
@@ -167,8 +168,9 @@ export async function removeTag(id: string, tagId: string): Promise<Lead | undef
 // Bulk actions (Leads list -> select rows -> Assign / Change Status / Add Tag)
 // ---------------------------------------------------------------------------
 
-export async function bulkAssign(ids: string[], userId: string): Promise<void> {
-  await api.post('/leads/bulk/assign', { ids, userId });
+/** How many were assigned and how many were skipped because they are outside the caller's team. */
+export async function bulkAssign(ids: string[], userId: string): Promise<{ assigned: number; skipped: number }> {
+  return api.post<{ assigned: number; skipped: number }>('/leads/bulk/assign', { ids, userId });
 }
 
 export async function bulkChangeStatus(ids: string[], status: LeadStatus): Promise<void> {

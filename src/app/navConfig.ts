@@ -22,6 +22,8 @@ import {
 export interface NavChild {
   label: string;
   to: string;
+  /** Hidden from people who only ever see their own work — there is no team for them to look at. */
+  teamOnly?: boolean;
 }
 
 /** Matches the module keys the server enforces — see server/src/services/permissions.ts. */
@@ -56,6 +58,8 @@ export const NAV_ITEMS: NavItem[] = [
       { label: 'Forms', to: '/crm/forms' },
       { label: 'Report Center', to: '/crm/report-center' },
       { label: 'Activities', to: '/crm/activities' },
+      { label: 'Team Leaders', to: '/crm/team-leaders', teamOnly: true },
+      { label: 'Team Hierarchy', to: '/crm/hierarchy', teamOnly: true },
       { label: 'Automation', to: '/crm/automation' },
       { label: 'Conversations', to: '/crm/conversations' },
       { label: 'Email Sequences', to: '/crm/email-sequences' },
@@ -146,6 +150,7 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { label: 'Agents', to: '/users/agents' },
       { label: 'Employees', to: '/users/employees' },
+      { label: 'Team Leaders', to: '/users/team-leaders' },
       { label: 'Leaders', to: '/users/leaders' },
     ],
   },

@@ -36,6 +36,7 @@ import { startFollowUpReminderPoller } from './services/followUpReminders';
 import { adminAuthRouter, adminGuard } from './routes/admin/auth';
 import { adminUsersRouter, adminKycRouter } from './routes/admin/users';
 import { adminTeamsRouter } from './routes/admin/teams';
+import { crmTeamRouter } from './routes/crmTeam';
 import { adminProjectsRouter, adminUnitsRouter } from './routes/admin/projects';
 import { adminPlotHoldsRouter } from './routes/admin/plotHolds';
 import { adminProjectMapsRouter, publicPlotMapRouter } from './routes/admin/projectMaps';
@@ -154,6 +155,7 @@ app.use('/api/auth', adminAuthRouter);
 // CRM
 app.use('/api/connections', connectionsRouter);
 app.use('/api/leads', leadsRouter);
+app.use('/api/crm-team', crmTeamRouter);
 app.use('/api/pipelines', pipelinesRouter);
 app.use('/api/tags', tagsRouter);
 app.use('/api/followups', followUpsRouter);

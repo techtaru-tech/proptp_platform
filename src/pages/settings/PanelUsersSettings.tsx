@@ -18,12 +18,14 @@ import {
   createPanelUser, deletePanelUser, listPanelRoles, listPanelUsers, updatePanelUser,
 } from '../../services/panelAccessService';
 import { formatDate } from '../../utils/format';
+import { loadReferenceData, refAgents, refEmployees, refLeaders, refTeamLeaders } from '../../data/referenceData';
 import type { PanelRole, PanelUser } from '../../types';
 
 const ACCOUNT_ROLE_LABEL: Record<AccountRole, string> = {
   admin: 'Admin',
-  employee: 'Employee',
   leader: 'Leader',
+  team_leader: 'Team Leader',
+  employee: 'Employee',
   agent: 'Agent',
 };
 
@@ -32,6 +34,18 @@ const ACCOUNT_ROLE_OPTIONS = (Object.keys(ACCOUNT_ROLE_LABEL) as AccountRole[]).
   label: ACCOUNT_ROLE_LABEL[value],
 }));
 
+/** Who each role may report to. Mirrors the server's rule, which is what actually enforces it. */
+const MANAGER_ROLES: Record<AccountRole, AccountRole[]> = {
+  admin: [],
+  leader: [],
+  team_leader: ['leader'],
+  employee: ['team_leader', 'leader'],
+  agent: ['employee', 'team_leader', 'leader'],
+};
+
+
+const ROLE_KEY_BY_ID: Record<number, AccountRole> = { 0: 'agent', 1: 'admin', 2: 'employee', 3: 'leader', 4: 'team_leader' };
+const roleKey = (id: number): AccountRole => ROLE_KEY_BY_ID[id] ?? 'employee';
 
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Active' },
@@ -87,6 +101,11 @@ export function PanelUsersSettings() {
       key: 'accountRole',
       header: 'Account',
       render: (u) => <Badge tone="neutral">{ACCOUNT_ROLE_LABEL[u.accountRole] ?? u.accountRole}</Badge>,
+    },
+    {
+      key: 'manager',
+      header: 'Reports to',
+      render: (u) => (u.managerName ? u.managerName : <span className="text-ink-faint">—</span>),
     },
     { key: 'phone', header: 'Phone', render: (u) => u.phone },
     {
@@ -146,6 +165,9 @@ export function PanelUsersSettings() {
           onSaved={() => {
             setEditing(null);
             setReloadKey((k) => k + 1);
+            // The partner directory feeds every manager picker and assignee list, so a new
+            // person or a changed reporting line has to reach it before the next dropdown opens.
+            void loadReferenceData(true).catch(() => {});
           }}
         />
       )}
@@ -177,9 +199,8 @@ function UserDrawer({
   const [phone, setPhone] = useState(user?.phone ?? '');
   const [password, setPassword] = useState('');
   const [panelRoleId, setPanelRoleId] = useState(user?.panelRoleId ?? roles[0]?.id ?? '');
-  // Only set at creation: changing what an existing account *is* would move their bookings,
-  // payouts and team membership with it, which is a different operation entirely.
   const [accountRole, setAccountRole] = useState<AccountRole>(user?.accountRole ?? 'admin');
+  const [managerId, setManagerId] = useState<string>(user?.managerId ?? '');
   const [status, setStatus] = useState(user?.status ?? 'active');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -193,10 +214,15 @@ function UserDrawer({
           status,
           // Left blank means "keep the current password" — nothing is sent.
           ...(password ? { password } : {}),
+          // Placement is sent only when it actually changed, so saving a name edit cannot
+          // trip the server's reporting-line checks for somebody whose setup predates them.
+          ...(accountRole !== user.accountRole || (managerId || null) !== (user.managerId ?? null)
+            ? { accountRole, managerId: managerId || null }
+            : {}),
         });
         toast({ title: 'Panel user updated', variant: 'success' });
       } else {
-        await createPanelUser({ name: name.trim(), email: email.trim(), phone: phone.trim(), password, panelRoleId, accountRole });
+        await createPanelUser({ name: name.trim(), email: email.trim(), phone: phone.trim(), password, panelRoleId, accountRole, managerId: managerId || null });
         toast({ title: 'Panel user created', description: 'They can sign in with this email and password.', variant: 'success' });
       }
       onSaved();
@@ -208,6 +234,15 @@ function UserDrawer({
   };
 
   const selectedRole = roles.find((r) => r.id === panelRoleId);
+
+  // Everyone who could be this person's manager given what they are, excluding themselves.
+  const allowedManagerRoles = MANAGER_ROLES[accountRole];
+  const managerPool = [
+    ...(allowedManagerRoles.includes('leader') ? refLeaders : []),
+    ...(allowedManagerRoles.includes('team_leader') ? refTeamLeaders : []),
+    ...(allowedManagerRoles.includes('employee') ? refEmployees : []),
+    ...(allowedManagerRoles.includes('agent') ? refAgents : []),
+  ].filter((m) => m.id !== user?.id && m.status === 'active');
 
   return (
     <Drawer isOpen onClose={onClose} title={user ? `Edit ${user.name}` : 'New panel user'} width="sm">
@@ -242,15 +277,41 @@ function UserDrawer({
           placeholder={user ? 'Leave blank to keep the current one' : 'At least 8 characters'}
           leftIcon={<KeyRound size={14} />}
         />
-        {!user && (
+        <Select
+          label="Account role"
+          name="accountRole"
+          value={accountRole}
+          onChange={(e) => {
+            setAccountRole(e.target.value as AccountRole);
+            // A manager that suits the old role may be the wrong kind for the new one.
+            setManagerId('');
+          }}
+          options={ACCOUNT_ROLE_OPTIONS}
+          hint="Where this person sits: Leader → Team Leader → Employee → Agent. It decides which leads, follow-ups, tasks and reports they can see — their own and everyone beneath them. An Admin sees everything."
+        />
+        {allowedManagerRoles.length > 0 && (
           <Select
-            label="Account role"
-            name="accountRole"
-            value={accountRole}
-            onChange={(e) => setAccountRole(e.target.value as AccountRole)}
-            options={ACCOUNT_ROLE_OPTIONS}
-            hint="Decides what this person is in the system. Modules like Tasks show an employee only their own work, an agent their team's, and an admin everyone's."
+            label="Reporting manager"
+            name="managerId"
+            value={managerId}
+            onChange={(e) => setManagerId(e.target.value)}
+            options={[
+              { value: '', label: 'No manager' },
+              ...managerPool.map((m) => ({ value: m.id, label: `${m.name} · ${ACCOUNT_ROLE_LABEL[roleKey(m.role)]}` })),
+            ]}
+            hint={
+              accountRole === 'team_leader'
+                ? 'A Team Leader reports to a Leader.'
+                : accountRole === 'employee'
+                  ? 'An Employee reports to a Team Leader.'
+                  : 'An Agent reports to an Employee or a Team Leader.'
+            }
           />
+        )}
+        {user && accountRole !== user.accountRole && (
+          <p className="rounded-lg bg-warning-50 px-3 py-2.5 text-xs text-warning-700">
+            Changing the role moves this person in the tree. Their leads stay with them; what changes is who can see them.
+          </p>
         )}
 
         <Select

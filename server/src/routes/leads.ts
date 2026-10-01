@@ -3,6 +3,18 @@ import { prisma } from '../prisma';
 import { buildLeadWhere } from '../services/leadFilters';
 import { Prisma } from '@prisma/client';
 import { fireTrigger } from '../services/automationEngine';
+import type { AuthedRequest } from '../services/auth';
+import {
+  actorNameOf,
+  assignableUsers,
+  canAssignTo,
+  canUnassign,
+  findLeadInScope,
+  inLeadScope,
+  leadIdsInScope,
+  scopeOf,
+  viaLead,
+} from '../services/hierarchy';
 
 export const leadsRouter = Router();
 
@@ -37,10 +49,14 @@ leadsRouter.get('/', async (req, res) => {
   // leads would build the whole list in memory and pre-join every one of them.
   const size = Math.min(100, Math.max(1, Number(pageSize) || 10));
 
-  const where = buildLeadWhere({
-    search, status, priority, source, pipelineId, stageId, assignedUserId,
-    campaignName, adName, formName, dateFrom, dateTo, lastActivityFrom, lastActivityTo,
-  });
+  const scope = await scopeOf(req);
+  const where = inLeadScope(
+    buildLeadWhere({
+      search, status, priority, source, pipelineId, stageId, assignedUserId,
+      campaignName, adName, formName, dateFrom, dateTo, lastActivityFrom, lastActivityTo,
+    }),
+    scope
+  );
 
   const orderBy: Prisma.LeadOrderByWithRelationInput =
     sortBy === 'leadScore'
@@ -92,11 +108,12 @@ leadsRouter.get('/', async (req, res) => {
  * Read from the leads rather than from Meta: the point is to filter what is in front of you,
  * and an ad that has never produced a lead is only noise in a list.
  */
-leadsRouter.get('/ad-sources', async (_req, res, next) => {
+leadsRouter.get('/ad-sources', async (req, res, next) => {
   try {
+    const scope = await scopeOf(req);
     const campaigns = await prisma.lead.groupBy({
       by: ['utmCampaign'],
-      where: { utmCampaign: { not: null } },
+      where: inLeadScope({ utmCampaign: { not: null } }, scope),
       _count: { _all: true },
       orderBy: { _count: { utmCampaign: 'desc' } },
       take: 100,
@@ -105,7 +122,7 @@ leadsRouter.get('/ad-sources', async (_req, res, next) => {
     // adDetail is JSON, so the ad names are counted in memory. Bounded by the Meta leads that
     // have one, which is only those ingested since the column existed.
     const withAd = await prisma.lead.findMany({
-      where: { adDetail: { not: Prisma.DbNull } },
+      where: inLeadScope({ adDetail: { not: Prisma.DbNull } }, scope),
       select: { adDetail: true },
       take: 5000,
     });
@@ -130,6 +147,20 @@ leadsRouter.get('/ad-sources', async (_req, res, next) => {
   }
 });
 
+/**
+ * The people the caller may assign a lead to (and filter the list by): their own hierarchy,
+ * or everybody for an administrator. Served from here rather than the partner list because
+ * that one needs the Partners module, which a sales user does not have.
+ */
+leadsRouter.get('/assignees', async (req, res, next) => {
+  try {
+    const scope = await scopeOf(req);
+    res.json({ canAssign: scope.canAssign, canUnassign: canUnassign(scope), kind: scope.kind, users: await assignableUsers(scope) });
+  } catch (err) {
+    next(err);
+  }
+});
+
 leadsRouter.get('/ids', async (req, res, next) => {
   try {
     const {
@@ -137,10 +168,14 @@ leadsRouter.get('/ids', async (req, res, next) => {
       campaignName, adName, formName, dateFrom, dateTo, lastActivityFrom, lastActivityTo,
     } =
       req.query as Record<string, string>;
-    const where = buildLeadWhere({
-      search, status, priority, source, pipelineId, stageId, assignedUserId,
-      campaignName, adName, formName, dateFrom, dateTo, lastActivityFrom, lastActivityTo,
-    });
+    const scope = await scopeOf(req);
+    const where = inLeadScope(
+      buildLeadWhere({
+        search, status, priority, source, pipelineId, stageId, assignedUserId,
+        campaignName, adName, formName, dateFrom, dateTo, lastActivityFrom, lastActivityTo,
+      }),
+      scope
+    );
 
     const LIMIT = 5000;
     const [rows, total] = await Promise.all([
@@ -154,8 +189,30 @@ leadsRouter.get('/ids', async (req, res, next) => {
   }
 });
 
+/**
+ * Who a new lead belongs to. A lead a non-admin creates must land somewhere they can see it —
+ * left unassigned it would vanish from the creator's own list — so it defaults to them, and an
+ * explicit assignee has to be somebody in their hierarchy.
+ */
+async function resolveNewLeadOwner(
+  scope: Awaited<ReturnType<typeof scopeOf>>,
+  requested: string | null | undefined
+): Promise<{ ok: true; userId: string | null } | { ok: false; error: string }> {
+  const wanted = requested || null;
+  if (scope.kind === 'all') return { ok: true, userId: wanted };
+  if (!wanted) return { ok: true, userId: scope.userId };
+  if (wanted === scope.userId) return { ok: true, userId: wanted };
+  if (!(await canAssignTo(scope, wanted))) {
+    return { ok: false, error: 'You can only assign leads to people in your own team.' };
+  }
+  return { ok: true, userId: wanted };
+}
+
 leadsRouter.post('/', async (req, res) => {
   const body = req.body;
+  const scope = await scopeOf(req);
+  const owner = await resolveNewLeadOwner(scope, body.assignedUserId);
+  if (!owner.ok) return res.status(403).json({ error: owner.error });
   const created = await prisma.lead.create({
     data: {
       firstName: body.firstName ?? '',
@@ -170,7 +227,7 @@ leadsRouter.post('/', async (req, res) => {
       preferredLocations: Array.isArray(body.preferredLocations) ? body.preferredLocations.filter(Boolean) : [],
       source: body.source ?? 'manual',
       priority: body.priority ?? 'normal',
-      assignedUserId: body.assignedUserId || undefined,
+      assignedUserId: owner.userId || undefined,
       pipelineId: body.pipelineId || undefined,
       pipelineStageId: body.pipelineStageId || undefined,
       stageEnteredAt: body.pipelineStageId ? new Date() : undefined,
@@ -194,36 +251,47 @@ leadsRouter.post('/', async (req, res) => {
 
 leadsRouter.post('/bulk/assign', async (req, res) => {
   const { ids, userId } = req.body as { ids: string[]; userId: string };
-  const leads = await prisma.lead.findMany({ where: { id: { in: ids } }, select: { id: true, assignedUserId: true } });
+  const scope = await scopeOf(req);
+  if (!userId || !(await canAssignTo(scope, userId))) {
+    return res.status(403).json({ error: 'You can only assign leads to people in your own team.' });
+  }
+  const actor = await actorNameOf(req);
+  // Only leads the caller can already see: an id from outside their hierarchy is skipped, as if
+  // it were not in the list — they cannot use a bulk call to reach a lead they cannot open.
+  const allowed = await leadIdsInScope(scope, ids);
+  const leads = await prisma.lead.findMany({ where: { id: { in: allowed } }, select: { id: true, assignedUserId: true } });
   await Promise.all(
     leads.map(async (lead) => {
       await prisma.lead.update({ where: { id: lead.id }, data: { assignedUserId: userId } });
       await prisma.leadAssignmentHistoryEntry.create({
-        data: { leadId: lead.id, fromUserId: lead.assignedUserId, toUserId: userId, actorName: 'Priyanka Singh' },
+        data: { leadId: lead.id, fromUserId: lead.assignedUserId, toUserId: userId, actorName: actor },
       });
-      await prisma.leadActivity.create({ data: { leadId: lead.id, type: 'assigned', description: 'Bulk-assigned.' } });
+      await prisma.leadActivity.create({ data: { leadId: lead.id, type: 'assigned', description: 'Bulk-assigned.', userName: actor } });
       await fireTrigger('lead_assigned', lead.id);
     })
   );
-  res.status(204).send();
+  res.json({ assigned: leads.length, skipped: (ids?.length ?? 0) - leads.length });
 });
 
 leadsRouter.post('/bulk/status', async (req, res) => {
   const { ids, status } = req.body as { ids: string[]; status: string };
-  await prisma.lead.updateMany({ where: { id: { in: ids } }, data: { status: status as any } });
+  const allowed = await leadIdsInScope(await scopeOf(req), ids);
+  await prisma.lead.updateMany({ where: { id: { in: allowed } }, data: { status: status as any } });
   res.status(204).send();
 });
 
 leadsRouter.post('/bulk/priority', async (req, res) => {
   const { ids, priority } = req.body as { ids: string[]; priority: string };
-  await prisma.lead.updateMany({ where: { id: { in: ids } }, data: { priority: priority as any } });
+  const allowed = await leadIdsInScope(await scopeOf(req), ids);
+  await prisma.lead.updateMany({ where: { id: { in: allowed } }, data: { priority: priority as any } });
   res.status(204).send();
 });
 
 leadsRouter.post('/bulk/source', async (req, res) => {
   const { ids, source, otherSource } = req.body as { ids: string[]; source: string; otherSource?: string };
+  const allowed = await leadIdsInScope(await scopeOf(req), ids);
   await prisma.lead.updateMany({
-    where: { id: { in: ids } },
+    where: { id: { in: allowed } },
     data: { source, otherSource: source === 'other' ? otherSource || undefined : null },
   });
   res.status(204).send();
@@ -231,22 +299,26 @@ leadsRouter.post('/bulk/source', async (req, res) => {
 
 leadsRouter.post('/bulk/tag', async (req, res) => {
   const { ids, tagId } = req.body as { ids: string[]; tagId: string };
+  const allowed = await leadIdsInScope(await scopeOf(req), ids);
   await Promise.all(
-    ids.map((leadId) => prisma.leadTagOnLead.create({ data: { leadId, tagId } }).catch(() => undefined))
+    allowed.map((leadId) => prisma.leadTagOnLead.create({ data: { leadId, tagId } }).catch(() => undefined))
   );
   res.status(204).send();
 });
 
 leadsRouter.post('/bulk/untag', async (req, res) => {
   const { ids, tagId } = req.body as { ids: string[]; tagId: string };
-  await prisma.leadTagOnLead.deleteMany({ where: { leadId: { in: ids }, tagId } });
+  const allowed = await leadIdsInScope(await scopeOf(req), ids);
+  await prisma.leadTagOnLead.deleteMany({ where: { leadId: { in: allowed }, tagId } });
   res.status(204).send();
 });
 
 leadsRouter.post('/bulk/stage', async (req, res) => {
   const { ids, pipelineId, stageId } = req.body as { ids: string[]; pipelineId: string; stageId: string };
   const toStage = await prisma.pipelineStage.findUnique({ where: { id: stageId } });
-  const leads = await prisma.lead.findMany({ where: { id: { in: ids } }, include: { stage: true } });
+  const actor = await actorNameOf(req);
+  const allowed = await leadIdsInScope(await scopeOf(req), ids);
+  const leads = await prisma.lead.findMany({ where: { id: { in: allowed } }, include: { stage: true } });
 
   const data: Record<string, unknown> = { pipelineId, pipelineStageId: stageId, stageEnteredAt: new Date() };
   if (toStage?.isWon) data.status = 'won';
@@ -256,10 +328,10 @@ leadsRouter.post('/bulk/stage', async (req, res) => {
     leads.map(async (lead) => {
       await prisma.lead.update({ where: { id: lead.id }, data: data as any });
       await prisma.leadStageHistoryEntry.create({
-        data: { leadId: lead.id, fromStageName: lead.stage?.name, toStageName: toStage?.name ?? 'Unknown', actorName: 'Priyanka Singh' },
+        data: { leadId: lead.id, fromStageName: lead.stage?.name, toStageName: toStage?.name ?? 'Unknown', actorName: actor },
       });
       await prisma.leadActivity.create({
-        data: { leadId: lead.id, type: 'stage_moved', description: `Bulk-moved to "${toStage?.name ?? 'Unknown'}".` },
+        data: { leadId: lead.id, type: 'stage_moved', description: `Bulk-moved to "${toStage?.name ?? 'Unknown'}".`, userName: actor },
       });
       await fireTrigger('lead_stage_changed', lead.id, { fromStageId: lead.pipelineStageId ?? undefined, toStageId: stageId });
     })
@@ -269,7 +341,8 @@ leadsRouter.post('/bulk/stage', async (req, res) => {
 
 leadsRouter.post('/bulk/delete', async (req, res) => {
   const { ids } = req.body as { ids: string[] };
-  await prisma.lead.deleteMany({ where: { id: { in: ids } } });
+  const allowed = await leadIdsInScope(await scopeOf(req), ids);
+  await prisma.lead.deleteMany({ where: { id: { in: allowed } } });
   res.status(204).send();
 });
 
@@ -283,6 +356,11 @@ leadsRouter.post('/import', async (req, res) => {
     defaultPipelineId?: string;
     defaultStageId?: string;
   };
+
+  const scope = await scopeOf(req);
+  // An import by anybody but an admin lands in their own list, for the same reason a single
+  // new lead does: otherwise the person who uploaded it could not see what they uploaded.
+  const importOwner = scope.kind === 'all' ? undefined : scope.userId;
 
   const seen = new Set<string>();
   const results: { row: number; status: 'imported' | 'duplicate' | 'skipped'; reason?: string; leadId?: string }[] = [];
@@ -347,6 +425,7 @@ leadsRouter.post('/import', async (req, res) => {
         stageEnteredAt: defaultStageId ? new Date() : undefined,
         dealValue: row.deal_value ? Number(row.deal_value.replace(/[^0-9.]/g, '')) || undefined : undefined,
         assignedTo: row.assigned?.trim() || undefined,
+        assignedUserId: importOwner,
         notes: row.notes?.trim() || undefined,
       },
     });
@@ -374,10 +453,11 @@ leadsRouter.post('/import', async (req, res) => {
 /** Cross-lead activity feed (the CRM "Activities" page) — registered before `GET /:id`. */
 leadsRouter.get('/activities', async (req, res) => {
   const { page = '1', pageSize = '20', search, type, dateFrom, dateTo } = req.query as Record<string, string>;
+  const scope = await scopeOf(req);
   const pageNum = Math.max(1, Number(page) || 1);
   const size = Math.max(1, Number(pageSize) || 20);
 
-  const where: Prisma.LeadActivityWhereInput = {};
+  const where: Prisma.LeadActivityWhereInput = { ...viaLead(scope) };
   if (search) {
     where.OR = [
       { description: { contains: search, mode: 'insensitive' } },
@@ -414,6 +494,24 @@ leadsRouter.get('/activities', async (req, res) => {
 // Single-lead routes
 // ---------------------------------------------------------------------------
 
+/**
+ * Every `/:id/...` route below — the detail page, its notes, activities, follow-ups, history,
+ * tags, stage and assignment — passes through this first. A lead outside the caller's
+ * hierarchy answers exactly like one that does not exist, so the only way to learn that a
+ * colleague's lead is there would be to already be allowed to see it.
+ */
+leadsRouter.param('id', async (req, res, next, id) => {
+  try {
+    const scope = await scopeOf(req);
+    if (scope.kind !== 'all' && !(await findLeadInScope(scope, String(id)))) {
+      return res.status(404).json({ error: 'Lead not found' });
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
 leadsRouter.get('/:id', async (req, res) => {
   const lead = await prisma.lead.findUnique({
     where: { id: req.params.id },
@@ -437,9 +535,34 @@ leadsRouter.get('/:id', async (req, res) => {
 });
 
 leadsRouter.patch('/:id', async (req, res) => {
-  const before = req.body?.leadScore !== undefined ? await prisma.lead.findUnique({ where: { id: req.params.id }, select: { leadScore: true } }) : null;
-  const updated = await prisma.lead.update({ where: { id: req.params.id }, data: req.body }).catch(() => null);
+  const scope = await scopeOf(req);
+  const { id: _id, createdAt: _c, updatedAt: _u, assignedUserId, ...fields } = req.body ?? {};
+
+  // The edit form sends the whole record back, assignee included. Only an actual change of
+  // owner is an assignment — and that one has to be somebody this caller may assign to.
+  const current = await prisma.lead.findUnique({ where: { id: req.params.id }, select: { leadScore: true, assignedUserId: true } });
+  const reassigning = assignedUserId !== undefined && (assignedUserId || null) !== (current?.assignedUserId ?? null);
+  if (reassigning) {
+    if (!assignedUserId ? !canUnassign(scope) : !(await canAssignTo(scope, assignedUserId))) {
+      return res.status(403).json({ error: 'You can only assign leads to people in your own team.' });
+    }
+  }
+
+  const before = fields.leadScore !== undefined ? current : null;
+  const updated = await prisma.lead
+    .update({ where: { id: req.params.id }, data: { ...fields, ...(reassigning ? { assignedUserId: assignedUserId || null } : {}) } })
+    .catch(() => null);
   if (!updated) return res.status(404).json({ error: 'Lead not found' });
+  if (reassigning) {
+    const actor = await actorNameOf(req);
+    await prisma.leadAssignmentHistoryEntry.create({
+      data: { leadId: updated.id, fromUserId: current?.assignedUserId ?? null, toUserId: assignedUserId || null, actorName: actor },
+    });
+    await prisma.leadActivity.create({
+      data: { leadId: updated.id, type: 'assigned', description: assignedUserId ? 'Reassigned.' : 'Unassigned.', userName: actor },
+    });
+    if (assignedUserId) await fireTrigger('lead_assigned', updated.id);
+  }
   if (before && updated.leadScore !== before.leadScore) await fireTrigger('lead_score_threshold', updated.id);
   res.json(updated);
 });
@@ -466,22 +589,34 @@ leadsRouter.post('/:id/status', async (req, res) => {
 
   const updated = await prisma.lead.update({ where: { id: req.params.id }, data });
   await prisma.leadActivity.create({
-    data: { leadId: lead.id, type: 'status_changed', description: `Status changed from "${lead.status}" to "${status}".` },
+    data: {
+      leadId: lead.id,
+      type: 'status_changed',
+      description: `Status changed from "${lead.status}" to "${status}".`,
+      userName: await actorNameOf(req),
+    },
   });
   res.json(updated);
 });
 
 leadsRouter.post('/:id/assign', async (req, res) => {
   const { userId } = req.body as { userId?: string };
+  const scope = await scopeOf(req);
+  // Handing a lead on is a manager's action, and only to somebody in their own hierarchy.
+  // Unassigning is the same action, so it needs the same standing.
+  if (userId ? !(await canAssignTo(scope, userId)) : !canUnassign(scope)) {
+    return res.status(403).json({ error: 'You can only assign leads to people in your own team.' });
+  }
   const before = await prisma.lead.findUnique({ where: { id: req.params.id } });
   if (!before) return res.status(404).json({ error: 'Lead not found' });
+  const actor = await actorNameOf(req);
 
   const updated = await prisma.lead.update({ where: { id: req.params.id }, data: { assignedUserId: userId || null } });
   await prisma.leadAssignmentHistoryEntry.create({
-    data: { leadId: updated.id, fromUserId: before.assignedUserId, toUserId: userId || null, actorName: 'Priyanka Singh' },
+    data: { leadId: updated.id, fromUserId: before.assignedUserId, toUserId: userId || null, actorName: actor },
   });
   await prisma.leadActivity.create({
-    data: { leadId: updated.id, type: 'assigned', description: userId ? 'Reassigned.' : 'Unassigned.' },
+    data: { leadId: updated.id, type: 'assigned', description: userId ? 'Reassigned.' : 'Unassigned.', userName: actor },
   });
   if (userId) await fireTrigger('lead_assigned', updated.id);
   res.json(updated);
@@ -512,7 +647,7 @@ leadsRouter.post('/:id/stage', async (req, res) => {
       leadId: lead.id,
       fromStageName: lead.stage?.name,
       toStageName: toStage?.name ?? 'Unknown',
-      actorName: 'Priyanka Singh',
+      actorName: await actorNameOf(req),
     },
   });
   await prisma.leadActivity.create({
@@ -520,6 +655,7 @@ leadsRouter.post('/:id/stage', async (req, res) => {
       leadId: lead.id,
       type: 'stage_moved',
       description: `Moved from "${lead.stage?.name ?? 'Unassigned'}" to "${toStage?.name ?? 'Unknown'}".`,
+      userName: await actorNameOf(req),
     },
   });
   await fireTrigger('lead_stage_changed', lead.id, { fromStageId: lead.pipelineStageId ?? undefined, toStageId: stageId });
@@ -549,7 +685,7 @@ leadsRouter.get('/:id/activities', async (req, res) => {
 leadsRouter.post('/:id/activities', async (req, res) => {
   const { type, description } = req.body as { type: string; description: string };
   const row = await prisma.leadActivity.create({
-    data: { leadId: req.params.id, type, description, userName: 'Priyanka Singh' },
+    data: { leadId: req.params.id, type, description, userName: await actorNameOf(req) },
   });
   res.status(201).json(row);
 });
@@ -561,11 +697,12 @@ leadsRouter.get('/:id/notes', async (req, res) => {
 
 leadsRouter.post('/:id/notes', async (req, res) => {
   const { body } = req.body as { body: string };
+  const actor = await actorNameOf(req);
   const note = await prisma.leadNote.create({
-    data: { leadId: req.params.id, userId: 'ADMIN-1', userName: 'Priyanka Singh', body },
+    data: { leadId: req.params.id, userId: (req as AuthedRequest).auth?.sub ?? 'unknown', userName: actor, body },
   });
   await prisma.leadActivity.create({
-    data: { leadId: req.params.id, type: 'note_added', description: 'Note added.', userName: 'Priyanka Singh' },
+    data: { leadId: req.params.id, type: 'note_added', description: 'Note added.', userName: actor },
   });
   res.status(201).json(note);
 });

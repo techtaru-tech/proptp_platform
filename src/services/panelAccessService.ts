@@ -50,6 +50,8 @@ export interface PanelUserInput {
   panelRoleId: string;
   /** Defaults to `admin` server-side, which is what every panel user was before this existed. */
   accountRole?: AccountRole;
+  /** Who they report to in the CRM hierarchy. A Team Leader reports to a Leader, and so on. */
+  managerId?: string | null;
 }
 
 export async function createPanelUser(input: PanelUserInput): Promise<PanelUser> {
@@ -62,6 +64,9 @@ export interface PanelUserUpdate {
   status?: string;
   /** Only sent when the admin actually typed a new one. */
   password?: string;
+  /** Placement in the reporting tree. Role and manager are validated together by the server. */
+  accountRole?: AccountRole;
+  managerId?: string | null;
 }
 
 export async function updatePanelUser(id: string, input: PanelUserUpdate): Promise<PanelUser> {

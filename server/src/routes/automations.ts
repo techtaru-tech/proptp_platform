@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../prisma';
 import { runAutomationManually } from '../services/automationEngine';
+import { leadIdsInScope, scopeOf, visibleLeadIds, type Scope } from '../services/hierarchy';
 
 export const automationsRouter = Router();
 
@@ -13,6 +14,31 @@ function validateSteps(steps: unknown): string | null {
     if (!step.config || typeof step.config !== 'object') return 'Every step needs a config object.';
   }
   return null;
+}
+
+/**
+ * Everybody a saved step would hand a lead to, whichever assignment mode it uses. A step may
+ * name them directly (specific, round robin, rota) or by manager (hierarchy mode); both are
+ * collected so one check covers all of them.
+ */
+async function assigneesNamedBy(steps: any[]): Promise<{ users: string[]; managers: string[] }> {
+  const users = new Set<string>();
+  const managers = new Set<string>();
+  for (const step of steps) {
+    if (step?.type !== 'action' || step.config?.action !== 'assign_lead') continue;
+    for (const id of step.config.assignUserIds ?? []) users.add(String(id));
+    for (const entry of step.config.assignSequence ?? []) if (entry?.userId) users.add(String(entry.userId));
+    if (step.config.assignMode === 'hierarchy' && step.config.assignManagerId) managers.add(String(step.config.assignManagerId));
+  }
+  return { users: [...users], managers: [...managers] };
+}
+
+/** Somebody who is not an administrator can only build rules that deal to their own hierarchy. */
+async function stepsStayInScope(scope: Scope, steps: unknown): Promise<boolean> {
+  if (scope.kind === 'all' || !Array.isArray(steps)) return true;
+  const { users, managers } = await assigneesNamedBy(steps);
+  if (users.some((id) => !scope.userIds.includes(id))) return false;
+  return managers.every((id) => scope.userIds.includes(id));
 }
 
 automationsRouter.get('/', async (_req, res) => {
@@ -49,6 +75,9 @@ automationsRouter.post('/', async (req, res) => {
 
   const stepError = validateSteps(steps ?? []);
   if (stepError) return res.status(400).json({ error: stepError });
+  if (!(await stepsStayInScope(await scopeOf(req), steps))) {
+    return res.status(403).json({ error: 'A rule can only assign leads to people in your own team.' });
+  }
 
   const created = await prisma.automation.create({
     data: {
@@ -84,6 +113,9 @@ automationsRouter.patch('/:id', async (req, res) => {
   if (steps !== undefined) {
     const stepError = validateSteps(steps);
     if (stepError) return res.status(400).json({ error: stepError });
+    if (!(await stepsStayInScope(await scopeOf(req), steps))) {
+      return res.status(403).json({ error: 'A rule can only assign leads to people in your own team.' });
+    }
   }
 
   // Steps are replaced wholesale, same as the Forms builder's fields: the editor always submits
@@ -129,7 +161,12 @@ automationsRouter.get('/runs/list', async (req, res) => {
   const pageNum = Math.max(1, Number(page) || 1);
   const size = Math.max(1, Number(pageSize) || 20);
 
-  const where = automationId && automationId !== 'all' ? { automationId } : {};
+  // A run is a record about a lead, so a team sees only the runs on its own leads.
+  const visible = await visibleLeadIds(await scopeOf(req));
+  const where = {
+    ...(automationId && automationId !== 'all' ? { automationId } : {}),
+    ...(visible ? { leadId: { in: visible } } : {}),
+  };
   const [items, total] = await Promise.all([
     prisma.automationRun.findMany({ where, orderBy: { ranAt: 'desc' }, skip: (pageNum - 1) * size, take: size }),
     prisma.automationRun.count({ where }),
@@ -159,10 +196,14 @@ automationsRouter.get('/runs/list', async (req, res) => {
  * passes it in here (see leadAutomationService.ts) rather than this server needing its own copy.
  */
 automationsRouter.post('/:id/run', async (req, res) => {
-  const { leadIds, teamMemberIds } = req.body as { leadIds: string[]; teamMemberIds?: string[] };
+  const { leadIds: requested, teamMemberIds } = req.body as { leadIds: string[]; teamMemberIds?: string[] };
   const automation = await prisma.automation.findUnique({ where: { id: req.params.id } });
   if (!automation) return res.status(404).json({ error: 'Automation not found' });
 
-  const result = await runAutomationManually(automation.id, leadIds, teamMemberIds);
+  // Only leads the caller can see, and — for anybody but an administrator — assignment held to
+  // their own hierarchy whatever the saved rule says.
+  const scope = await scopeOf(req);
+  const leadIds = await leadIdsInScope(scope, requested);
+  const result = await runAutomationManually(automation.id, leadIds, teamMemberIds, scope.kind === 'all' ? undefined : scope.userIds);
   res.json(result);
 });
