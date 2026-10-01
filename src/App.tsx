@@ -90,6 +90,7 @@ import { VendorDetail } from './pages/vendors/VendorDetail';
 import { Materials } from './pages/vendors/Materials';
 import { VendorBills } from './pages/vendors/VendorBills';
 import { VendorOnly } from './pages/vendorPortal/VendorOnly';
+import { PortalViewShell } from './pages/vendorPortal/PortalViewShell';
 import { PortalHome } from './pages/vendorPortal/PortalHome';
 import { PortalMaterial } from './pages/vendorPortal/PortalMaterial';
 import { PortalBills } from './pages/vendorPortal/PortalBills';
@@ -196,6 +197,11 @@ function App() {
                 <Route path="/vendors/material" element={<Materials />} />
                 <Route path="/vendors/bills" element={<VendorBills />} />
                 <Route path="/vendors/:id" element={<VendorDetail />} />
+                <Route path="/vendors/:id/portal" element={<PortalViewShell />}>
+                  <Route index element={<PortalHome />} />
+                  <Route path="material" element={<PortalMaterial />} />
+                  <Route path="bills" element={<PortalBills />} />
+                </Route>
                 <Route path="/vendor-portal" element={<VendorOnly><PortalHome /></VendorOnly>} />
                 <Route path="/vendor-portal/material" element={<VendorOnly><PortalMaterial /></VendorOnly>} />
                 <Route path="/vendor-portal/bills" element={<VendorOnly><PortalBills /></VendorOnly>} />

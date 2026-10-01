@@ -15,9 +15,11 @@ import { PlanVsActual } from '../construction/PlanVsActual';
 import { useAsync } from '../../hooks/useAsync';
 import { useToast } from '../../context/ToastContext';
 import { formatCurrency, formatDate, formatDateTime } from '../../utils/format';
-import { portal, type PortalActivity } from '../../services/vendorService';
+import type { PortalActivity } from '../../services/vendorService';
+import { usePortal } from './PortalContext';
 
 export function PortalHome() {
+  const { api: portal, readOnly } = usePortal();
   const [reload, setReload] = useState(0);
   const [posting, setPosting] = useState<PortalActivity | null>(null);
   const me = useAsync(() => portal.me(), [reload]);
@@ -50,7 +52,7 @@ export function PortalHome() {
                     <span className={a.days_behind > 0 ? 'font-medium text-danger-700' : 'text-success-700'}>{a.days_behind > 0 ? `${a.days_behind} days behind` : 'On track'}</span></div>
                   <PlanVsActual planned={a.planned_percent} actual={a.actual_percent} />
                 </div>
-                <Button variant="primary" size="sm" onClick={() => setPosting(a)}>Post today&apos;s update</Button>
+                {!readOnly && <Button variant="primary" size="sm" onClick={() => setPosting(a)}>Post today&apos;s update</Button>}
               </li>
             ))}
           </ul>
@@ -68,12 +70,13 @@ export function PortalHome() {
             </li>))}</ul>
         )}
       </Card>
-      {posting && <UpdateModal activity={posting} onClose={() => setPosting(null)} onSaved={() => { setPosting(null); setReload((k) => k + 1); }} />}
+      {posting && !readOnly && <UpdateModal activity={posting} onClose={() => setPosting(null)} onSaved={() => { setPosting(null); setReload((k) => k + 1); }} />}
     </div>
   );
 }
 
 function UpdateModal({ activity, onClose, onSaved }: { activity: PortalActivity; onClose: () => void; onSaved: () => void }) {
+  const { api: portal } = usePortal();
   const { toast } = useToast();
   const [f, setF] = useState({ work_done: '', manpower: '', percent_complete: String(activity.actual_percent), remarks: '' });
   const [photos, setPhotos] = useState<StampedPhoto[]>([]);

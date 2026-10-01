@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { FileText, Plus, Trash2 } from 'lucide-react';
+import { Link, useParams } from 'react-router-dom';
+import { Eye, FileText, Plus, Trash2 } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -40,7 +40,9 @@ export function VendorDetail() {
     <div>
       <PageHeader title={v.name} description={`${v.category}${v.contactPerson ? ` · ${v.contactPerson}` : ''}${v.phone ? ` · ${v.phone}` : ''}`}
         breadcrumb={[{ label: 'Vendors', to: '/vendors' }, { label: v.name }]}
-        actions={<Button variant="outline" onClick={toggle}>{v.active ? 'Deactivate' : 'Reactivate'}</Button>} />
+        actions={<div className="flex gap-2">
+          <Link to={`/vendors/${v.id}/portal`} className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-3 py-2 text-sm font-medium text-ink hover:bg-surface-muted focus-ring"><Eye size={14} /> View their portal</Link>
+          <Button variant="outline" onClick={toggle}>{v.active ? 'Deactivate' : 'Reactivate'}</Button></div>} />
 
       <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="On-time delivery" value={pct(p.onTimePct)} tone="success" footer={<span className="text-xs text-ink-muted">{p.deliveries} deliveries</span>} />

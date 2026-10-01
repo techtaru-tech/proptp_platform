@@ -20,8 +20,8 @@ export function VendorOnly({ children }: { children: ReactNode }) {
       <EmptyState
         icon={Briefcase}
         title="This page is for vendor logins"
-        description="The vendor portal shows a vendor their own work orders, daily updates, material and bills. You are signed in as staff, so there is nothing of yours to show here."
-        action={can('vendors') ? <Link to="/vendors" className="text-sm font-medium text-brand-700 focus-ring rounded">Manage vendors, their material and bills →</Link> : undefined}
+        description="The vendor portal shows a vendor their own work orders, daily updates, material and bills. You are signed in as staff, so there is nothing of yours to show here. To see a vendor’s portal as they see it, open the vendor and choose “View their portal”."
+        action={can('vendors') ? <Link to="/vendors" className="text-sm font-medium text-brand-700 focus-ring rounded">Open the vendors →</Link> : undefined}
       />
     </Card>
   );

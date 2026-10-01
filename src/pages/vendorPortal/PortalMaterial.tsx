@@ -8,10 +8,11 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { CardSkeleton } from '../../components/ui/LoadingSkeleton';
 import { useAsync } from '../../hooks/useAsync';
 import { formatDate } from '../../utils/format';
-import { portal } from '../../services/vendorService';
+import { usePortal } from './PortalContext';
 import { MaterialEntryModal } from '../vendors/MaterialEntryModal';
 
 export function PortalMaterial() {
+  const { api: portal, readOnly } = usePortal();
   const [reload, setReload] = useState(0);
   const [adding, setAdding] = useState(false);
   const me = useAsync(() => portal.me(), []);
@@ -20,7 +21,7 @@ export function PortalMaterial() {
   return (
     <div>
       <PageHeader title="Material delivered" description="Record each delivery with photos of the material, the challan and the vehicle." breadcrumb={[{ label: 'Material' }]}
-        actions={<Button variant="primary" leftIcon={<Plus size={14} />} disabled={sites.length === 0} onClick={() => setAdding(true)}>Record delivery</Button>} />
+        actions={readOnly ? undefined : <Button variant="primary" leftIcon={<Plus size={14} />} disabled={sites.length === 0} onClick={() => setAdding(true)}>Record delivery</Button>} />
       {!data ? <CardSkeleton /> : data.length === 0 ? <Card><EmptyState title="No deliveries recorded" /></Card> : (
         <Card padded={false}><ul className="divide-y divide-line">{data.map((e) => (
           <li key={e.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm">

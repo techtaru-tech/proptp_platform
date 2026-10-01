@@ -40,7 +40,7 @@ import { crmTeamRouter } from './routes/crmTeam';
 import { adminConstructionRouter } from './routes/admin/construction';
 import { appConstructionRouter } from './routes/app/construction';
 import { adminVendorsRouter, adminMaterialsRouter } from './routes/admin/vendors';
-import { vendorPortalRouter } from './routes/vendorPortal';
+import { vendorPortalRouter, vendorPortalViewRouter } from './routes/vendorPortal';
 import { adminLegalRouter } from './routes/admin/legal';
 import { adminOpsRulesRouter } from './routes/admin/opsRules';
 import { startOpsRulePoller } from './services/opsRules';
@@ -167,6 +167,8 @@ app.use('/api/crm-team', crmTeamRouter);
 app.use('/api/construction', adminConstructionRouter);
 app.use('/api/legal', adminLegalRouter);
 app.use('/api/ops-rules', adminOpsRulesRouter);
+// Staff looking at a vendor's portal. Before the vendors router so its paths are not read as ids.
+app.use('/api/vendors/portal-view/:vendorId', vendorPortalViewRouter);
 app.use('/api/vendors', adminVendorsRouter);
 app.use('/api/materials', adminMaterialsRouter);
 app.use('/api/vendor-portal', vendorPortalRouter);

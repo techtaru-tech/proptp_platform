@@ -13,11 +13,12 @@ import { CardSkeleton } from '../../components/ui/LoadingSkeleton';
 import { useAsync } from '../../hooks/useAsync';
 import { useToast } from '../../context/ToastContext';
 import { formatCurrency, formatDate } from '../../utils/format';
-import { portal } from '../../services/vendorService';
+import { usePortal } from './PortalContext';
 
 const TONE = { submitted: 'warning', approved: 'info', paid: 'success', rejected: 'danger' } as const;
 
 export function PortalBills() {
+  const { api: portal, readOnly } = usePortal();
   const { toast } = useToast();
   const [reload, setReload] = useState(0);
   const [adding, setAdding] = useState(false);
@@ -37,7 +38,7 @@ export function PortalBills() {
   return (
     <div>
       <PageHeader title="Bills" description="Raised against your work orders. Approval and payment show here." breadcrumb={[{ label: 'Bills' }]}
-        actions={<Button variant="primary" leftIcon={<Plus size={14} />} disabled={!me.data?.workOrders.length} onClick={() => { setF((x) => ({ ...x, workOrderId: me.data?.workOrders[0]?.id ?? '' })); setAdding(true); }}>Raise bill</Button>} />
+        actions={readOnly ? undefined : <Button variant="primary" leftIcon={<Plus size={14} />} disabled={!me.data?.workOrders.length} onClick={() => { setF((x) => ({ ...x, workOrderId: me.data?.workOrders[0]?.id ?? '' })); setAdding(true); }}>Raise bill</Button>} />
       {!data ? <CardSkeleton /> : data.length === 0 ? <Card><EmptyState title="No bills yet" /></Card> : (
         <Card padded={false}><ul className="divide-y divide-line">{data.map((b) => (
           <li key={b.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm">

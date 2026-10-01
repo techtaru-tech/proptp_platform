@@ -56,14 +56,17 @@ export interface PortalMe {
   workOrders: { id: string; number: string; description: string; amount: number; projectId: string; projectName: string; billed: number; paid: number }[];
 }
 export interface PortalActivity { id: string; project: string; phase: string; block: string; name: string; planned_end: string; planned_percent: number; actual_percent: number; days_behind: number }
-export const portal = {
-  me: () => api.get<PortalMe>('/vendor-portal/me'),
-  activities: () => api.get<{ activities: PortalActivity[] }>('/vendor-portal/activities'),
-  updates: () => api.get<{ updates: { id: string; activity: string; work_done: string; percent_complete: number; status: string; rejection_reason: string | null; captured_at: string }[] }>('/vendor-portal/updates'),
-  postUpdate: (form: FormData) => api.upload<{ id: string; duplicate: boolean }>('/vendor-portal/updates', form),
-  materials: () => api.get<{ id: string; projectName: string; material: string; unit: string; quantity: number; challanNo: string; receivedOn: string; status: string; rejectionReason: string | null }[]>('/vendor-portal/materials'),
-  postMaterial: (form: FormData) => api.upload<{ id: string }>('/vendor-portal/materials', form),
-  bills: () => api.get<BillRow[]>('/vendor-portal/bills'),
-  postBill: (input: { workOrderId: string; billNumber: string; amount: number; billDate: string }) => api.post('/vendor-portal/bills', input),
-};
+/** The portal's calls, for `base`: the vendor's own login, or staff looking at one vendor (read-only). */
+export const makePortal = (base: string) => ({
+  me: () => api.get<PortalMe>(`${base}/me`),
+  activities: () => api.get<{ activities: PortalActivity[] }>(`${base}/activities`),
+  updates: () => api.get<{ updates: { id: string; activity: string; work_done: string; percent_complete: number; status: string; rejection_reason: string | null; captured_at: string }[] }>(`${base}/updates`),
+  postUpdate: (form: FormData) => api.upload<{ id: string; duplicate: boolean }>(`${base}/updates`, form),
+  materials: () => api.get<{ id: string; projectName: string; material: string; unit: string; quantity: number; challanNo: string; receivedOn: string; status: string; rejectionReason: string | null }[]>(`${base}/materials`),
+  postMaterial: (form: FormData) => api.upload<{ id: string }>(`${base}/materials`, form),
+  bills: () => api.get<BillRow[]>(`${base}/bills`),
+  postBill: (input: { workOrderId: string; billNumber: string; amount: number; billDate: string }) => api.post(`${base}/bills`, input),
+});
+export type PortalApi = ReturnType<typeof makePortal>;
+export const portal = makePortal('/vendor-portal');
 export const postStaffMaterial = (form: FormData) => api.upload<{ id: string }>('/materials/entries', form);
