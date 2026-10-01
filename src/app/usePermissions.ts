@@ -21,7 +21,10 @@ export function usePermissions() {
     // Team pages are for people who manage somebody. An Employee or Agent — `scope: 'own'` —
     // has no team to look at, so the entries are left out rather than opening an empty page.
     const hasTeam = isFullAccess || session?.scope !== 'own';
-    const navItems: NavItem[] = NAV_ITEMS.filter((item) => can(item.module)).map((item) =>
+    // "My Work" is a vendor's own view, so it is in nobody's menu but a vendor's — a full-access
+    // administrator can open every module, but has no vendor work of their own to see there.
+    const isVendor = (session?.accountRole as string | undefined) === 'vendor';
+    const navItems: NavItem[] = NAV_ITEMS.filter((item) => (item.module === 'vendor_portal' ? isVendor : can(item.module))).map((item) =>
       item.children ? { ...item, children: item.children.filter((c) => !c.teamOnly || hasTeam) } : item
     );
 
