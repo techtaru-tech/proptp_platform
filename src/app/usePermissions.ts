@@ -48,6 +48,7 @@ export function moduleForPath(pathname: string): ModuleKey | null {
   const EXTRA_PREFIXES: { prefix: string; module: ModuleKey }[] = [
     { prefix: '/crm', module: 'crm' },
     { prefix: '/tasks', module: 'tasks' },
+    { prefix: '/construction', module: 'construction' },
     { prefix: '/projects', module: 'projects' },
     { prefix: '/properties', module: 'properties' },
     { prefix: '/bookings', module: 'bookings' },

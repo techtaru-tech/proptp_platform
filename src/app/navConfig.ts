@@ -16,6 +16,7 @@ import {
   ListChecks,
   TrendingUp,
   Gift,
+  HardHat,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -28,7 +29,7 @@ export interface NavChild {
 
 /** Matches the module keys the server enforces — see server/src/services/permissions.ts. */
 export type ModuleKey =
-  | 'dashboard' | 'crm' | 'tasks' | 'projects' | 'properties' | 'bookings' | 'payments' | 'investments'
+  | 'dashboard' | 'crm' | 'tasks' | 'projects' | 'construction' | 'properties' | 'bookings' | 'payments' | 'investments'
   | 'partners' | 'teams' | 'attendance' | 'payouts' | 'incentives' | 'support' | 'notifications'
   | 'reports' | 'settings';
 
@@ -78,6 +79,17 @@ export const NAV_ITEMS: NavItem[] = [
       { label: 'Board', to: '/tasks/board' },
       { label: 'My Tasks', to: '/tasks/mine' },
       { label: 'New Task', to: '/tasks/new' },
+    ],
+  },
+  {
+    label: 'Construction',
+    to: '/construction',
+    icon: HardHat,
+    module: 'construction',
+    children: [
+      { label: 'Progress', to: '/construction' },
+      { label: 'Review Updates', to: '/construction/reviews' },
+      { label: 'Site Issues', to: '/construction/issues' },
     ],
   },
   {

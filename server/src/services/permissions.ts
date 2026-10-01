@@ -16,6 +16,7 @@ export const MODULES = [
   { key: 'crm', label: 'CRM' },
   { key: 'tasks', label: 'Task Management' },
   { key: 'projects', label: 'Projects' },
+  { key: 'construction', label: 'Construction' },
   { key: 'properties', label: 'Properties' },
   { key: 'bookings', label: 'Bookings' },
   { key: 'payments', label: 'Payments / Transactions' },
@@ -63,6 +64,7 @@ const PATH_MODULE_ENTRIES = [
   { prefix: '/tasks', module: 'tasks' },
 
   { prefix: '/projects', module: 'projects' },
+  { prefix: '/construction', module: 'construction' },
   { prefix: '/units', module: 'properties' },
   { prefix: '/plot-holds', module: 'properties' },
   { prefix: '/project-maps', module: 'properties' },

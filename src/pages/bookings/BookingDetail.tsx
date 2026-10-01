@@ -12,6 +12,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { FilePreview } from '../../components/ui/FilePreview';
 import { Timeline, type TimelineEntry } from '../../components/ui/Timeline';
 import { useAsync } from '../../hooks/useAsync';
+import { BuyerConstructionCard } from '../construction/BuyerConstructionCard';
 import { useToast } from '../../context/ToastContext';
 import {
   getBookingDetail,
@@ -128,6 +129,8 @@ export function BookingDetail() {
       />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <BuyerConstructionCard bookingId={booking.id} />
+
         {/* Customer */}
         <Card>
           <CardHeader title="Customer" subtitle="Booking applicant details" action={<User size={16} className="text-ink-faint" />} />

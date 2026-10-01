@@ -76,6 +76,10 @@ import { LeaderList } from './pages/users/LeaderList';
 import { TeamLeaderList } from './pages/users/TeamLeaderList';
 import { TeamLeaders } from './pages/crm/TeamLeaders';
 import { TeamHierarchy } from './pages/crm/TeamHierarchy';
+import { ConstructionHome } from './pages/construction/ConstructionHome';
+import { ConstructionProject } from './pages/construction/ConstructionProject';
+import { ReviewUpdates } from './pages/construction/ReviewUpdates';
+import { SiteIssues } from './pages/construction/SiteIssues';
 import { UserDetail } from './pages/users/UserDetail';
 
 import { TeamsOverview } from './pages/teams/TeamsOverview';
@@ -167,6 +171,10 @@ function App() {
                 <Route path="/crm/automation" element={<Automations />} />
                 <Route path="/crm/automation/new" element={<AutomationBuilder />} />
                 <Route path="/crm/automation/:id/edit" element={<AutomationBuilder />} />
+                <Route path="/construction" element={<ConstructionHome />} />
+                <Route path="/construction/reviews" element={<ReviewUpdates />} />
+                <Route path="/construction/issues" element={<SiteIssues />} />
+                <Route path="/construction/:id" element={<ConstructionProject />} />
                 <Route path="/crm/team-leaders" element={<TeamLeaders />} />
                 <Route path="/crm/hierarchy" element={<TeamHierarchy />} />
                 <Route path="/crm/sdr-agents" element={<AiSdrAgents />} />
