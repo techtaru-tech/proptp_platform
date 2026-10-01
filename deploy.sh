@@ -11,6 +11,10 @@ PM2_NAME="rosium-backend"
 
 cd "$APP_DIR"
 
+# This box has ~1GB of RAM shared with other apps. The TypeScript and Vite builds exceed Node's
+# default heap and are killed (out of memory) unless allowed to spill into swap.
+export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=1400}"
+
 echo "==> Pulling latest code..."
 git pull origin main
 
