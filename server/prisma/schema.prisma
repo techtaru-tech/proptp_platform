@@ -1109,6 +1109,7 @@ model User {
   progressReviewed   ProgressUpdate[]       @relation("ProgressReviewer")
   issuesOwned        SiteIssue[]            @relation("IssueOwner")
   issuesRaised       SiteIssue[]            @relation("IssueRaiser")
+  camerasOwned       Camera[]               @relation("CameraOwner")
   vendorProfile      Vendor?                @relation("VendorLogin")
   materialCreated    MaterialEntry[]        @relation("MaterialCreator")
   materialIssued     MaterialIssue[]        @relation("MaterialIssuer")
@@ -1412,6 +1413,7 @@ model Project {
 
   constructionActivities ConstructionActivity[]
   siteIssues             SiteIssue[]
+  cameras                Camera[]
   materialEntries        MaterialEntry[]
   materialIssues         MaterialIssue[]
   workOrders             WorkOrder[]
@@ -2892,4 +2894,63 @@ model OpsRuleFire {
 
   @@unique([ruleId, subjectKey, stepIndex, occurrence])
   @@index([ruleId, firedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Site cameras
+//
+// A camera keeps its pictures on a PC at the site, and a scheduled job there pushes them here
+// with the camera's own key (routes/cameraIngest.ts). Whether a camera is live, stale or offline
+// is derived from when it last delivered, never stored. Review (ok / flagged) is a person's call
+// for now; `aiStatus` is reserved for the automated review that comes later.
+// ---------------------------------------------------------------------------
+
+model Camera {
+  id                   String    @id @default(cuid())
+  name                 String
+  project              Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId            String
+  /// Where it points, in words: "Gate, facing Block A".
+  placement            String?
+  owner                User?     @relation("CameraOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  ownerId              String?
+  active               Boolean   @default(true)
+  /// How often the PC is expected to push. Silence beyond a couple of these is "offline".
+  expectedEveryMinutes Int       @default(60)
+  /// SHA-256 of the key; the key itself is shown once, when it is made or rotated.
+  keyHash              String    @unique
+  keyPrefix            String
+  lastImageAt          DateTime?
+  lastSeenAt           DateTime?
+  createdAt            DateTime  @default(now())
+
+  images CameraImage[]
+
+  @@index([projectId])
+}
+
+model CameraImage {
+  id         String   @id @default(cuid())
+  camera     Camera   @relation(fields: [cameraId], references: [id], onDelete: Cascade)
+  cameraId   String
+  url        String
+  /// When the picture was taken (the file's own time), as opposed to when it arrived.
+  capturedAt DateTime
+  receivedAt DateTime @default(now())
+  /// SHA-256 of the file: the same picture pushed twice is stored once.
+  fileHash   String
+  sizeBytes  Int
+
+  /// unreviewed | ok | flagged
+  review      String    @default("unreviewed")
+  flagNote    String?
+  flaggedById String?
+  flaggedAt   DateTime?
+  issueId     String?
+  /// Reserved for the automated review: pending | reviewed | skipped.
+  aiStatus    String    @default("pending")
+
+  @@unique([cameraId, fileHash])
+  @@index([cameraId, capturedAt])
+  @@index([review])
 }

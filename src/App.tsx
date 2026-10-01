@@ -80,6 +80,8 @@ import { ConstructionHome } from './pages/construction/ConstructionHome';
 import { ConstructionProject } from './pages/construction/ConstructionProject';
 import { ReviewUpdates } from './pages/construction/ReviewUpdates';
 import { OpsRules } from './pages/automation/OpsRules';
+import { Cameras } from './pages/cameras/Cameras';
+import { CameraDetail } from './pages/cameras/CameraDetail';
 import { LegalFiles } from './pages/legal/LegalFiles';
 import { LegalFileDetail } from './pages/legal/LegalFileDetail';
 import { Compliance } from './pages/legal/Compliance';
@@ -188,6 +190,9 @@ function App() {
                 <Route path="/crm/automation/new" element={<AutomationBuilder />} />
                 <Route path="/crm/automation/:id/edit" element={<AutomationBuilder />} />
                 <Route path="/ops-rules" element={<OpsRules />} />
+                <Route path="/cameras" element={<Cameras />} />
+                <Route path="/cameras/flagged" element={<CameraDetail flaggedOnly />} />
+                <Route path="/cameras/:id" element={<CameraDetail />} />
                 <Route path="/legal" element={<LegalFiles />} />
                 <Route path="/legal/files/:id" element={<LegalFileDetail />} />
                 <Route path="/legal/compliance" element={<Compliance />} />

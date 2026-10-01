@@ -20,6 +20,7 @@ import {
   Truck,
   Scale,
   Workflow,
+  Camera,
   Briefcase,
   type LucideIcon,
 } from 'lucide-react';
@@ -33,7 +34,7 @@ export interface NavChild {
 
 /** Matches the module keys the server enforces — see server/src/services/permissions.ts. */
 export type ModuleKey =
-  | 'dashboard' | 'crm' | 'tasks' | 'projects' | 'construction' | 'vendors' | 'legal' | 'ops_rules' | 'vendor_portal' | 'properties' | 'bookings' | 'payments' | 'investments'
+  | 'dashboard' | 'crm' | 'tasks' | 'projects' | 'construction' | 'vendors' | 'legal' | 'ops_rules' | 'cameras' | 'vendor_portal' | 'properties' | 'bookings' | 'payments' | 'investments'
   | 'partners' | 'teams' | 'attendance' | 'payouts' | 'incentives' | 'support' | 'notifications'
   | 'reports' | 'settings';
 
@@ -117,6 +118,16 @@ export const NAV_ITEMS: NavItem[] = [
       { label: 'Compliance', to: '/legal/compliance' },
       { label: 'Disputes & Notices', to: '/legal/disputes' },
       { label: 'Document Templates', to: '/legal/templates' },
+    ],
+  },
+  {
+    label: 'Site Cameras',
+    to: '/cameras',
+    icon: Camera,
+    module: 'cameras',
+    children: [
+      { label: 'Cameras', to: '/cameras' },
+      { label: 'Flagged Pictures', to: '/cameras/flagged' },
     ],
   },
   { label: 'Operations Rules', to: '/ops-rules', icon: Workflow, module: 'ops_rules' },

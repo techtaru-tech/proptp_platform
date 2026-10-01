@@ -43,6 +43,8 @@ import { adminVendorsRouter, adminMaterialsRouter } from './routes/admin/vendors
 import { vendorPortalRouter, vendorPortalViewRouter } from './routes/vendorPortal';
 import { adminLegalRouter } from './routes/admin/legal';
 import { adminOpsRulesRouter } from './routes/admin/opsRules';
+import { adminCamerasRouter } from './routes/admin/cameras';
+import { cameraIngestRouter } from './routes/cameraIngest';
 import { startOpsRulePoller } from './services/opsRules';
 import { adminProjectsRouter, adminUnitsRouter } from './routes/admin/projects';
 import { adminPlotHoldsRouter } from './routes/admin/plotHolds';
@@ -119,6 +121,7 @@ app.use('/api/webhook', webhookRouter);
 app.use('/api/unsubscribe', unsubscribeRouter);
 // A plot map shared with a buyer on WhatsApp. Same reasoning: no session to check.
 app.use('/api/plot-map', publicPlotMapRouter);
+app.use('/api/camera-ingest', cameraIngestRouter);
 
 app.use(express.json({ limit: '2mb' }));
 // Multipart endpoints (registration, booking KYC, uploads) also receive plain form fields.
@@ -167,6 +170,7 @@ app.use('/api/crm-team', crmTeamRouter);
 app.use('/api/construction', adminConstructionRouter);
 app.use('/api/legal', adminLegalRouter);
 app.use('/api/ops-rules', adminOpsRulesRouter);
+app.use('/api/cameras', adminCamerasRouter);
 // Staff looking at a vendor's portal. Before the vendors router so its paths are not read as ids.
 app.use('/api/vendors/portal-view/:vendorId', vendorPortalViewRouter);
 app.use('/api/vendors', adminVendorsRouter);

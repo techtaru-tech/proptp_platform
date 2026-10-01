@@ -325,6 +325,8 @@ const PUBLIC_PATTERNS = [
   /^\/forms\/public(\/|$)/,
   // A plot map link shared with a buyer, opened with no session.
   /^\/plot-map(\/|$)/,
+  // A camera's PC pushing pictures with its own key, not a signed-in person.
+  /^\/camera-ingest(\/|$)/,
   /^\/v1\/app(\/|$)/,
 ];
 

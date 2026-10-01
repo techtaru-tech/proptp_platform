@@ -54,6 +54,7 @@ export function moduleForPath(pathname: string): ModuleKey | null {
     { prefix: '/construction', module: 'construction' },
     { prefix: '/legal', module: 'legal' },
     { prefix: '/ops-rules', module: 'ops_rules' },
+    { prefix: '/cameras', module: 'cameras' },
     { prefix: '/vendors', module: 'vendors' },
     { prefix: '/vendor-portal', module: 'vendor_portal' },
     { prefix: '/projects', module: 'projects' },
