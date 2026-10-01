@@ -133,6 +133,7 @@ export function TaskForm() {
           <div className="flex flex-col gap-5">
             <Input
               label="Title"
+              name="taskTitle"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -150,24 +151,27 @@ export function TaskForm() {
             <div className="grid gap-5 sm:grid-cols-2">
               <Select
                 label="Assignee"
+                name="taskAssignee"
                 value={assigneeId}
                 onChange={(e) => setAssigneeId(e.target.value)}
                 options={assigneeOptions}
                 disabled={!canChooseAssignee}
                 hint={canChooseAssignee ? undefined : 'Your role can only create tasks for yourself.'}
               />
-              <DatePicker label="Due date" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
+              <DatePicker label="Due date" name="taskDueDate" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
             </div>
 
             <div className="grid gap-5 sm:grid-cols-2">
               <Select
                 label="Status"
+                name="taskStatus"
                 value={status}
                 onChange={(e) => setStatus(e.target.value as TaskStatus)}
                 options={TASK_STATUS_OPTIONS}
               />
               <Select
                 label="Priority"
+                name="taskPriority"
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as TaskPriority)}
                 options={TASK_PRIORITY_OPTIONS}
