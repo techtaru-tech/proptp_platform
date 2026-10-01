@@ -7,6 +7,7 @@ import { seedPlotMap } from './seedPlotMap';
 import { seedHierarchy } from './seedHierarchy';
 import { seedConstruction } from './seedConstruction';
 import { seedVendors } from './seedVendors';
+import { seedLegal } from './seedLegal';
 
 const prisma = new PrismaClient();
 
@@ -137,6 +138,7 @@ async function main() {
   await seedHierarchy(prisma);
   await seedConstruction(prisma);
   await seedVendors(prisma);
+  await seedLegal(prisma);
 
   console.log('');
   console.log('Done. Admin sign-in:');

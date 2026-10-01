@@ -18,6 +18,7 @@ export const MODULES = [
   { key: 'projects', label: 'Projects' },
   { key: 'construction', label: 'Construction' },
   { key: 'vendors', label: 'Vendors & Material' },
+  { key: 'legal', label: 'Legal & Registry' },
   { key: 'vendor_portal', label: 'Vendor Portal (a vendor\'s own work)' },
   { key: 'properties', label: 'Properties' },
   { key: 'bookings', label: 'Bookings' },
@@ -67,6 +68,7 @@ const PATH_MODULE_ENTRIES = [
 
   { prefix: '/projects', module: 'projects' },
   { prefix: '/construction', module: 'construction' },
+  { prefix: '/legal', module: 'legal' },
   { prefix: '/vendors', module: 'vendors' },
   { prefix: '/materials', module: 'vendors' },
   { prefix: '/vendor-portal', module: 'vendor_portal' },

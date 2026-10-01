@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import type { Booking, Prisma } from '@prisma/client';
 import { prisma } from '../../prisma';
+import { openLegalFileFor } from '../../services/legal';
 import { writeAudit } from '../../services/audit';
 import type { AuthedRequest } from '../../services/auth';
 import { BOOKING_STATUS_BY_ID, PAYMENT_MODE_BY_ID, adminAudit, adminBooking, adminUnit } from '../../services/adminMappers';
@@ -176,6 +177,7 @@ adminBookingsRouter.post('/:id/status', async (req: AuthedRequest, res, next) =>
       data: { status: nextStatus },
       include: rowInclude,
     });
+    if (nextStatus === 'booked' || nextStatus === 'partPaid') await openLegalFileFor(updated.id).catch(() => undefined);
     await writeAudit(req, {
       module: 'Bookings',
       action: `Status changed to ${nextStatus}`,

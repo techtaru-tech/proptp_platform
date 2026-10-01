@@ -1,5 +1,6 @@
 import type { BookingStatus, PaymentMode, Prisma } from '@prisma/client';
 import { prisma } from '../prisma';
+import { openLegalFileFor } from './legal';
 import { commissionForBooking, paidAmountFromBookings, remainingAmount } from './derive';
 
 /**
@@ -107,7 +108,7 @@ export interface CreateBookingInput {
  *           -> a Notification for the partner
  */
 export async function createBooking(input: CreateBookingInput) {
-  return prisma.$transaction(async (tx) => {
+  const created = await prisma.$transaction(async (tx) => {
     const unit = await tx.propertyUnit.findUnique({
       where: { id: input.unitId },
       include: { project: { select: { projectName: true } }, bookings: { select: { amount: true, status: true } } },
@@ -232,6 +233,10 @@ export async function createBooking(input: CreateBookingInput) {
 
     return booking;
   });
+  // A confirmed booking opens its legal file. Best effort: the booking is already saved, and the
+  // legal list also opens any file that is missing, so a failure here loses nothing.
+  await openLegalFileFor(created.id).catch(() => undefined);
+  return created;
 }
 
 /**

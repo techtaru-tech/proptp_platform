@@ -1415,6 +1415,10 @@ model Project {
   materialEntries        MaterialEntry[]
   materialIssues         MaterialIssue[]
   workOrders             WorkOrder[]
+  approvals              ProjectApproval[]
+  landRecords            LandRecord[]
+  legalCases             LegalCase[]
+  legalFiles             LegalFile[]
 
   files   ProjectFile[]
   units   PropertyUnit[]
@@ -1607,6 +1611,7 @@ model Booking {
 
   investments Investment[]
   earnings    EarningEntry[]
+  legalFile   LegalFile?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2645,4 +2650,198 @@ model MaterialIssue {
   createdAt  DateTime     @default(now())
 
   @@index([projectId, materialId])
+}
+
+// ---------------------------------------------------------------------------
+// Legal, compliance & registry
+//
+// A legal file opens by itself for every confirmed booking and carries the buyer, unit and value
+// forward from it. Documents are generated from the booking and a wording template, so names,
+// units and amounts are never retyped. Agreement stage, milestone status, registry progress and
+// compliance validity are all derived from dated records, not set by hand.
+// ---------------------------------------------------------------------------
+
+enum LegalDocKind {
+  kyc
+  booking_form
+  allotment_letter
+  agreement
+  receipt
+  demand_note
+  correspondence
+  other
+}
+
+enum AgreementStage {
+  draft
+  sent
+  under_review
+  signed
+  executed
+  stamped
+}
+
+enum RegistryStatus {
+  pending
+  documents_in_preparation
+  stamp_duty_paid
+  appointment_booked
+  registered
+}
+
+enum MutationStatus {
+  pending
+  applied
+  completed
+}
+
+model LegalFile {
+  id          String   @id @default(cuid())
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId   String   @unique
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   String
+  unitId      String
+  buyerName   String
+  phone       String
+  /// The agreed value at the moment the file opened, so a later price edit cannot move a signed deal.
+  agreedValue Int
+  openedAt    DateTime @default(now())
+
+  documents  LegalDocument[]
+  stages     AgreementStep[]
+  milestones PaymentMilestone[]
+  registry   Registry?
+  cases      LegalCase[]
+
+  @@index([projectId])
+}
+
+model LegalDocument {
+  id          String       @id @default(cuid())
+  file        LegalFile    @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  fileId      String
+  kind        LegalDocKind
+  title       String
+  url         String
+  /// Produced from the booking data by the system, as opposed to uploaded.
+  generated   Boolean      @default(false)
+  milestoneId String?
+  createdById String?
+  createdAt   DateTime     @default(now())
+
+  @@index([fileId, kind])
+}
+
+/// One recorded step of the agreement, with when it happened and who answers for it.
+model AgreementStep {
+  id          String         @id @default(cuid())
+  file        LegalFile      @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  fileId      String
+  stage       AgreementStage
+  at          DateTime
+  responsible String
+  note        String?
+  createdAt   DateTime       @default(now())
+
+  @@unique([fileId, stage])
+}
+
+model PaymentMilestone {
+  id         String    @id @default(cuid())
+  file       LegalFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  fileId     String
+  name       String
+  dueOn      DateTime
+  amount     Int
+  sortOrder  Int       @default(0)
+  /// When the demand note went out, if it has.
+  demandedAt DateTime?
+
+  payments MilestonePayment[]
+
+  @@index([fileId])
+}
+
+model MilestonePayment {
+  id          String           @id @default(cuid())
+  milestone   PaymentMilestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  milestoneId String
+  amount      Int
+  paidOn      DateTime
+  reference   String?
+  createdAt   DateTime         @default(now())
+
+  @@index([milestoneId])
+}
+
+model Registry {
+  id            String         @id @default(cuid())
+  file          LegalFile      @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  fileId        String         @unique
+  status        RegistryStatus @default(pending)
+  appointmentOn DateTime?
+  registryDate  DateTime?
+  subRegistrar  String?
+  deedNumber    String?
+  deedUrl       String?
+  updatedAt     DateTime       @updatedAt
+}
+
+model ProjectApproval {
+  id          String    @id @default(cuid())
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   String
+  /// RERA, ADA, municipal approval, NOC, layout sanction, environment or fire clearance — free label.
+  kind        String
+  referenceNo String
+  issuedOn    DateTime
+  /// Null for an approval that does not lapse.
+  validUntil  DateTime?
+  documentUrl String?
+  createdAt   DateTime  @default(now())
+
+  @@index([projectId])
+}
+
+model LandRecord {
+  id              String         @id @default(cuid())
+  project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId       String
+  khasra          String
+  area            String?
+  conversionOrder String?
+  mutation        MutationStatus @default(pending)
+  titleDocUrl     String?
+  notes           String?
+  createdAt       DateTime       @default(now())
+
+  @@index([projectId])
+}
+
+model LegalCase {
+  id           String     @id @default(cuid())
+  project      Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  projectId    String?
+  file         LegalFile? @relation(fields: [fileId], references: [id], onDelete: SetNull)
+  fileId       String?
+  title        String
+  counterparty String
+  stage        String
+  nextHearing  DateTime?
+  documents    String[]   @default([])
+  notes        String?
+  closed       Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([closed, nextHearing])
+}
+
+/// The wording of a generated document. Edited in Settings-level screens by the legal team, never in code.
+model LegalTemplate {
+  kind      LegalDocKind @id
+  title     String
+  body      String
+  updatedAt DateTime     @updatedAt
 }

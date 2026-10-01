@@ -18,6 +18,7 @@ import {
   Gift,
   HardHat,
   Truck,
+  Scale,
   Briefcase,
   type LucideIcon,
 } from 'lucide-react';
@@ -31,7 +32,7 @@ export interface NavChild {
 
 /** Matches the module keys the server enforces — see server/src/services/permissions.ts. */
 export type ModuleKey =
-  | 'dashboard' | 'crm' | 'tasks' | 'projects' | 'construction' | 'vendors' | 'vendor_portal' | 'properties' | 'bookings' | 'payments' | 'investments'
+  | 'dashboard' | 'crm' | 'tasks' | 'projects' | 'construction' | 'vendors' | 'legal' | 'vendor_portal' | 'properties' | 'bookings' | 'payments' | 'investments'
   | 'partners' | 'teams' | 'attendance' | 'payouts' | 'incentives' | 'support' | 'notifications'
   | 'reports' | 'settings';
 
@@ -103,6 +104,18 @@ export const NAV_ITEMS: NavItem[] = [
       { label: 'Directory', to: '/vendors' },
       { label: 'Material', to: '/vendors/material' },
       { label: 'Bills', to: '/vendors/bills' },
+    ],
+  },
+  {
+    label: 'Legal & Registry',
+    to: '/legal',
+    icon: Scale,
+    module: 'legal',
+    children: [
+      { label: 'Legal Files', to: '/legal' },
+      { label: 'Compliance', to: '/legal/compliance' },
+      { label: 'Disputes & Notices', to: '/legal/disputes' },
+      { label: 'Document Templates', to: '/legal/templates' },
     ],
   },
   {
