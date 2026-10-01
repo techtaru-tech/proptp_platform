@@ -5,6 +5,8 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
+import { useAsync } from '../../hooks/useAsync';
+import { getCatalogue } from '../../services/projectReportService';
 
 interface ReportCard {
   title: string;
@@ -25,6 +27,7 @@ const REPORTS: ReportCard[] = [
 ];
 
 export function ReportsHome() {
+  const { data: suite } = useAsync(() => getCatalogue(), []);
   return (
     <div>
       <PageHeader title="Reports" description="Operational reports across properties, bookings, payments, partners and more." />
@@ -47,6 +50,26 @@ export function ReportsHome() {
           </Link>
         ))}
       </div>
+
+      {suite && suite.length > 0 && (
+        <>
+          <h2 className="mb-3 mt-8 text-sm font-semibold uppercase tracking-wide text-ink-faint">Projects &amp; operations</h2>
+          <p className="mb-4 text-sm text-ink-muted">Construction, material, vendors, plot inventory, legal and collections. Each exports to Excel and PDF.</p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {suite.map((r) => (
+              <Link key={r.key} to={`/reports/suite/${r.key}`} className="focus-ring block rounded-xl">
+                <Card className="flex h-full flex-col gap-3 transition-shadow hover:shadow-popover">
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-ink">{r.title}</h3>
+                    <p className="mt-1 text-xs text-ink-muted">{r.description}</p>
+                  </div>
+                  <span className="flex items-center gap-1 text-xs font-medium text-brand-600">View report <ArrowRight size={13} /></span>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

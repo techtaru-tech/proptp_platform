@@ -3,7 +3,7 @@
  * Every service function goes through this, so the API base URL, the Authorization header
  * and error normalisation live in exactly one place.
  */
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000/api';
+export const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000/api';
 
 const SESSION_KEY = 'rosium_admin_session';
 
@@ -15,6 +15,9 @@ export function fileUrl(path?: string | null): string | undefined {
   if (!path) return undefined;
   return path.startsWith('/uploads/') ? `${FILE_BASE_URL}${path}` : path;
 }
+
+/** The signed-in session's token, for the few requests (file downloads) that bypass `request`. */
+export const storedAuthToken = () => storedToken();
 
 function storedToken(): string | undefined {
   try {

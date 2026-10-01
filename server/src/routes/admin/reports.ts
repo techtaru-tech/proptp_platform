@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { prisma } from '../../prisma';
 import { PAYMENT_MODE_ID, attendanceStatus } from '../../services/adminMappers';
 import { aggregateProject } from '../../services/derive';
+import ExcelJS from 'exceljs';
+import { REPORT_CATALOGUE, buildReport, hasReport } from '../../services/projectReports';
 
 export const adminOpsReportsRouter = Router();
 
@@ -203,6 +205,62 @@ adminOpsReportsRouter.get('/payouts', async (_req, res, next) => {
         status: p.status,
       })),
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Project & operations reports — one definition each (services/projectReports.ts), rendered by
+// the screen, the Excel export and the PDF export alike.
+// ---------------------------------------------------------------------------
+
+adminOpsReportsRouter.get('/suite', (_req, res) => {
+  res.json(REPORT_CATALOGUE);
+});
+
+adminOpsReportsRouter.get('/suite/:key', async (req, res, next) => {
+  try {
+    const key = String(req.params.key);
+    if (!hasReport(key)) return res.status(404).json({ error: 'No such report.' });
+    res.json(await buildReport(key, { projectId: req.query.projectId ? String(req.query.projectId) : undefined }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminOpsReportsRouter.get('/suite/:key/export.xlsx', async (req, res, next) => {
+  try {
+    const key = String(req.params.key);
+    if (!hasReport(key)) return res.status(404).json({ error: 'No such report.' });
+    const report = await buildReport(key, { projectId: req.query.projectId ? String(req.query.projectId) : undefined });
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Rosium Developers';
+    const used = new Set<string>();
+    for (const t of report.tables) {
+      // Sheet names are capped at 31 characters and must be unique.
+      let name = t.title.replace(/[\\/?*[\]:]/g, ' ').slice(0, 31) || 'Sheet';
+      while (used.has(name)) name = `${name.slice(0, 28)}_${used.size}`;
+      used.add(name);
+      const ws = wb.addWorksheet(name);
+      ws.addRow([report.title]).font = { bold: true, size: 13 };
+      ws.addRow([report.summary.map((s) => `${s.label}: ${s.value}`).join('   ·   ')]);
+      ws.addRow([]);
+      const head = ws.addRow(t.columns);
+      head.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      head.eachCell((c) => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF652251' } }; });
+      t.rows.forEach((r) => ws.addRow(r));
+      t.columns.forEach((c, i) => {
+        const col = ws.getColumn(i + 1);
+        col.width = Math.min(40, Math.max(c.length + 2, ...t.rows.slice(0, 200).map((r) => String(r[i] ?? '').length + 2)));
+        if (t.money?.includes(i)) col.numFmt = '"₹"#,##,##0';
+      });
+    }
+    if (report.tables.length === 0) wb.addWorksheet('Report');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${key}.xlsx"`);
+    await wb.xlsx.write(res);
+    res.end();
   } catch (err) {
     next(err);
   }

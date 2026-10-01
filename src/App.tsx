@@ -117,6 +117,7 @@ import { Payroll } from './pages/hr/Payroll';
 import { WhatsAppTemplates } from './pages/notifications/WhatsAppTemplates';
 
 import { ReportsHome } from './pages/reports/ReportsHome';
+import { ProjectReportPage } from './pages/reports/ProjectReportPage';
 import { PropertyReport } from './pages/reports/PropertyReport';
 import { BookingReport } from './pages/reports/BookingReport';
 import { PaymentReport } from './pages/reports/PaymentReport';
@@ -284,6 +285,7 @@ function App() {
                 <Route path="/notifications/whatsapp" element={<WhatsAppTemplates />} />
 
                 <Route path="/reports" element={<ReportsHome />} />
+                <Route path="/reports/suite/:key" element={<ProjectReportPage />} />
                 <Route path="/reports/properties" element={<PropertyReport />} />
                 <Route path="/reports/bookings" element={<BookingReport />} />
                 <Route path="/reports/payments" element={<PaymentReport />} />
