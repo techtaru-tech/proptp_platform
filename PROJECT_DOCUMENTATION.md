@@ -1,808 +1,704 @@
-# Rosium Platform — Full Project Documentation
+# Rosium Platform
 
-## 1. Project overview
+## Executive summary
 
-Rosium Platform is a full-stack business platform for a real-estate and operations company. It combines:
+Rosium Platform is a full business management system built for modern real-estate, property operations, and workforce management teams. It brings together sales, operations, finance coordination, HR, project control, and team collaboration into a single digital platform.
 
-- a CRM for leads and sales teams
-- a property operations module for projects, plots, bookings, investments, and wallets
-- an HRMS layer for attendance, leave, payroll, and employee management
-- a task and workflow management system
-- a partner/mobile-facing API for field staff and customers
-- an admin dashboard used by internal staff and managers
+The platform is designed for organizations that need to manage:
 
-The project is centered around Rosium Developers and is designed to serve both an internal React admin panel and a partner-facing Flutter app using one shared database and shared business logic.
+- leads and sales pipelines
+- customer onboarding and follow-ups
+- projects and plot inventory
+- bookings, deposits, investments, and payouts
+- worker and staff attendance and payroll
+- support requests and operational workflows
+- internal approvals and reporting
 
-The repository is organized as a monorepo with:
+Rosium Platform serves two primary audiences:
 
-- `src/` — React + TypeScript frontend
-- `server/` — Express + Prisma + PostgreSQL backend
-- `public/` — static assets and downloadable tools
-- `deploy/` and `deploy.sh` — deployment scripts
-- `tools/` — utilities such as the camera uploader
+1. Internal admins, sales teams, project teams, finance teams, and managers through a web dashboard
+2. Partners, associates, and field users through a dedicated app/API layer
 
-The project description in the repo says:
-
-> Rosium Developers — CRM, property operations and HRMS. React admin panel + Express/Prisma API.
-
-This project is built on a real-estate operations model, but the implementation is generalized enough to cover many internal workflows used by a modern property and workforce business.
+The platform is built around one central database and a shared business rules engine so that the same information is consistent everywhere, whether it is viewed by the internal team or the partner app.
 
 ---
 
-## 2. What this project does
+## 1. What the platform is
 
-### 2.1 CRM
+Rosium Platform is not a single feature or a single app. It is a connected operating system for a property and business enterprise.
 
-The system includes lead capture, lead management, and sales workflows.
+At a high level, it helps the organization manage the entire lifecycle of:
 
-Core CRM capabilities include:
+- sales leads to conversion
+- project development and plot tracking
+- customer booking and payment lifecycle
+- team performance and workforce operations
+- approvals, support, and compliance
 
-- lead creation and management
-- lead assignment and reassignment
-- pipeline and stage tracking
-- drag-and-drop sales board
-- follow-up tasks and reminders
-- lead notes and activities
-- lead tag management
-- source tracking (including Meta lead ads)
-- automation rules and assignment logic
-- email sequences
-- call logs and telephony event tracking
-- WhatsApp conversations and templates
-- lead form capture pages
-- integrations with external systems
+It is designed to reduce manual tracking, improve visibility, and provide a single source of truth for critical business activity.
 
-The CRM also supports:
+### The platform includes
 
-- bulk lead operations
-- CSV import
-- lead reporting and dashboard analytics
-- custom fields
-- source-based attribution
-- automation run history
+- CRM and sales management
+- project and property operations
+- booking and financial tracking
+- partner/customer access
+- HRMS functionality
+- audit visibility and permission control
+- reporting and dashboards
+- communication and automation tools
 
-### 2.2 Property operations
+---
 
-This is the operational heart of the project. It supports the full lifecycle of property sale and management.
+## 2. What the platform does
 
-Capabilities include:
+Rosium Platform combines operational modules in one place so teams do not work from disconnected spreadsheets, manual records, or multiple systems.
 
-- projects and property listings
-- plot management and plot maps
-- plot holds and bookings
-- full booking ledgers
-- investment tracking
-- commission and referral bonuses
-- wallet management
-- KYC approvals
-- payouts and commission statements
-- support tickets
-- construction tracking and vendor/material management
-- legal and compliance records
+### 2.1 CRM and sales
 
-This module is deeply tied to the real-estate and property business model and likely carries a lot of decision-critical business logic around accounting, property state, and payouts.
+The CRM module helps the business manage leads from first contact through conversion.
 
-### 2.3 HRMS
+Key functions:
 
-The employee and workforce side of the system includes:
+- add and manage leads
+- assign leads to sales agents or teams
+- track lead stages and pipeline movement
+- manage notes and activities
+- schedule follow-ups and reminders
+- view lead history and activity timeline
+- add tags and custom fields
+- manage sources and campaigns
+- import leads in bulk
+- track lead performance and conversion trends
+
+This makes the sales team more organized and helps leaders monitor pipeline health.
+
+### 2.2 Property and project operations
+
+The operations module supports real-estate and project management.
+
+Key functions:
+
+- manage projects
+- manage plots and units
+- mark units available, reserved, sold, or on hold
+- manage plot holds and booking requests
+- maintain booking ledgers
+- keep records of deposits and installment activity
+- track investments and commissions
+- manage referral bonuses
+- track wallet balances and transactions
+- process KYC approvals
+- handle payouts and commission statements
+- manage support tickets and operational queries
+- track project progress, vendors, and material records
+- maintain legal and compliance documentation
+
+This module ensures the business can manage property transactions and project execution from a single system.
+
+### 2.3 HR and employee operations
+
+The HRMS functions help manage workforce records and daily operations.
+
+Key functions:
 
 - attendance tracking
-- geo-fencing for attendance capture
 - attendance corrections
 - leave requests and balances
-- payroll runs
-- payslips
-- employee work status and platform access
-- notifications and broadcasts
+- payroll management
+- payslip generation
+- employee and team tracking
+- work-scope and role-based access
+- business-hours and attendance policy management
 
-The HRMS layer is tightly integrated with the platform identity and role system, so employees, managers, and admins can each see only the features relevant to them.
+This allows HR and operations teams to keep employee information organized and monitored.
 
-### 2.4 Tasks and work management
+### 2.4 Team workflow and task management
 
-There is a task system that supports:
+The platform includes task management for internal operations.
 
-- work assignment across teams
-- kanban-style task boards
-- visibility by role and team scope
-- task tracking for managers and employees
+Key functions:
 
-This lets the platform manage both sales and operational work across departments.
+- create and assign tasks
+- track status and progress
+- monitor tasks by team or user
+- use role-based visibility for task access
+- support task lifecycle from creation to completion
 
-### 2.5 Platform and administration
+This improves accountability and prevents work from being lost across teams.
 
-The platform layer includes:
+### 2.5 Notifications and communication
+
+The platform supports internal communication and customer engagement.
+
+Key functions:
+
+- notifications to users or teams
+- WhatsApp templates and messaging support
+- email sequences and templated communication
+- broadcast capabilities
+- customer and partner communication workflows
+
+### 2.6 Integrations and external systems
+
+Rosium Platform integrates with external tools to automate real business workflows.
+
+Available or supported integration areas include:
+
+- Meta Lead Ads and webhook ingestion
+- WhatsApp messaging platform
+- email service workflows
+- telephony or call event tracking
+- camera-based site photo ingestion
+
+These integrations help the business connect external data sources and communication channels directly to the platform.
+
+---
+
+## 3. Business value
+
+Rosium Platform provides value by reducing silos and creating a single business operating environment.
+
+### Business improvements
+
+- one source of truth for sales and operations
+- better tracking of customer, project, and financial activity
+- faster approvals and decision-making
+- less dependence on manual spreadsheets
+- consistent records across teams
+- stronger audit capability
+- improved team accountability
+- better financial visibility
+- scalability for growing businesses
+
+### Who benefits
+
+- sales managers and CRM users
+- project managers and operations teams
+- finance and payout teams
+- HR and attendance managers
+- team leads and department heads
+- organization owners and executives
+- external partners and field users
+
+---
+
+## 4. Platform modules at a glance
+
+### 4.1 CRM
+
+Purpose:
+
+- manage leads and sales opportunities
+- monitor sales pipeline and rep performance
+- automate sales follow-ups
+
+Typical user groups:
+
+- sales team
+- marketing team
+- sales managers
+- CRM admins
+
+### 4.2 Projects and properties
+
+Purpose:
+
+- track property inventory and units
+- manage plot statuses and booking lifecycle
+- maintain real-estate project records
+
+Typical user groups:
+
+- project managers
+- sales executives
+- operations team
+- finance team
+
+### 4.3 Bookings and financial management
+
+Purpose:
+
+- record bookings and ledger movement
+- manage deposits and payments
+- compute referral and commission data
+- support wallet and payout activity
+
+Typical user groups:
+
+- finance team
+- sales operations
+- accountants
+- approvals team
+
+### 4.4 HRMS
+
+Purpose:
+
+- manage employee presence and records
+- track leave and attendance
+- calculate payroll and generate payslips
+
+Typical user groups:
+
+- HR team
+- managers
+- employees
+- payroll administrators
+
+### 4.5 Tasks and work execution
+
+Purpose:
+
+- assign and monitor daily work
+- keep teams aligned on responsibilities
+
+Typical user groups:
+
+- managers
+- team leads
+- field operations staff
+- support staff
+
+### 4.6 Platform administration
+
+Purpose:
+
+- manage users and roles
+- configure workflow access and permissions
+- maintain settings and system structure
+
+Typical user groups:
+
+- platform admins
+- organization owners
+- supervisors
+
+---
+
+## 5. Roles and permissions
+
+The system is role-aware. It does not expose all modules to every user.
+
+### Common roles in the platform
+
+- Admin
+- Sales manager
+- Sales agent
+- Project manager
+- Operations manager
+- Team lead
+- Employee
+- Partner/app user
+
+### Role behavior
+
+- admin users can usually access broad platform controls
+- managers can see team-level or business unit-level information
+- employees usually only see their own records and assigned work
+- partner users access role-relevant data through app-specific endpoints
+
+### Permission model
+
+Permissions are controlled through:
+
+- module access
+- team visibility rules
+- role-based screens and actions
+- audit logging for changes
+
+This ensures the platform is secure and operationally aligned with organizational structure.
+
+---
+
+## 6. User experience overview
+
+Rosium Platform is designed to be usable by both operational teams and leadership teams.
+
+### Internal dashboard experience
+
+The internal dashboard focuses on:
+
+- quick overview of important metrics
+- KPI reporting
+- filters by date, team, project, or lead stage
+- direct drill-down into records
+- management-level status visibility
+
+### Partner/app experience
+
+The partner/app experience is designed for users who need lighter, mobile-oriented access to company data and workflows.
+
+This includes:
+
+- partner login and authentication
+- project and booking information
+- attendance or work-related updates
+- payment and account visibility
+- support and communication flows
+
+The app and admin panel are intentionally built to reflect the same underlying business data, but with different views and shapes appropriate to each audience.
+
+---
+
+## 7. Functional workflow examples
+
+### 7.1 Lead-to-sale workflow
+
+1. A lead is created manually or captured from a public form or marketing campaign.
+2. The lead is assigned to a sales rep or team.
+3. The rep adds notes, follow-up tasks, and communication activity.
+4. The sales stage updates as the lead progresses.
+5. Automated rules may assign or remind based on status.
+6. The lead is converted into a booking or project customer record.
+7. Funnel and revenue reports reflect the movement.
+
+### 7.2 Project booking workflow
+
+1. A project is created and property inventory is defined.
+2. Units are marked available or reserved.
+3. A customer books a unit.
+4. The booking ledger records the transaction and any deposit.
+5. Commission and referral logic is calculated.
+6. Payment activity and KYC are tracked.
+7. Support or legal tasks may be triggered if required.
+8. Final payout or settlement activity is tracked.
+
+### 7.3 Attendance and payroll workflow
+
+1. Employee checks in or records attendance.
+2. Business rules and policy checks validate attendance.
+3. Leave or attendance correction requests are submitted.
+4. Manager reviews and approves the data.
+5. Payroll is processed based on approved records.
+6. Payslips and payroll summaries are generated.
+
+### 7.4 Task management workflow
+
+1. A task is created and assigned.
+2. The assignee updates status.
+3. Manager checks progress and escalates if needed.
+4. Task is completed and recorded.
+5. Reporting and team overview reflect completion metrics.
+
+---
+
+## 8. Module-by-module detail
+
+### 8.1 CRM details
+
+Core capabilities:
+
+- pipeline and stage management
+- lead attribution and source tracking
+- history and timeline logs
+- lead notes and follow-ups
+- automation rules and assignment logic
+- custom lead fields
+- forms and lead capture
+- import and export-based lead management
+- dashboards and analytics
+
+Typical business use:
+
+- property sales teams can see active opportunities
+- sales managers can monitor team performance
+- leads can be imported from external sources
+- automation can assign leads to the right team instantly
+
+### 8.2 Operations and projects details
+
+Core capabilities:
+
+- project creation and lifecycle management
+- plot-level status tracking
+- booking and ledger control
+- investment and cash flow record keeping
+- wallet and KYC review
+- payout and commission reporting
+- vendor and material tracking
+- legal documentation management
+- construction update management
+
+Typical business use:
+
+- project teams can manage inventory and progress
+- finance teams can verify deposits and payouts
+- leadership gains visibility into project performance and open commitments
+
+### 8.3 HRMS details
+
+Core capabilities:
+
+- attendance capture and correction
+- leave approval workflow
+- payroll generation
+- employee work tracking
+- financial compensation recordkeeping
+
+Typical business use:
+
+- managers can approve employee actions
+- HR can track workforce patterns
+- payroll team can produce accurate payout outputs
+
+### 8.4 Communication and integration details
+
+Core capabilities:
+
+- WhatsApp message templates
+- email marketing or transactional communication
+- telephony event tracking
+- webhook and external app integration
+- camera ingestion for site monitoring
+
+Typical business use:
+
+- marketing or member outreach
+- operational alerts and communications
+- integration with business systems and partner workflows
+
+---
+
+## 9. Data and system design principles
+
+The platform is built with a strong operational principle: it keeps one reliable source of truth.
+
+### Core design principles
+
+- one shared database across major business areas
+- consistent business rules across admin and partner surfaces
+- no duplicate logic for core operations
+- role-based access for security and clarity
+- auditable records for sensitive changes
+- reporting driven from live operational data
+
+### Why this matters to the client
+
+This means users are not working from conflicting versions of the same dataset. The information visible in the web platform and the partner app is derived from the same operational source, which improves accountability and reduces mistakes.
+
+---
+
+## 10. Platform assumptions and expected workflow
+
+Rosium Platform assumes a business environment with clear organizational structure and role boundaries.
+
+### Typical operational assumptions
+
+- there is a team of sales, operations, and HR staff
+- there are projects or property units to manage
+- financial approvals and commission processes exist
+- there are human resources and payroll requirements
+- multiple teams need different levels of access to the same information
+
+### Operational outcome
+
+The platform is meant to centralize operational control so the business can run with less friction and more visibility.
+
+---
+
+## 11. Security, governance, and control
+
+The platform includes enterprise-minded governance by design.
+
+### Security features
 
 - role-based access control
-- panel roles with modules/groups
-- audit log tracking of modifications
-- organization settings
-- notifications and broadcasts
-- integrations management
-- settings and operational rules
-- user and team management
+- auditable actions and change history
+- platform-configurable permissions
+- secure user authentication
+- protected backend API surfaces
+- external secrets managed through environment configuration
 
-This is the shared scaffolding that makes the business modules work in a controlled and auditable environment.
+### Governance value
 
-### 2.6 Partner app API
+This is important for organizations that need to:
 
-The backend exposes a second API surface for a Flutter partner app:
-
-- `/api/*` for the React admin panel
-- `/api/v1/app/*` for the mobile/partner app
-
-The two API types are intentionally separate:
-
-- admin uses camelCase and numeric status codes
-- partner app uses snake_case and string enums
-
-The project uses separate mapper layers to avoid disagreements between surfaces and keeps core calculations in one place.
+- track who changed what
+- enforce access boundaries
+- prevent cross-team exposure of sensitive information
+- maintain controlled operational records
 
 ---
 
-## 3. Core architecture
+## 12. Deployment model
 
-The project follows a classic full-stack architecture but with shared business logic and one database.
+Rosium Platform is deployed as a production-ready system with a frontend and backend working together.
 
-### 3.1 High-level structure
+### Deployment architecture
 
-- Frontend: React 19 + Vite + TypeScript + Tailwind
-- Backend: Express 5 + Prisma + PostgreSQL
-- Database: single PostgreSQL database used by the CRM, operations, and HRMS modules
-- Identity: one shared `User` model across both admin and partner surfaces
-- Business rules: centralized in server-side services, not spread across the UI
+- frontend served as a web application
+- backend runs as a Node/Express service
+- PostgreSQL database stores business data
+- process management via PM2
+- web server through nginx
+- production hosting on server infrastructure such as EC2
 
-### 3.2 Why the architecture matters
+### Deployment highlights
 
-The repo README highlights a very important design decision:
+- frontend and backend are shipped together
+- environment variables must be configured correctly
+- webhooks and external integrations require public HTTPS URLs
+- external API credentials must be stored securely
 
-- all three modules share one database
-- both the web panel and partner app read the same data
-- business logic with side effects lives in a single service layer
-- derived values are computed once and reused to avoid different surfaces disagreeing on totals or statuses
+### Production readiness
 
-This reduces drift between the admin panel and app experience and makes financial or operational calculations much more reliable.
-
-### 3.3 API surfaces
-
-The backend exposes two API families:
-
-- admin API: internal platform features and dashboards
-- partner app API: customer-facing or partner-access mobile endpoints
-
-Examples from the repo:
-
-- login endpoints for admin and app users
-- CRM endpoints for leads and forms
-- operations endpoints for projects, bookings, payments, payouts, and wallet
-- HRMS endpoints for attendance and payroll
-- integration endpoints for Meta, WhatsApp, and email
+The project includes infrastructure scripts and deployment instructions so teams can set up a real environment rather than only a development setup.
 
 ---
 
-## 4. Technology stack
+## 13. Local setup and onboarding
 
-### 4.1 Frontend
-
-The web app is built with:
-
-- React 19
-- Vite
-- TypeScript
-- Tailwind CSS
-- React Router
-- Recharts for charts
-- Lucide icons
-- `jspdf` and `jspdf-autotable` for exports
-
-This is a modern admin dashboard stack designed for complex internal business workflows.
-
-### 4.2 Backend
-
-The server is built with:
-
-- Node.js
-- Express 5
-- TypeScript
-- Prisma ORM
-- PostgreSQL
-- JWT auth
-- bcrypt for password hashing
-- multer for uploads
-- morgan for logging
-- Swagger-like patterns are not emphasized here; instead the code and routes define the API surface directly
-
-### 4.3 Additional integrations
-
-The platform integrates with many external systems, including:
-
-- Meta Lead Ads (webhooks and connectivity)
-- WhatsApp Cloud API
-- Email service and templates
-- Airphone / telephony events
-- camera upload tool for site photo ingestion
-- QR / encryption utilities
-- PDF generation and Excel exports
-
----
-
-## 5. Repository layout
-
-At the root of the repo you will see the main project pieces:
-
-- `README.md` — top-level overview
-- `DEPLOY.md` — deployment instructions
-- `package.json` — frontend application manifest
-- `server/` — backend project
-- `public/` — static assets and browser-facing files
-- `deploy/` — deployment automation
-- `ecosystem.config.cjs` — pm2 process config
-
-Inside `server/`:
-
-- `src/` — all Express route and service logic
-- `src/routes/` — HTTP route definitions
-- `src/services/` — centralized business logic
-- `prisma/` — Prisma schema, migrations, and seed data
-
-Inside the frontend `src/`:
-
-- `src/pages/` — application pages
-- `src/components/` — UI building blocks
-- `src/context/` — auth, UI, and reference data
-- `src/hooks/` — helper hooks
-- `src/layouts/` — page layouts
-- `src/app/` — navigation and permissions configuration
-
-This is a large full-featured SaaS-style project rather than a small demo app.
-
----
-
-## 6. Getting started
-
-### 6.1 Prerequisites
-
-You need:
+For implementation teams or internal staff, the platform can be installed and run locally with the basic prerequisites:
 
 - Node.js 20+
 - PostgreSQL database
 - npm
-- a terminal with Git access
+- environment configuration
 
-### 6.2 Backend setup
+### Standard local steps
 
-From the repo root:
+1. install backend dependencies
+2. configure database environment variables
+3. run Prisma migrations
+4. seed initial demo data
+5. start the backend API
+6. configure frontend environment for API access
+7. start the frontend
+8. log in with seeded admin credentials or configured user accounts
 
-```bash
-cd server
-cp .env.example .env
-npm install
-npm run prisma:migrate
-npm run prisma:seed
-npm run dev
-```
+### Default demo admin login
 
-The backend runs on:
+The project seed creates a default admin user, with example values such as:
 
-- `http://localhost:4300`
+- email: `admin@rosium.in`
+- password: `Rosium@2026`
 
-The seed script creates sample admin credentials and initial reference data. The README notes the default admin sign-in values:
-
-```text
-email: admin@rosium.in
-password: Rosium@2026
-```
-
-You can override the seed admin credentials with:
-
-- `SEED_ADMIN_EMAIL`
-- `SEED_ADMIN_PASSWORD`
-
-### 6.3 Frontend setup
-
-From the project root:
-
-```bash
-cp .env.example .env
-npm install
-npm run dev
-```
-
-The frontend typically runs on:
-
-- `http://localhost:5273`
-
-The frontend is configured to talk to the backend at:
-
-- `VITE_API_BASE_URL=http://localhost:4300/api`
+These values are intended for development or seed environments and should be changed in production.
 
 ---
 
-## 7. Environment variables
+## 14. Integrations overview
 
-The server uses environment variables for database access, secrets, and external integrations. The backend README lists important values, including:
+### Meta Lead Ads
 
-| Variable | Purpose |
-|---|---|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `PORT` | API port, default 4300 |
-| `CLIENT_ORIGIN` | frontend origin for CORS |
-| `META_APP_ID` | Meta app ID |
-| `META_APP_SECRET` | Meta app secret |
-| `META_WEBHOOK_VERIFY_TOKEN` | webhook verification token |
-| `PUBLIC_BASE_URL` | public HTTPS base URL for webhook callbacks |
-| `ENCRYPTION_KEY` | encrypts stored integration credentials |
-| `JWT_SECRET` | JWT secret for auth |
-| `JWT_EXPIRES_IN` | token expiration |
-| `ORG_TIME_ZONE` | organization timezone |
-| `SEED_ADMIN_EMAIL` | admin login email for seeding |
-| `SEED_ADMIN_PASSWORD` | admin password for seeding |
+The platform supports Meta integration for automated lead capture.
 
-The repo README also notes that production secrets should be changed and not left as defaults.
+This helps the organization:
 
----
+- collect leads from advertising sources
+- ingest form responses automatically
+- assign leads to relevant teams
+- track campaign source data
 
-## 8. Tutorial: how the app is meant to work
+### WhatsApp and email
 
-### 8.1 Admin login flow
+The platform supports outreach and messaging workflows for operational and customer communication.
 
-The admin panel is built around role-based access. Users log in through the admin auth routes, receive a JWT, and then access modules based on their role and permissions.
+### Telephony
 
-The repo uses a permission system and module-role mapping for panel access; this is enforced on both backend and frontend.
+Call data and telephony events can be tracked, which helps the organization maintain accurate customer interaction records.
 
-### 8.2 Sales and CRM workflow
+### Site cameras
 
-Typical CRM workflow:
-
-1. generate or import lead
-2. assign lead to a salesperson or team
-3. track lead activity and notes
-4. move lead through pipeline stages
-5. automate follow-ups or assignment rules
-6. send WhatsApp or email communications as needed
-7. close the lead or move to a lost/won status
-8. monitor dashboards and reports
-
-The system is designed for operational sales tracking rather than simple static lead tables.
-
-### 8.3 Property workflow
-
-Typical operations workflow:
-
-1. create or manage a project
-2. define plots within the project
-3. track plot holds and bookings
-4. record investments and associated ledger entries
-5. calculate commissions and referral bonuses
-6. process payments and payouts
-7. approve KYC or support requests
-8. monitor site progress, materials, vendors, and legal requirements
-
-The platform appears to be designed to support the entire lifecycle of a real-estate business process end-to-end.
-
-### 8.4 HR workflow
-
-Typical HRMS workflow:
-
-1. employee logs attendance
-2. system validates attendance against configured rules and geofencing
-3. employees submit leave requests
-4. HR approves or adjusts attendance entries
-5. payroll runs calculate compensation
-6. payslips are produced and distributed
-7. admin manages leave balances and team reports
+The camera uploader tool allows the company to upload property site or construction photos from a PC into the platform, making site monitoring easier.
 
 ---
 
-## 9. Tutorial: CRM module
+## 15. Support, maintenance, and operational guidance
 
-### Purpose
+### Routine operational needs
 
-The CRM module is for handling sales opportunities, relationships, and conversions.
+- user onboarding and role assignment
+- workflow configuration
+- reporting review
+- integration credential management
+- periodic data verification
+- system health checks
 
-### Key CRM areas
+### Support expectation
 
-- Leads
-- Pipelines and stages
-- Follow-ups
-- Notes and activities
-- Automations
-- Lead forms
-- Integrations
-- Lead reports
+The platform is designed to be maintained by a technical team, but it is built around real operational processes and should be managed with clear ownership across:
 
-### CRM features
-
-The project has deep CRM functionality, including:
-
-- pipeline and stage management
-- lead source tracking
-- history and assignment audit
-- bulk actions
-- automation engine
-- custom field support
-- integration with Meta Lead Ads
-- email sequences and follow-up logic
-- WhatsApp messaging templates
-- task creation from lead activity
-
-### Tutorial
-
-1. Create a lead from the CRM dashboard or capture via a public form.
-2. Assign the lead to a team or user.
-3. Add notes and tasks.
-4. Move it through the pipeline.
-5. Set automation rules to follow up automatically.
-6. Use reports to review conversion metrics, source performance, and assignee productivity.
-7. Connect Meta or other integrations to ingest leads automatically.
+- administration
+- sales
+- operations
+- HR
+- finance
+- IT or platform support
 
 ---
 
-## 10. Tutorial: operations module
+## 16. Known implementation realities and limitations
 
-### Purpose
+The project documentation explicitly states that some flows are intentionally simplified for local or staged environments.
 
-This module manages project execution and transactions behind a property business.
+Examples include:
 
-### Key operations areas
+- OTPs can be returned as development values instead of real SMS in non-production
+- payment logic may be simulated without real third-party verification in test environments
+- some external services are expected to be connected in production rather than only in local setup
 
-- projects
-- plots
-- bookings
-- investments
-- wallet and KYC
-- payouts and commission statements
-- support tickets
-- construction tracking
-- legal and vendors
-
-### Tutorial
-
-1. Create a project and its associated plot inventory.
-2. Mark plots as available, reserved, sold, or on hold.
-3. Allow a customer to book a plot.
-4. Record investments and deposit transactions.
-5. Review the ledger for the booking to ensure accounting consistency.
-6. Approve KYC or wallet activities.
-7. Process payouts and generate commission statements.
-8. Handle support tickets and operational cases.
-9. Review vendor, material, and legal records for project execution.
+These are not defects; they are intentional design choices that keep the platform practical for staged testing while allowing real integrations later.
 
 ---
 
-## 11. Tutorial: HRMS module
+## 17. Client-facing summary
 
-### Purpose
+Rosium Platform is a complete operations and management platform for a property-driven business. It combines commercial sales, project tracking, customer lifecycle management, employee operations, and internal administration into a single system.
 
-Manages workforce operations and employee compensation data.
+In practical terms, it is meant to help the organization:
 
-### Key HRMS areas
+- manage sales from lead to booking
+- control project and property activity
+- track financial commitments and payouts
+- manage HR and payroll processes
+- improve visibility across teams and departments
+- maintain a single operational system that scales with growth
 
-- attendance
-- attendance corrections
-- leave requests
-- payroll
-- payslips
-- employee work rules
-
-### Tutorial
-
-1. Create or import employee profiles and assign roles.
-2. Configure attendance rules and business hours.
-3. Employees mark attendance or check in using configured rules.
-4. Managers review attendance records and corrections.
-5. Employees request leave and managers approve it.
-6. Payroll runs aggregate attendance, leave, and compensation rules.
-7. Payslips are generated and distributed.
+It is designed to be clear, role-aware, and business-first rather than being a generic software shell.
 
 ---
 
-## 12. Tutorial: tasks and workflows
+## 18. Final client statement
 
-### Purpose
+Rosium Platform is a business operating system built for organizations that need to manage real-estate operations, workforce records, and business workflows in one place. It brings together the critical processes that usually run across multiple disconnected systems and unifies them into a controlled, role-aware, scalable platform.
 
-The task system supports team coordination and role-scoped execution.
-
-### How tasks work
-
-- tasks are assigned across staff or teams
-- each task belongs to a work context
-- visibility is scoped by role
-- team leads can see their team's tasks
-- members typically see their own tasks
-- managers can usually see more than individual contributors
-
-### Tutorial
-
-1. Create a task from a lead, project, or team workflow.
-2. Assign it to the proper person or team.
-3. Track status on the kanban board.
-4. Update due dates and progress.
-5. Monitor completion from dashboards and team views.
+The solution is designed for practical business use, allowing teams to move faster, make better decisions, and maintain a cleaner and more consistent operational record.
 
 ---
 
-## 13. Tutorial: integrations and external systems
+## 19. Quick reference
 
-### 13.1 Meta Lead Ads
+### Main modules
 
-The repo specifically documents how to integrate with Meta Lead Ads.
+- CRM
+- Projects and property operations
+- Bookings and financial management
+- HRMS
+- Task management
+- Platform administration
+- Integrations and notifications
 
-Required steps include:
+### Primary users
 
-1. create a Meta Developer App
-2. create a Facebook Page
-3. configure the Webhooks product
-4. add the callback URL for the Meta webhook
-5. subscribe to the `leadgen` object
-6. request `leads_retrieval` permission
-7. connect the app through the CRM integrations UI
+- admin team
+- sales team
+- operations team
+- finance team
+- HR team
+- project managers
+- partners and field users
 
-The server README explains this clearly and gives the exact callback patterns to use.
+### Key benefits
 
-### 13.2 WhatsApp
-
-The project includes WhatsApp templates, conversation features, and broadcast support.
-
-Typical flow:
-
-- configure WhatsApp Cloud API
-- add account credentials in settings
-- create message templates
-- broadcast or respond to conversations
-- monitor delivery and interactions
-
-### 13.3 Email
-
-The repo supports:
-
-- email sequences
-- templates
-- outbound email flows
-- inbound email webhook processing
-
-### 13.4 Telephony
-
-The system includes call history, telephony event tracking, and outbound call routing support.
+- single system of record
+- better visibility
+- improved coordination
+- role-based access
+- stronger audit trail
+- support for growth and scaling
 
 ---
 
-## 14. Tutorial: public forms and lead capture
-
-The project includes public lead-capture forms. These are used to collect leads from websites or external sources and then store them in the CRM.
-
-This is especially relevant for real-estate businesses that want to capture leads through landing pages and ads.
-
-Typical flow:
-
-1. create a public form or capture workflow
-2. configure fields and submission rules
-3. publish the form
-4. collect lead submissions
-5. sync them to the CRM
-6. trigger automation and assignments
-
----
-
-## 15. Tutorial: camera uploader tool
-
-There is a helper tool under `tools/camera-uploader/`.
-
-### Purpose
-
-This tool uploads photos from a PC camera folder to the Rosium CRM so they appear under Site Cameras.
-
-### How it works
-
-- the admin creates a camera in the CRM and receives a camera key
-- the uploader script watches a folder of photos generated by a 4G camera
-- it sends new photos to the CRM backend
-- the CRM marks the camera offline if no images are received for a while
-
-### Setup
-
-```bash
-python3 upload_photos.py --folder "D:/CameraPhotos" --key rck_xxxxxxxx --dry-run
-python3 upload_photos.py --folder "D:/CameraPhotos" --key rck_xxxxxxxx
-```
-
-### Scheduling
-
-On Linux/macOS with cron:
-
-```bash
-0 * * * * /usr/bin/python3 /path/to/upload_photos.py --folder "/path/to/photos" --key rck_xxxxxxxx >> ~/rosium-camera.log 2>&1
-```
-
-This is useful for on-site coverage, remote monitoring, and construction progress documentation.
-
----
-
-## 16. Tutorial: deployment
-
-The repo includes a full deployment setup.
-
-### Deployment model
-
-The project is deployed as a single application bundle containing both the frontend and backend.
-
-The repo describes a deployment to an EC2 server with:
-
-- nginx
-- pm2
-- PostgreSQL
-- static frontend hosting through nginx
-- backend process on port 4300
-
-### Deployment files
-
-- `DEPLOY.md`
-- `deploy.sh`
-- `deploy/server-setup.sh`
-- `ecosystem.config.cjs`
-- `deploy/nginx-console.conf`
-
-### Typical deployment flow
-
-```bash
-git pull
-./deploy.sh
-```
-
-The project README points out that the frontend is built and then served as static files, while the backend remains as a Node/Express service.
-
-### Deploy notes
-
-Important production cautions from the docs:
-
-- memory is a real constraint on the server
-- `VITE_API_BASE_URL` is compiled into the build and cannot be changed later without rebuilding
-- `ENCRYPTION_KEY` should never change after it has been used because it affects stored secret data
-- webhooks must be registered carefully with the correct public URLs
-
----
-
-## 17. Security and operational notes
-
-The project is a serious internal business platform, not a toy demo. The repo explicitly warns about several important production considerations:
-
-- do not leave default JWT secret values in production
-- keep `ENCRYPTION_KEY` stable once used
-- use real Meta app credentials and public HTTPS endpoints
-- do not use fake SMS or fake payment logic outside development
-- manage all external integrations via secure credentials and environment variables
-
-The repo also notes that some parts are intentionally mock or not fully wired for production in order to keep the project focused. The README says:
-
-- OTPs are returned as `dev_otp` outside production
-- payment flow for `mode: "online"` records a payment without verifying it
-
-This behavior is intentional for development and local testing; in production, the platform expects real providers and real verification workflows.
-
----
-
-## 18. Module summary table
-
-| Module | Purpose | Main features |
-|---|---|---|
-| CRM | sales and lead ops | leads, stages, automations, integrations, follow-ups |
-| Operations | property transactions | projects, plots, bookings, wallet, payouts |
-| HRMS | workforce management | attendance, leave, payroll, payslips |
-| Tasks | team coordination | kanban tasks, assignment, role scope |
-| Platform | admin governance | roles, audit logs, settings, notifications |
-| Partner App API | mobile / field access | partner login, bookings, attendance, property data |
-| Integrations | system connectivity | Meta, WhatsApp, email, telephony |
-
----
-
-## 19. Running in production
-
-For deployment, the repo is designed around a production-like environment with:
-
-- a PostgreSQL database
-- a backend service running on port 4300
-- a static frontend served by nginx
-- TLS and domain configuration
-- PM2 process management
-- environment files configured for production values
-
-The `DEPLOY.md` file shows a realistic EC2 production deployment pattern and is a good reference when moving from local development to a live environment.
-
----
-
-## 20. Recommended development workflow
-
-If you are contributing to this project, the typical local workflow is:
-
-1. clone the repo
-2. install frontend dependencies at the root
-3. install backend dependencies in `server/`
-4. create the PostgreSQL database
-5. set environment variables in `server/.env`
-6. run Prisma migrations
-7. seed demo data
-8. start backend
-9. start frontend
-10. test flows in CRM, operations, and HRMS modules
-
-It is advisable to keep the backend and frontend versions aligned and follow the server README for integration-specific tasks before testing external providers.
-
----
-
-## 21. Conclusion
-
-Rosium Platform is a business operating system for a real-estate and property management company. It is not just a website or a simple CRM; it is a full platform that integrates:
-
-- sales and lead lifecycle management
-- property projects and booking operations
-- workforce HR, payroll, and attendance
-- internal admin governance, settings, and workflows
-- partner/mobile experiences via a dedicated API
-- integrations with modern business tools such as Meta, WhatsApp, email, and telephony
-
-The repository is substantial and already organized as a production-oriented monorepo with real business logic, deployment automation, and a clear backend/frontend split.
-
-For a team running a property business or a real-estate operations company, this project is designed to centralize the operational data and business rules that normally live across disconnected systems.
-
----
-
-## 22. Quick start checklist
-
-Use this checklist for a fast local setup:
-
-```bash
-# root
-npm install
-
-# backend
-cd server
-cp .env.example .env
-npm install
-npm run prisma:migrate
-npm run prisma:seed
-npm run dev
-
-# frontend (new terminal)
-cd ..
-cp .env.example .env
-npm run dev
-```
-
-Then open:
-
-- frontend: `http://localhost:5273`
-- backend: `http://localhost:4300`
-
-Log in with the seeded admin credentials or use the partner app authentication flow described in the backend docs.
-
----
-
-## 23. Additional documentation in this repo
-
-This project already contains useful reference documents beyond this write-up:
-
-- `README.md` — project overview
-- `server/README.md` — backend architecture and detailed platform logic
-- `DEPLOY.md` — production deployment instructions
-- `tools/camera-uploader/README.md` — camera photo upload integration
-
-This new document complements them by giving a readable, end-to-end explanation for developers, operators, and project stakeholders.
-
----
-
-## 24. Suggested next steps
-
-If you intend to extend or maintain the project, the best next tasks are:
-
-1. review the Prisma schema to understand the database domain model
-2. inspect the route files under `server/src/routes/` to map modules to endpoints
-3. inspect the service files under `server/src/services/` to understand the business logic
-4. review admin permissions to match role-based access to actual screens
-5. test the lead and booking lifecycle end-to-end
-6. verify webhook and integration flows before production rollout
-7. set up secure secrets and TLS for public deployment
-
-This is a proper business platform, so documentation and operational discipline matter as much as code quality.
-
----
-
-End of project documentation.
+End of document.
