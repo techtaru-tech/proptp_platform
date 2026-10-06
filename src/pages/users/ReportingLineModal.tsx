@@ -16,7 +16,7 @@ import { RoleId, type AccountRole, type PartnerUser } from '../../types';
  */
 
 const ROLE_FROM_ID: Record<number, AccountRole> = {
-  [RoleId.Agent]: 'agent',
+  [RoleId.Agent]: 'channel_partner',
   [RoleId.Admin]: 'admin',
   [RoleId.Employee]: 'employee',
   [RoleId.Leader]: 'leader',
@@ -28,7 +28,7 @@ const ROLE_LABEL: Record<AccountRole, string> = {
   leader: 'Leader',
   team_leader: 'Team Leader',
   employee: 'Employee',
-  agent: 'Agent',
+  channel_partner: 'Channel partner',
 };
 
 /** Who each role may report to — mirrors the server's rule, which is what enforces it. */
@@ -37,10 +37,10 @@ const MANAGER_ROLES: Record<AccountRole, AccountRole[]> = {
   leader: [],
   team_leader: ['leader'],
   employee: ['team_leader', 'leader'],
-  agent: ['employee', 'team_leader', 'leader'],
+  channel_partner: ['employee', 'team_leader', 'leader'],
 };
 
-const ROLE_OPTIONS = (['leader', 'team_leader', 'employee', 'agent'] as AccountRole[]).map((value) => ({ value, label: ROLE_LABEL[value] }));
+const ROLE_OPTIONS = (['leader', 'team_leader', 'employee', 'channel_partner'] as AccountRole[]).map((value) => ({ value, label: ROLE_LABEL[value] }));
 
 export function ReportingLineModal({ user, onClose, onSaved }: { user: PartnerUser; onClose: () => void; onSaved: () => void }) {
   const { toast } = useToast();
@@ -53,7 +53,7 @@ export function ReportingLineModal({ user, onClose, onSaved }: { user: PartnerUs
     ...(allowed.includes('leader') ? refLeaders : []),
     ...(allowed.includes('team_leader') ? refTeamLeaders : []),
     ...(allowed.includes('employee') ? refEmployees : []),
-    ...(allowed.includes('agent') ? refAgents : []),
+    ...(allowed.includes('channel_partner') ? refAgents : []),
   ].filter((m) => m.id !== user.id && m.status === 'active');
 
   const save = async () => {

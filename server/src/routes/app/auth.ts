@@ -124,7 +124,7 @@ appAuthRouter.get('/leaders', async (_req, res, next) => {
   }
 });
 
-const SELF_REGISTERABLE_ROLES: UserRole[] = ['agent', 'employee', 'leader'];
+const SELF_REGISTERABLE_ROLES: UserRole[] = ['channel_partner', 'employee', 'leader'];
 
 const KYC_FIELDS = [
   { name: 'aadhaar_front', maxCount: 1 },
@@ -155,15 +155,16 @@ appAuthRouter.post('/register', upload.fields(KYC_FIELDS), async (req, res, next
       return fail(res, 409, 'already_registered', 'An account already exists for this mobile number.');
     }
 
-    const role = String(body.role ?? '') as UserRole;
+    // The app used to send "agent"; the role is now channel_partner, and the old word is still understood.
+    const role = (String(body.role ?? '') === 'agent' ? 'channel_partner' : String(body.role ?? '')) as UserRole;
     if (!SELF_REGISTERABLE_ROLES.includes(role)) {
-      return fail(res, 400, 'invalid_role', 'Role must be one of agent, employee or leader.');
+      return fail(res, 400, 'invalid_role', 'Role must be one of channel_partner, employee or leader.');
     }
     if (!body.email) return fail(res, 400, 'missing_email', 'Email is required.');
     if (!body.aadhaar_number) return fail(res, 400, 'missing_aadhaar', 'Aadhaar number is required.');
 
     const name =
-      role === 'agent'
+      role === 'channel_partner'
         ? `${String(body.first_name ?? '').trim()} ${String(body.last_name ?? '').trim()}`.trim()
         : String(body.full_name ?? '').trim();
     if (!name) return fail(res, 400, 'missing_name', 'Name is required.');

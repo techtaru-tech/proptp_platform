@@ -48,7 +48,7 @@ export const ALLOWED_MANAGER_ROLES: Record<UserRole, UserRole[]> = {
   // A Leader is accepted for an Employee because that is how every existing Employee is
   // already wired (the app registers them under a Leader); it is not a dead path.
   employee: ['team_leader', 'leader'],
-  agent: ['employee', 'team_leader', 'leader'],
+  channel_partner: ['employee', 'team_leader', 'leader'],
   vendor: [],
 };
 
@@ -57,7 +57,7 @@ export const ROLE_LABEL: Record<UserRole, string> = {
   leader: 'Leader',
   team_leader: 'Team Leader',
   employee: 'Employee',
-  agent: 'Agent',
+  channel_partner: 'Channel partner',
   vendor: 'Vendor',
 };
 
@@ -221,7 +221,7 @@ export async function assignableUsers(scope: Scope) {
     // Staff, administrators included (a lead may be owned by whoever runs the CRM), plus any
     // Agent who has been placed under a manager. The thousands of referral partners who have
     // not are not people a sales lead gets handed to, and would drown the picker.
-    where.OR = [{ role: { in: ['admin', 'leader', 'team_leader', 'employee'] } }, { role: 'agent', reportingLeaderId: { not: null } }];
+    where.OR = [{ role: { in: ['admin', 'leader', 'team_leader', 'employee'] } }, { role: 'channel_partner', reportingLeaderId: { not: null } }];
   } else if (!scope.canAssign) where.id = scope.userId;
   else where.id = { in: scope.userIds };
 

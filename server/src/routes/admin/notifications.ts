@@ -67,7 +67,7 @@ adminNotificationsRouter.get('/recipients', async (req, res, next) => {
     const users = await prisma.user.findMany({
       where: {
         status: 'active',
-        role: { in: ['agent', 'employee', 'leader', 'team_leader'] },
+        role: { in: ['channel_partner', 'employee', 'leader', 'team_leader'] },
         ...(search
           ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { phone: { contains: search } }] }
           : {}),
@@ -89,7 +89,7 @@ adminNotificationsRouter.get('/push-status', async (_req, res, next) => {
   try {
     const [withDevice, active] = await Promise.all([
       prisma.user.count({ where: { status: 'active', fcmToken: { not: null } } }),
-      prisma.user.count({ where: { status: 'active', role: { in: ['agent', 'employee', 'leader', 'team_leader'] } } }),
+      prisma.user.count({ where: { status: 'active', role: { in: ['channel_partner', 'employee', 'leader', 'team_leader'] } } }),
     ]);
     res.json({
       configured: isPushConfigured(),

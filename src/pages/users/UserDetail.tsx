@@ -341,7 +341,7 @@ export function UserDetail() {
                     <div className="mb-5 grid grid-cols-2 gap-4 sm:grid-cols-3">
                       <StatCard label="Team Size" value={(user as { teamSize: number }).teamSize} tone="shell" />
                       <StatCard label="Employees" value={(user as { employeeCount: number }).employeeCount} tone="brand" />
-                      <StatCard label="Agents" value={(user as { agentCount: number }).agentCount} tone="accent" />
+                      <StatCard label="Channel partners" value={(user as { agentCount: number }).agentCount} tone="accent" />
                     </div>
                     {leaderTree && leaderTree.children.length > 0 ? (
                       <div className="rounded-lg border border-line p-2">
@@ -393,7 +393,7 @@ export function UserDetail() {
 
                 {isAgent && agentTeamId && (
                   <>
-                    <CardHeader title="Team" subtitle="Team this agent belongs to" />
+                    <CardHeader title="Team" subtitle="Team this channel partner belongs to" />
                     {agentTeam ? (
                       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                         <DetailField label="Team" value={agentTeam.name} />
@@ -417,7 +417,7 @@ export function UserDetail() {
 
             {activeKey === 'referrals' && showReferralsTab && (
               <Card>
-                <CardHeader title="Referrals" subtitle="Agents referred directly by this agent" />
+                <CardHeader title="Referrals" subtitle="Channel partners referred directly by this one" />
                 {referredAgents.length > 0 ? (
                   <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
                     {referredAgents.map((a) => (

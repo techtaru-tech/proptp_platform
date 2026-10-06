@@ -180,7 +180,7 @@ export async function seedPlatform(prisma: PrismaClient) {
   const nameFor = () => `${pick(FIRST)} ${pick(LAST)}`;
 
   async function upsertPartner(seq: number, role: UserRole, extra: Record<string, unknown>) {
-    const prefix = role === 'agent' ? 'AGT' : role === 'employee' ? 'EMP' : 'LDR';
+    const prefix = role === 'channel_partner' ? 'AGT' : role === 'employee' ? 'EMP' : 'LDR';
     const code = `SR-${prefix}-${1000 + seq}`;
     const name = nameFor();
     return prisma.user.upsert({
@@ -252,7 +252,7 @@ export async function seedPlatform(prisma: PrismaClient) {
     // is genuinely multi-level and the referral ladder has something to walk.
     const sponsor = i < 20 ? leaders[i % leaders.length] : agents[i - 20];
     agents.push(
-      await upsertPartner(seq, 'agent', {
+      await upsertPartner(seq, 'channel_partner', {
         sponsorId: sponsor.id,
         teamId: sponsor.teamId ?? teamByLeader.get(sponsor.id) ?? null,
       })

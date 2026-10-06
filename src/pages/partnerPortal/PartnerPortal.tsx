@@ -22,7 +22,7 @@ import { BrokerageTable } from './BrokerageTable';
 /** The portal is a channel partner's own view, so anyone else who opens it is told what it is. */
 export function PartnerOnly({ children }: { children: ReactNode }) {
   const { session } = useAuth();
-  if ((session?.accountRole as string | undefined) === 'agent') return <>{children}</>;
+  if ((session?.accountRole as string | undefined) === 'channel_partner') return <>{children}</>;
   return (
     <Card>
       <EmptyState icon={Handshake} title="This page is for channel partner logins"

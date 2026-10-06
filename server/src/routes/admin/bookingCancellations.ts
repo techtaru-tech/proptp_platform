@@ -91,7 +91,7 @@ adminBookingCancellationsRouter.post('/booking/:bookingId', async (req: AuthedRe
     await writeAudit(req, { module: 'Bookings', action: 'Requested booking cancellation', recordId: bookingId, recordLabel: `Booking ${booking.reference}`, description: `${reason} — refund ${inr(saved.refundAmount)} of ${inr(paid)} paid.` });
 
     // Tell whoever the policy lets decide, so it does not sit unseen.
-    const approvers = await prisma.user.findMany({ where: { status: 'active', role: { notIn: ['vendor', 'agent'] }, panelRoleId: { not: null } }, select: { id: true } });
+    const approvers = await prisma.user.findMany({ where: { status: 'active', role: { notIn: ['vendor', 'channel_partner'] }, panelRoleId: { not: null } }, select: { id: true } });
     const deciders: string[] = [];
     for (const u of approvers) if (u.id !== req.auth!.sub && (await mayDecide(u.id, policy))) deciders.push(u.id);
     if (deciders.length) await notify({ title: 'Booking cancellation needs approval', body: `${booking.reference}: refund ${inr(saved.refundAmount)}. ${reason}`, userIds: deciders, type: 'system', data: { kind: 'booking_cancellation', bookingId } }).catch(() => undefined);

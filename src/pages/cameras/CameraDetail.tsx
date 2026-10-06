@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Flag, KeyRound, Link2, Radio, Trash2 } from 'lucide-react';
+import { Flag, KeyRound, Link2, Pencil, Radio, Trash2 } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
+import { getMaterialLookups } from '../../services/vendorService';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -18,7 +19,7 @@ import { useAsync } from '../../hooks/useAsync';
 import { useToast } from '../../context/ToastContext';
 import { fileUrl } from '../../services/apiClient';
 import { formatDateTime } from '../../utils/format';
-import { HEALTH, deleteCamera, listCameras, listImages, rotateCameraKey, updateCamera } from '../../services/cameraService';
+import { HEALTH, deleteAllPictures, deleteCamera, deletePictures, listCameras, listImages, rotateCameraKey, updateCamera, type CameraRow } from '../../services/cameraService';
 import { Lightbox } from './Lightbox';
 import { KeyReveal } from './KeyReveal';
 
@@ -34,7 +35,9 @@ export function CameraDetail({ flaggedOnly = false }: { flaggedOnly?: boolean })
   const [reload, setReload] = useState(0);
   const [secret, setSecret] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
-  const [live, setLive] = useState<null | 'view' | 'set'>(null);
+  const [live, setLive] = useState<null | 'view' | 'set' | 'edit'>(null);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [purge, setPurge] = useState<null | 'chosen' | 'all'>(null);
   const [liveUrl, setLiveUrl] = useState('');
   const cams = useAsync(() => listCameras(), [reload]);
   const cam = cams.data?.find((c) => c.id === id);
@@ -59,6 +62,7 @@ export function CameraDetail({ flaggedOnly = false }: { flaggedOnly?: boolean })
         actions={cam && (
           <div className="flex gap-2">
             {cam.liveUrl && <Button variant="primary" leftIcon={<Radio size={14} />} onClick={() => setLive('view')}>Live view</Button>}
+            <Button variant="outline" leftIcon={<Pencil size={14} />} onClick={() => setLive('edit')}>Edit camera</Button>
             <Button variant="outline" leftIcon={<Link2 size={14} />} onClick={() => { setLiveUrl(cam.liveUrl ?? ''); setLive('set'); }}>{cam.liveUrl ? 'Live address' : 'Add live address'}</Button>
             <Button variant="outline" leftIcon={<KeyRound size={14} />} onClick={rotate}>Rotate key</Button>
             <Button variant="outline" onClick={async () => { await updateCamera(cam.id, { active: !cam.active }); refresh(); }}>{cam.active ? 'Switch off' : 'Switch on'}</Button>
@@ -72,7 +76,6 @@ export function CameraDetail({ flaggedOnly = false }: { flaggedOnly?: boolean })
             <span className="text-ink-muted">Last picture: <strong className="text-ink">{cam.lastImageAt ? formatDateTime(cam.lastImageAt) : 'none yet'}</strong></span>
             <span className="text-ink-muted">Last contact: <strong className="text-ink">{cam.lastSeenAt ? formatDateTime(cam.lastSeenAt) : 'never'}</strong></span>
             <span className="text-ink-muted">Expected every <strong className="text-ink">{cam.expectedEveryMinutes} min</strong></span>
-            <span className="text-ink-muted">Responsible: <strong className="text-ink">{cam.ownerName ?? 'nobody'}</strong></span>
             <span className="font-mono text-xs text-ink-faint">key {cam.keyPrefix}…</span>
           </div>
           {(cam.health === 'offline' || cam.health === 'never') && (
@@ -86,6 +89,7 @@ export function CameraDetail({ flaggedOnly = false }: { flaggedOnly?: boolean })
           <LiveFrame url={cam.liveUrl} />
         </Modal>
       )}
+      {cam && live === 'edit' && <EditCamera cam={cam} onClose={() => setLive(null)} onSaved={() => { setLive(null); refresh(); }} />}
       {cam && live === 'set' && (
         <Modal isOpen onClose={() => setLive(null)} title="Live address" footer={<><Button variant="outline" onClick={() => setLive(null)}>Cancel</Button>
           <Button variant="primary" onClick={async () => { try { await updateCamera(cam.id, { liveUrl }); setLive(null); refresh(); } catch (e) { toast({ title: 'Could not save', description: (e as Error).message, variant: 'error' }); } }}>Save</Button></>}>
@@ -105,22 +109,44 @@ export function CameraDetail({ flaggedOnly = false }: { flaggedOnly?: boolean })
         <Card><EmptyState icon={Flag} title={flaggedOnly ? 'Nothing flagged' : 'No pictures'} description={flaggedOnly ? undefined : 'Pictures appear here as the PC pushes them.'} /></Card>
       ) : (
         <>
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPicked(picked.size === imgs.data!.items.length ? new Set() : new Set(imgs.data!.items.map((x) => x.id)))}>{picked.size === imgs.data.items.length ? 'Clear selection' : 'Select this page'}</Button>
+            {picked.size > 0 && <Button variant="danger" size="sm" leftIcon={<Trash2 size={13} />} onClick={() => setPurge('chosen')}>Delete {picked.size} selected</Button>}
+            {!flaggedOnly && cam && <Button variant="ghost" size="sm" className="text-danger-600" onClick={() => setPurge('all')}>Delete all pictures</Button>}
+            <span className="text-xs text-ink-faint">{imgs.data.total} picture{imgs.data.total === 1 ? '' : 's'}</span>
+          </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             {imgs.data.items.map((im, i) => (
-              <button key={im.id} type="button" onClick={() => setOpen(i)} className="group overflow-hidden rounded-lg border border-line bg-white text-left focus-ring" aria-label={`Open picture from ${im.cameraName}, ${formatDateTime(im.capturedAt)}`}>
+              <div key={im.id} className="relative">
+                <label className="absolute left-1.5 top-1.5 z-10 flex h-6 w-6 cursor-pointer items-center justify-center rounded bg-white/90 shadow-card" onClick={(e) => e.stopPropagation()}>
+                  <input type="checkbox" aria-label={`Select picture from ${formatDateTime(im.capturedAt)}`} className="h-4 w-4 rounded border-line-strong focus-ring" checked={picked.has(im.id)}
+                    onChange={(e) => setPicked((s) => { const n = new Set(s); if (e.target.checked) n.add(im.id); else n.delete(im.id); return n; })} />
+                </label>
+              <button type="button" onClick={() => setOpen(i)} className="group block w-full overflow-hidden rounded-lg border border-line bg-white text-left focus-ring" aria-label={`Open picture from ${im.cameraName}, ${formatDateTime(im.capturedAt)}`}>
                 <div className="relative h-28 bg-surface-muted">
                   <img src={fileUrl(im.url)} alt="" loading="lazy" className="h-full w-full object-cover" />
                   {im.review === 'flagged' && <span className="absolute right-1.5 top-1.5 rounded bg-danger-600 p-1 text-white"><Flag size={11} /></span>}
                   {im.review === 'ok' && <span className="absolute right-1.5 top-1.5 rounded bg-success-600 px-1 text-[10px] text-white">OK</span>}
                 </div>
                 <p className="px-2 py-1.5 text-[11px] text-ink-muted">{flaggedOnly && <span className="block font-medium text-ink">{im.cameraName}</span>}{formatDateTime(im.capturedAt)}</p>
-              </button>))}
+              </button>
+              </div>))}
           </div>
           <Pagination page={imgs.data.page} pageSize={imgs.data.pageSize} total={imgs.data.total} onPageChange={setPage} />
         </>)}
 
       {open !== null && imgs.data && <Lightbox images={imgs.data.items} index={open} onIndex={setOpen} onClose={() => setOpen(null)} onChanged={refresh} />}
       {secret && cam && <KeyReveal camera={cam} secret={secret} onClose={() => setSecret(null)} />}
+      <ConfirmationDialog isOpen={purge !== null} onClose={() => setPurge(null)} variant="danger" confirmLabel="Delete"
+        title={purge === 'all' ? 'Delete every picture of this camera?' : `Delete ${picked.size} picture${picked.size === 1 ? '' : 's'}?`}
+        description={purge === 'all' ? `All ${imgs.data?.total ?? ''} pictures of “${cam?.name}” will be deleted for good. The camera and its key stay, so new pictures keep arriving.` : 'The chosen pictures will be deleted for good.'}
+        onConfirm={async () => {
+          try {
+            const r = purge === 'all' ? await deleteAllPictures(cam!.id) : await deletePictures([...picked]);
+            toast({ title: `${r.deleted} picture${r.deleted === 1 ? '' : 's'} deleted`, variant: 'success' }); setPicked(new Set()); setPage(1); refresh();
+          } catch (e) { toast({ title: 'Could not delete', description: (e as Error).message, variant: 'error' }); }
+          setPurge(null);
+        }} />
       <ConfirmationDialog isOpen={removing} onClose={() => setRemoving(false)} onConfirm={remove} title="Remove this camera?" description={cam ? `“${cam.name}” and its list of pictures will be removed. Site issues already raised from it stay.` : undefined} confirmLabel="Remove camera" variant="danger" />
       {!cam && !flaggedOnly && <Link to="/cameras" />}
     </div>
@@ -137,5 +163,31 @@ function LiveFrame({ url }: { url: string }) {
       <iframe src={url} title="Live view" className="aspect-video w-full rounded-lg border border-line bg-black" allow="autoplay; fullscreen" />
       <p className="mt-2 text-xs text-ink-muted">If this stays blank, the camera's page does not allow being shown here. <a className="font-medium text-brand-700" href={url} target="_blank" rel="noreferrer">Open it in a new tab</a>.</p>
     </div>
+  );
+}
+
+/** Change a camera's name, site, where it points, how often it pushes, and its live address. */
+function EditCamera({ cam, onClose, onSaved }: { cam: CameraRow; onClose: () => void; onSaved: () => void }) {
+  const { toast } = useToast();
+  const { data: lookups } = useAsync(() => getMaterialLookups(), []);
+  const [f, setF] = useState({ name: cam.name, projectId: cam.projectId, placement: cam.placement ?? '', every: String(cam.expectedEveryMinutes), liveUrl: cam.liveUrl ?? '' });
+  const [saving, setSaving] = useState(false);
+  const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
+  const save = async () => {
+    setSaving(true);
+    try { await updateCamera(cam.id, { name: f.name, projectId: f.projectId, placement: f.placement, expectedEveryMinutes: Number(f.every), liveUrl: f.liveUrl }); toast({ title: 'Camera updated', variant: 'success' }); onSaved(); }
+    catch (e) { toast({ title: 'Could not save', description: (e as Error).message, variant: 'error' }); }
+    finally { setSaving(false); }
+  };
+  return (
+    <Modal isOpen onClose={onClose} title="Edit camera" footer={<><Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button><Button variant="primary" onClick={save} isLoading={saving} disabled={!f.name.trim() || !(Number(f.every) >= 1)}>Save</Button></>}>
+      <div className="flex flex-col gap-4">
+        <Input label="Camera name" name="editCamName" required value={f.name} onChange={set('name')} />
+        <Select label="Site" name="editCamProject" value={f.projectId} onChange={set('projectId')} options={(lookups?.projects ?? []).map((p) => ({ value: p.id, label: p.projectName }))} />
+        <Input label="Where it points" name="editCamPlacement" value={f.placement} onChange={set('placement')} />
+        <Input label="Pushes a picture set every (minutes)" name="editCamEvery" type="number" min={1} max={1440} value={f.every} onChange={set('every')} hint="Used to tell a quiet camera from one that is down. 60 is every hour." />
+        <Input label="Live address" name="editCamLive" value={f.liveUrl} onChange={set('liveUrl')} hint="Optional. An https:// address to watch the camera live." />
+      </div>
+    </Modal>
   );
 }

@@ -53,7 +53,7 @@ async function statsFor(users: { id: string; role: UserRole }[]) {
       const tally = teamTally.get(parentId) ?? { total: 0, employees: 0, agents: 0 };
       tally.total += 1;
       if (member.role === 'employee') tally.employees += 1;
-      if (member.role === 'agent') tally.agents += 1;
+      if (member.role === 'channel_partner') tally.agents += 1;
       teamTally.set(parentId, tally);
     }
   }
@@ -62,7 +62,7 @@ async function statsFor(users: { id: string; role: UserRole }[]) {
     users.map((user) => {
       const tally = teamTally.get(user.id) ?? { total: 0, employees: 0, agents: 0 };
       const base: Record<string, unknown> = {};
-      if (user.role === 'agent') {
+      if (user.role === 'channel_partner') {
         base.totalBookings = bookingsBy.get(user.id) ?? 0;
         base.totalReferrals = referralsBy.get(user.id) ?? 0;
       }
@@ -111,7 +111,7 @@ async function listByRole(req: AuthedRequest, role: UserRole) {
 
 adminUsersRouter.get('/agents', async (req, res, next) => {
   try {
-    res.json(await listByRole(req, 'agent'));
+    res.json(await listByRole(req, 'channel_partner'));
   } catch (err) {
     next(err);
   }
@@ -151,7 +151,7 @@ adminUsersRouter.get('/', async (req, res, next) => {
     const roleParam = String(req.query.role ?? '').trim();
     // Vendors are listed under Vendors, not among the partners.
     const where: Prisma.UserWhereInput = { role: { not: 'vendor' } };
-    if (['agent', 'employee', 'leader', 'team_leader', 'admin'].includes(roleParam)) where.role = roleParam as UserRole;
+    if (['channel_partner', 'employee', 'leader', 'team_leader', 'admin'].includes(roleParam)) where.role = roleParam as UserRole;
     const users = await prisma.user.findMany({ where, include: userInclude, orderBy: { name: 'asc' } });
     const stats = await statsFor(users);
     res.json({ users: users.map((u) => adminUser(u, stats.get(u.id) ?? {})) });
@@ -236,7 +236,7 @@ adminUsersRouter.patch('/:id/hierarchy', async (req: AuthedRequest, res, next) =
     if (user.role === 'admin') return res.status(400).json({ error: 'Administrators sit outside the reporting tree.' });
 
     const role = (req.body?.role ?? user.role) as UserRole;
-    if (!['leader', 'team_leader', 'employee', 'agent'].includes(role)) {
+    if (!['leader', 'team_leader', 'employee', 'channel_partner'].includes(role)) {
       return res.status(400).json({ error: 'role must be leader, team_leader, employee or agent.' });
     }
     const managerId = req.body?.managerId === undefined ? user.reportingLeaderId : String(req.body.managerId || '') || null;

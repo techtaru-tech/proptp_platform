@@ -14,7 +14,7 @@ import type { NotificationAudience } from '../../types';
 
 const AUDIENCES: { value: NotificationAudience; label: string; hint: string }[] = [
   { value: 'all', label: 'Everyone', hint: 'Agents, employees and leaders' },
-  { value: 'agents', label: 'Agents', hint: 'Partner app users' },
+  { value: 'agents', label: 'Channel partners', hint: 'Partner app users' },
   { value: 'employees', label: 'Employees', hint: 'Office staff' },
   { value: 'leaders', label: 'Leaders', hint: 'Team leaders' },
   { value: 'custom', label: 'Specific people', hint: 'Pick them by name' },

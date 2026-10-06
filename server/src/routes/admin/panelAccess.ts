@@ -14,7 +14,7 @@ import { ROLE_LABEL, validateReporting } from '../../services/hierarchy';
 export const panelRolesRouter = Router();
 
 /** The account roles a panel user may be created as. `leader` and `agent` also lead/join teams. */
-const ACCOUNT_ROLES: UserRole[] = ['admin', 'employee', 'leader', 'team_leader', 'agent'];
+const ACCOUNT_ROLES: UserRole[] = ['admin', 'employee', 'leader', 'team_leader', 'channel_partner'];
 export const panelUsersRouter = Router();
 
 /** The module catalogue the Roles screen renders its checkboxes from. */
@@ -186,7 +186,7 @@ panelUsersRouter.get('/', async (_req, res, next) => {
     const users = await prisma.user.findMany({
       // Panel access is "is an admin, or has been given a panel role" (see canUsePanel) — an
       // employee or agent who works in the panel belongs on this list too.
-      where: { OR: [{ role: 'admin' }, { panelRoleId: { not: null } }], role: { notIn: ['vendor', 'agent'] } },
+      where: { OR: [{ role: 'admin' }, { panelRoleId: { not: null } }], role: { notIn: ['vendor', 'channel_partner'] } },
       orderBy: { createdAt: 'asc' },
       include: panelUserInclude,
     });

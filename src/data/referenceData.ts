@@ -25,7 +25,7 @@ export interface AssigneeUser {
 }
 
 const ROLE_ID_BY_NAME: Record<string, RoleId> = {
-  agent: RoleId.Agent,
+  channel_partner: RoleId.Agent,
   admin: RoleId.Admin,
   employee: RoleId.Employee,
   leader: RoleId.Leader,

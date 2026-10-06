@@ -8,7 +8,7 @@ export function PlanVsActual({ planned, actual, className }: { planned: number; 
   const behind = actual < planned;
   return (
     <div
-      className={cn('relative h-2.5 w-full rounded-full bg-surface-muted', className)}
+      className={cn('relative h-2.5 rounded-full bg-surface-muted', /(^|\s)w-/.test(className ?? '') ? '' : 'w-full', className)}
       role="img"
       aria-label={`${actual}% complete, ${planned}% planned`}
     >

@@ -49,8 +49,8 @@ const BROADCASTS: [string, string, 'booking' | 'payout' | 'team' | 'system', 'al
 ];
 
 const ROLE_FOR_AUDIENCE = {
-  all: ['agent', 'employee', 'leader'],
-  agents: ['agent'],
+  all: ['channel_partner', 'employee', 'leader'],
+  agents: ['channel_partner'],
   employees: ['employee'],
   leaders: ['leader'],
 } as const;

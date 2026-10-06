@@ -17,7 +17,6 @@ import { useToast } from '../../context/ToastContext';
 import { fileUrl } from '../../services/apiClient';
 import { formatDateTime } from '../../utils/format';
 import { getMaterialLookups } from '../../services/vendorService';
-import { listConstructionPeople } from '../../services/constructionService';
 import { HEALTH, createCamera, listCameras, type CameraRow } from '../../services/cameraService';
 import { KeyReveal } from './KeyReveal';
 
@@ -54,7 +53,7 @@ export function Cameras() {
                 <div className="flex items-start justify-between gap-2"><h3 className="font-semibold text-ink">{c.name}</h3><Badge tone={HEALTH[c.health].tone} dot>{HEALTH[c.health].label}</Badge></div>
                 <p className="text-xs text-ink-muted">{c.projectName}{c.placement ? ` · ${c.placement}` : ''}</p>
                 <p className="mt-2 text-xs text-ink-muted">{c.lastImageAt ? `Last picture ${formatDateTime(c.lastImageAt)}` : 'No pictures yet'}</p>
-                <p className="mt-1 text-xs text-ink-faint">{c.imagesToday} today{c.flagged ? ` · ${c.flagged} flagged` : ''}{c.ownerName ? ` · ${c.ownerName}` : ''}</p>
+                <p className="mt-1 text-xs text-ink-faint">{c.imagesToday} today{c.flagged ? ` · ${c.flagged} flagged` : ''}</p>
               </div>
             </Link>))}
         </div>)}
@@ -67,13 +66,12 @@ export function Cameras() {
 function AddCamera({ onClose, onCreated }: { onClose: () => void; onCreated: (c: CameraRow & { key: string }) => void }) {
   const { toast } = useToast();
   const { data: lookups } = useAsync(() => getMaterialLookups(), []);
-  const { data: people } = useAsync(() => listConstructionPeople(), []);
-  const [f, setF] = useState({ name: '', projectId: '', placement: '', ownerId: '', every: '60' });
+  const [f, setF] = useState({ name: '', projectId: '', placement: '', every: '60' });
   const [saving, setSaving] = useState(false);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
   const save = async () => {
     setSaving(true);
-    try { onCreated(await createCamera({ name: f.name, projectId: f.projectId, placement: f.placement || undefined, ownerId: f.ownerId || undefined, expectedEveryMinutes: Number(f.every) || 60 })); }
+    try { onCreated(await createCamera({ name: f.name, projectId: f.projectId, placement: f.placement || undefined, expectedEveryMinutes: Number(f.every) || 60 })); }
     catch (e) { toast({ title: 'Could not add the camera', description: (e as Error).message, variant: 'error' }); }
     finally { setSaving(false); }
   };
@@ -83,7 +81,6 @@ function AddCamera({ onClose, onCreated }: { onClose: () => void; onCreated: (c:
         <Input label="Camera name" name="camName" required value={f.name} onChange={set('name')} placeholder="e.g. Main gate" />
         <Select label="Site" name="camProject" required value={f.projectId} onChange={set('projectId')} options={[{ value: '', label: 'Choose a project' }, ...(lookups?.projects ?? []).map((p) => ({ value: p.id, label: p.projectName }))]} />
         <Input label="Where it points" name="camPlacement" value={f.placement} onChange={set('placement')} placeholder="e.g. Gate, facing Block A" />
-        <Select label="Responsible person" name="camOwner" value={f.ownerId} onChange={set('ownerId')} options={[{ value: '', label: 'Nobody yet' }, ...(people ?? []).map((p) => ({ value: p.id, label: p.name }))]} />
         <Input label="Pushes a picture set every (minutes)" name="camEvery" type="number" min={1} max={1440} value={f.every} onChange={set('every')} hint="Used to tell a quiet camera from one that is down." />
       </div>
     </Modal>

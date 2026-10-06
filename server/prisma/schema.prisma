@@ -1008,7 +1008,7 @@ model AiSdrMessage {
 /// system's numeric role ids (0=Agent, 1=Admin, 2=Employee, 3=Leader), the app uses
 /// these names verbatim (§8 UserRole).
 enum UserRole {
-  agent
+  channel_partner
   admin
   employee
   leader
@@ -1134,7 +1134,6 @@ model User {
   progressReviewed   ProgressUpdate[]       @relation("ProgressReviewer")
   issuesOwned        SiteIssue[]            @relation("IssueOwner")
   issuesRaised       SiteIssue[]            @relation("IssueRaiser")
-  camerasOwned       Camera[]               @relation("CameraOwner")
   visitsHosted       SiteVisit[]            @relation("VisitHost")
   visitsCreated      SiteVisit[]            @relation("VisitCreator")
   vendorProfile      Vendor?                @relation("VendorLogin")
@@ -2960,8 +2959,6 @@ model Camera {
   projectId            String
   /// Where it points, in words: "Gate, facing Block A".
   placement            String?
-  owner                User?     @relation("CameraOwner", fields: [ownerId], references: [id], onDelete: SetNull)
-  ownerId              String?
   active               Boolean   @default(true)
   /// How often the PC is expected to push. Silence beyond a couple of these is "offline".
   expectedEveryMinutes Int       @default(60)

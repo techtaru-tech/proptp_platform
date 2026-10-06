@@ -154,7 +154,7 @@ export function currentUser(req: AuthedRequest) {
 }
 
 const ROLE_PREFIX: Record<UserRole, string> = {
-  agent: 'AGT',
+  channel_partner: 'CP',
   admin: 'ADM',
   employee: 'EMP',
   leader: 'LDR',

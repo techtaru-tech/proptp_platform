@@ -62,7 +62,7 @@ adminDashboardRouter.get('/snapshot', async (_req, res, next) => {
       ['pending', 'booked', 'partPaid', 'cancelled'],
       (r) => r.status as 'pending'
     );
-    const roleCounts = countBy(usersByRole, ['agent', 'employee', 'leader', 'admin'], (r) => r.role as 'agent');
+    const roleCounts = countBy(usersByRole, ['channel_partner', 'employee', 'leader', 'admin'], (r) => r.role as 'channel_partner');
     const statusCounts = countBy(usersByStatus, ['active', 'inactive', 'suspended'], (r) => r.status as 'active');
     const ticketCounts = countBy(ticketsByStatus, ['open', 'pending', 'resolved', 'closed'], (r) => r.status as 'open');
 
@@ -107,7 +107,7 @@ adminDashboardRouter.get('/snapshot', async (_req, res, next) => {
       online: sumByMode.get('online') ?? 0,
     };
     const partners = {
-      agents: roleCounts.get('agent') ?? 0,
+      agents: roleCounts.get('channel_partner') ?? 0,
       employees: roleCounts.get('employee') ?? 0,
       leaders: roleCounts.get('leader') ?? 0,
       active: statusCounts.get('active') ?? 0,
@@ -285,7 +285,7 @@ adminDashboardRouter.get('/management', async (req: AuthedRequest, res, next) =>
     }
 
     if (has('partners')) {
-      const rows = await prisma.booking.groupBy({ by: ['userId'], where: { isDeposit: 0, status: { not: 'cancelled' }, user: { is: { role: 'agent' } } }, _count: { _all: true }, _sum: { amount: true }, orderBy: { _sum: { amount: 'desc' } }, take: 5 });
+      const rows = await prisma.booking.groupBy({ by: ['userId'], where: { isDeposit: 0, status: { not: 'cancelled' }, user: { is: { role: 'channel_partner' } } }, _count: { _all: true }, _sum: { amount: true }, orderBy: { _sum: { amount: 'desc' } }, take: 5 });
       const users = await prisma.user.findMany({ where: { id: { in: rows.map((r) => r.userId!) } }, select: { id: true, name: true } });
       const name = new Map(users.map((u) => [u.id, u.name]));
       out.partners = rows.map((r) => ({ id: r.userId, name: name.get(r.userId!) ?? 'Partner', bookings: r._count._all, value: r._sum.amount ?? 0, to: `/channel-partners/${r.userId}` }));

@@ -56,7 +56,7 @@ export function buildTeamTree(members: TeamMember[]): TeamNode[] {
     else roots.push(node);
   }
   // Leaders first, then by name, so the tree reads top-down the same way every time.
-  const order: AccountRole[] = ['leader', 'team_leader', 'employee', 'agent', 'admin'];
+  const order: AccountRole[] = ['leader', 'team_leader', 'employee', 'channel_partner', 'admin'];
   const sort = (nodes: TeamNode[]) => {
     nodes.sort((a, b) => order.indexOf(a.role) - order.indexOf(b.role) || a.name.localeCompare(b.name));
     nodes.forEach((n) => sort(n.children));

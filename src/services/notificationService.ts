@@ -61,7 +61,7 @@ export async function searchRecipients(search: string): Promise<NotificationReci
 
 export const AUDIENCE_LABEL: Record<NotificationAudience, string> = {
   all: 'All Partners',
-  agents: 'Agents',
+  agents: 'Channel partners',
   employees: 'Employees',
   leaders: 'Leaders',
   custom: 'Selected people',

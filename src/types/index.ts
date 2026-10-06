@@ -26,7 +26,7 @@ export const ROLE_NAME_BY_ID: Record<RoleId, RoleName> = {
 export type AccountStatus = 'active' | 'inactive' | 'suspended';
 
 /** `User.role` as the API spells it. Distinct from the numeric `RoleId` the older screens use. */
-export type AccountRole = 'admin' | 'employee' | 'leader' | 'team_leader' | 'agent';
+export type AccountRole = 'admin' | 'employee' | 'leader' | 'team_leader' | 'channel_partner';
 
 /**
  * Real `funds` table (`Admin\PaymentLogController`) — manual wallet-deposit requests that need

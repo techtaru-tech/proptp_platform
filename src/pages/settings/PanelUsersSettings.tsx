@@ -26,7 +26,7 @@ const ACCOUNT_ROLE_LABEL: Record<AccountRole, string> = {
   leader: 'Leader',
   team_leader: 'Team Leader',
   employee: 'Employee',
-  agent: 'Agent',
+  channel_partner: 'Channel partner',
 };
 
 const ACCOUNT_ROLE_OPTIONS = (Object.keys(ACCOUNT_ROLE_LABEL) as AccountRole[]).map((value) => ({
@@ -40,11 +40,11 @@ const MANAGER_ROLES: Record<AccountRole, AccountRole[]> = {
   leader: [],
   team_leader: ['leader'],
   employee: ['team_leader', 'leader'],
-  agent: ['employee', 'team_leader', 'leader'],
+  channel_partner: ['employee', 'team_leader', 'leader'],
 };
 
 
-const ROLE_KEY_BY_ID: Record<number, AccountRole> = { 0: 'agent', 1: 'admin', 2: 'employee', 3: 'leader', 4: 'team_leader' };
+const ROLE_KEY_BY_ID: Record<number, AccountRole> = { 0: 'channel_partner', 1: 'admin', 2: 'employee', 3: 'leader', 4: 'team_leader' };
 const roleKey = (id: number): AccountRole => ROLE_KEY_BY_ID[id] ?? 'employee';
 
 const STATUS_OPTIONS = [
@@ -241,7 +241,7 @@ function UserDrawer({
     ...(allowedManagerRoles.includes('leader') ? refLeaders : []),
     ...(allowedManagerRoles.includes('team_leader') ? refTeamLeaders : []),
     ...(allowedManagerRoles.includes('employee') ? refEmployees : []),
-    ...(allowedManagerRoles.includes('agent') ? refAgents : []),
+    ...(allowedManagerRoles.includes('channel_partner') ? refAgents : []),
   ].filter((m) => m.id !== user?.id && m.status === 'active');
 
   return (

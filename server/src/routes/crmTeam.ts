@@ -19,7 +19,7 @@ import { scopeOf } from '../services/hierarchy';
  */
 export const crmTeamRouter = Router();
 
-const TREE_ROLES: UserRole[] = ['leader', 'team_leader', 'employee', 'agent'];
+const TREE_ROLES: UserRole[] = ['leader', 'team_leader', 'employee', 'channel_partner'];
 
 crmTeamRouter.get('/', async (req, res, next) => {
   try {

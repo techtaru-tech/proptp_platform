@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, Flag, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Flag, Trash2, X } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { Textarea } from '../../components/ui/Textarea';
@@ -7,7 +7,7 @@ import { Badge } from '../../components/ui/Badge';
 import { useToast } from '../../context/ToastContext';
 import { fileUrl } from '../../services/apiClient';
 import { formatDateTime } from '../../utils/format';
-import { reviewImage, type CameraImage } from '../../services/cameraService';
+import { deletePicture, reviewImage, type CameraImage } from '../../services/cameraService';
 
 /** One picture, large, with the verdict controls. Arrow keys move between pictures. */
 export function Lightbox({ images, index, onIndex, onClose, onChanged }: { images: CameraImage[]; index: number; onIndex: (i: number) => void; onClose: () => void; onChanged: () => void }) {
@@ -54,6 +54,7 @@ export function Lightbox({ images, index, onIndex, onClose, onChanged }: { image
           {img.review === 'unreviewed' && <span className="text-white/60">Not reviewed yet</span>}
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" leftIcon={<Trash2 size={13} />} disabled={busy} onClick={async () => { if (!window.confirm('Delete this picture? This cannot be undone.')) return; setBusy(true); try { await deletePicture(img.id); toast({ title: 'Picture deleted', variant: 'success' }); if (images.length <= 1) onClose(); else if (index >= images.length - 1) onIndex(index - 1); onChanged(); } catch (e) { toast({ title: 'Could not delete it', description: (e as Error).message, variant: 'error' }); } finally { setBusy(false); } }}>Delete</Button>
           {img.review !== 'unreviewed' && <Button variant="outline" size="sm" disabled={busy} onClick={() => act({ decision: 'clear' }, 'Review cleared')}>Clear</Button>}
           {img.review !== 'ok' && <Button variant="outline" size="sm" leftIcon={<Check size={13} />} disabled={busy} onClick={() => act({ decision: 'ok' }, 'Marked fine')}>Looks fine</Button>}
           {img.review !== 'flagged' && <Button variant="primary" size="sm" leftIcon={<Flag size={13} />} disabled={busy} onClick={() => setFlagging(true)}>Flag an issue</Button>}

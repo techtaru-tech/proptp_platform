@@ -24,7 +24,7 @@ const actorName = async (req: AuthedRequest) => (await prisma.user.findUnique({ 
 
 adminChannelPartnersRouter.get('/', async (_req, res, next) => {
   try {
-    const partners = await prisma.user.findMany({ where: { role: 'agent' }, orderBy: { createdAt: 'desc' }, take: 500, select: { id: true, name: true, phone: true, email: true, partnerCode: true, status: true, kycStatus: true, authorisedProjectIds: true, passwordHash: true, panelRoleId: true, createdAt: true } });
+    const partners = await prisma.user.findMany({ where: { role: 'channel_partner' }, orderBy: { createdAt: 'desc' }, take: 500, select: { id: true, name: true, phone: true, email: true, partnerCode: true, status: true, kycStatus: true, authorisedProjectIds: true, passwordHash: true, panelRoleId: true, createdAt: true } });
     const ids = partners.map((p) => p.id);
     const [leads, bookings, open] = await Promise.all([
       prisma.lead.groupBy({ by: ['partnerId'], where: { partnerId: { in: ids }, archivedAt: null }, _count: true }),
@@ -41,7 +41,7 @@ adminChannelPartnersRouter.get('/', async (_req, res, next) => {
 
 adminChannelPartnersRouter.get('/:id', async (req, res, next) => {
   try {
-    const p = await prisma.user.findFirst({ where: { id: String(req.params.id), role: 'agent' }, select: { id: true, name: true, phone: true, email: true, partnerCode: true, status: true, kycStatus: true, city: true, aadhaarNumber: true, panNumber: true, authorisedProjectIds: true, passwordHash: true, panelRoleId: true, createdAt: true } });
+    const p = await prisma.user.findFirst({ where: { id: String(req.params.id), role: 'channel_partner' }, select: { id: true, name: true, phone: true, email: true, partnerCode: true, status: true, kycStatus: true, city: true, aadhaarNumber: true, panNumber: true, authorisedProjectIds: true, passwordHash: true, panelRoleId: true, createdAt: true } });
     if (!p) return res.status(404).json({ error: 'Channel partner not found.' });
     const policy = await getPolicy();
     const [leads, bookings, disputes, brokerage, projects] = await Promise.all([
@@ -71,7 +71,7 @@ adminChannelPartnersRouter.patch('/:id/projects', async (req: AuthedRequest, res
     if (!Array.isArray(ids)) return res.status(400).json({ error: 'projectIds must be a list.' });
     const unique = Array.from(new Set(ids.map(String)));
     if (unique.length && (await prisma.project.count({ where: { id: { in: unique } } })) !== unique.length) return res.status(400).json({ error: 'One of those projects does not exist.' });
-    const partner = await prisma.user.findFirst({ where: { id: String(req.params.id), role: 'agent' }, select: { id: true, name: true } });
+    const partner = await prisma.user.findFirst({ where: { id: String(req.params.id), role: 'channel_partner' }, select: { id: true, name: true } });
     if (!partner) return res.status(404).json({ error: 'Channel partner not found.' });
     await prisma.user.update({ where: { id: partner.id }, data: { authorisedProjectIds: unique } });
     await writeAudit(req, { module: 'Partners', action: 'Set authorised projects', recordId: partner.id, recordLabel: partner.name, description: `${unique.length} project(s).` });
@@ -84,7 +84,7 @@ adminChannelPartnersRouter.patch('/:id/projects', async (req: AuthedRequest, res
 /** Gives the partner a web login (or sets a new password for the one they have). */
 adminChannelPartnersRouter.put('/:id/login', async (req: AuthedRequest, res, next) => {
   try {
-    const partner = await prisma.user.findFirst({ where: { id: String(req.params.id), role: 'agent' }, select: { id: true, name: true, email: true, passwordHash: true, panelRoleId: true } });
+    const partner = await prisma.user.findFirst({ where: { id: String(req.params.id), role: 'channel_partner' }, select: { id: true, name: true, email: true, passwordHash: true, panelRoleId: true } });
     if (!partner) return res.status(404).json({ error: 'Channel partner not found.' });
     const email = String(req.body?.email ?? partner.email ?? '').trim().toLowerCase();
     const password = String(req.body?.password ?? '');
@@ -102,7 +102,7 @@ adminChannelPartnersRouter.put('/:id/login', async (req: AuthedRequest, res, nex
 
 adminChannelPartnersRouter.delete('/:id/login', async (req: AuthedRequest, res, next) => {
   try {
-    const partner = await prisma.user.findFirst({ where: { id: String(req.params.id), role: 'agent' }, select: { id: true, name: true } });
+    const partner = await prisma.user.findFirst({ where: { id: String(req.params.id), role: 'channel_partner' }, select: { id: true, name: true } });
     if (!partner) return res.status(404).json({ error: 'Channel partner not found.' });
     await prisma.user.update({ where: { id: partner.id }, data: { passwordHash: null, panelRoleId: null } });
     await prisma.session.deleteMany({ where: { userId: partner.id } }).catch(() => undefined);
@@ -117,7 +117,7 @@ adminChannelPartnersRouter.post('/:id/disputes', async (req: AuthedRequest, res,
   try {
     const title = String(req.body?.title ?? '').trim();
     if (!title) return res.status(400).json({ error: 'Give the dispute a title.' });
-    const partner = await prisma.user.findFirst({ where: { id: String(req.params.id), role: 'agent' }, select: { id: true, name: true } });
+    const partner = await prisma.user.findFirst({ where: { id: String(req.params.id), role: 'channel_partner' }, select: { id: true, name: true } });
     if (!partner) return res.status(404).json({ error: 'Channel partner not found.' });
     const d = await prisma.partnerDispute.create({ data: { partnerId: partner.id, title, details: String(req.body?.details ?? '').trim(), bookingId: str(req.body?.bookingId), leadId: str(req.body?.leadId), raisedByName: await actorName(req) } });
     await writeAudit(req, { module: 'Partners', action: 'Logged partner dispute', recordId: partner.id, recordLabel: partner.name, description: title });
@@ -149,7 +149,7 @@ adminChannelPartnersRouter.patch('/disputes/:id', async (req: AuthedRequest, res
 partnerPortalRouter.use(async (req: AuthedRequest, res, next) => {
   try {
     const me = await prisma.user.findUnique({ where: { id: req.auth!.sub }, select: { role: true, status: true } });
-    if (!me || me.role !== 'agent' || me.status !== 'active') return res.status(403).json({ error: 'This login is not an active channel partner.' });
+    if (!me || me.role !== 'channel_partner' || me.status !== 'active') return res.status(403).json({ error: 'This login is not an active channel partner.' });
     next();
   } catch (err) {
     next(err);

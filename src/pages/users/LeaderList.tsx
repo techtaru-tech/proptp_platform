@@ -65,7 +65,7 @@ export function LeaderList() {
     { key: 'email', header: 'Email', render: (l) => l.email },
     { key: 'teamSize', header: 'Team Size', align: 'right', render: (l) => l.teamSize },
     { key: 'employeeCount', header: 'Employees', align: 'right', render: (l) => l.employeeCount },
-    { key: 'agentCount', header: 'Agents', align: 'right', render: (l) => l.agentCount },
+    { key: 'agentCount', header: 'Channel partners', align: 'right', render: (l) => l.agentCount },
     { key: 'status', header: 'Status', render: (l) => <StatusBadge kind="account" status={l.status} /> },
   ];
 

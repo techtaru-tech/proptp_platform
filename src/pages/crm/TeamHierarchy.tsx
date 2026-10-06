@@ -21,7 +21,7 @@ const ROLE_LABEL: Record<AccountRole, string> = {
   leader: 'Leader',
   team_leader: 'Team Leader',
   employee: 'Employee',
-  agent: 'Agent',
+  channel_partner: 'Channel partner',
 };
 
 const ROLE_TONE: Record<AccountRole, BadgeTone> = {
@@ -29,7 +29,7 @@ const ROLE_TONE: Record<AccountRole, BadgeTone> = {
   leader: 'brand',
   team_leader: 'accent',
   employee: 'shell',
-  agent: 'info',
+  channel_partner: 'info',
 };
 
 export function TeamHierarchy() {
