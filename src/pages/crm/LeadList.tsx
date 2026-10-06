@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Bot, Download, Filter, GitBranch, MailPlus, MoonStar, Plus, Star, Tag as TagIcon, Trash2, Upload, UserCog, X, Zap } from 'lucide-react';
+import { Archive, Bot, Download, Filter, GitBranch, MailPlus, MoonStar, Plus, Star, Tag as TagIcon, Trash2, Upload, UserCog, X, Zap } from 'lucide-react';
+import { ArchivedLeadsModal } from '../../components/leads/ArchivedLeadsModal';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { TemperatureBadge } from '../../components/leads/TemperatureBadge';
@@ -73,6 +74,7 @@ export function LeadList() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [reloadKey, setReloadKey] = useState(0);
+  const [showArchived, setShowArchived] = useState(false);
 
   const [bulkModal, setBulkModal] = useState<'assign' | 'status' | 'priority' | 'source' | 'tag' | 'remove_tag' | 'move_stage' | 'run_automation' | 'enroll_sdr' | 'enroll_sequence' | null>(null);
   const [bulkValue, setBulkValue] = useState('');
@@ -283,7 +285,7 @@ export function LeadList() {
   const handleBulkDelete = async () => {
     const ids = Array.from(selectedIds);
     await bulkDelete(ids);
-    toast({ title: `${ids.length} lead(s) deleted`, variant: 'success' });
+    toast({ title: `${ids.length} lead(s) archived`, variant: 'success' });
     setSelectedIds(new Set());
     setReloadKey((k) => k + 1);
   };
@@ -296,7 +298,7 @@ export function LeadList() {
   const handleRowDelete = async () => {
     if (!rowDeleteTarget) return;
     await deleteLead(rowDeleteTarget.id);
-    toast({ title: 'Lead deleted', variant: 'success' });
+    toast({ title: 'Lead archived', variant: 'success' });
     setRowDeleteTarget(null);
     setReloadKey((k) => k + 1);
   };
@@ -429,7 +431,7 @@ export function LeadList() {
           <button
             type="button"
             onClick={() => setRowDeleteTarget(l)}
-            aria-label="Delete lead"
+            aria-label="Archive lead"
             className="rounded p-1.5 text-ink-faint hover:bg-danger-50 hover:text-danger-600 focus-ring"
           >
             <Trash2 size={14} />
@@ -449,6 +451,9 @@ export function LeadList() {
           <>
             <Button variant="outline" leftIcon={<Upload size={14} />} onClick={() => navigate('/crm/leads/import')}>
               Import
+            </Button>
+            <Button variant="outline" leftIcon={<Archive size={14} />} onClick={() => setShowArchived(true)}>
+              Archived
             </Button>
             <Button variant="outline" leftIcon={<Download size={14} />} onClick={handleExport}>
               Export
@@ -517,7 +522,7 @@ export function LeadList() {
             Run Automation
           </Button>
           <Button variant="danger" size="sm" leftIcon={<Trash2 size={13} />} onClick={() => setBulkDeleteOpen(true)}>
-            Delete
+            Archive
           </Button>
           <Button variant="ghost" size="sm" leftIcon={<X size={13} />} onClick={() => setSelectedIds(new Set())} className="ml-auto">
             Clear selection
@@ -822,9 +827,9 @@ export function LeadList() {
           await handleBulkDelete();
           setBulkDeleteOpen(false);
         }}
-        title="Delete selected leads"
-        description={`This will delete ${selectedIds.size} selected lead(s). This action can be recovered by an administrator from the backend, but is not reversible from this screen.`}
-        confirmLabel="Delete"
+        title="Archive selected leads"
+        description={`${selectedIds.size} selected lead(s) will be archived: out of every list and report, but kept with their history. You can restore them from Archived.`}
+        confirmLabel="Archive"
         variant="danger"
         audited
       />
@@ -833,12 +838,13 @@ export function LeadList() {
         isOpen={!!rowDeleteTarget}
         onClose={() => setRowDeleteTarget(null)}
         onConfirm={handleRowDelete}
-        title="Delete lead"
-        description={rowDeleteTarget ? `This will delete "${leadFullName(rowDeleteTarget)}" (${rowDeleteTarget.id}).` : undefined}
-        confirmLabel="Delete"
+        title="Archive lead"
+        description={rowDeleteTarget ? `"${leadFullName(rowDeleteTarget)}" will be archived: out of every list and report, but kept with its history. You can restore it from Archived.` : undefined}
+        confirmLabel="Archive"
         variant="danger"
         audited
       />
+      {showArchived && <ArchivedLeadsModal onClose={() => setShowArchived(false)} onRestored={() => setReloadKey((k) => k + 1)} />}
     </div>
   );
 }

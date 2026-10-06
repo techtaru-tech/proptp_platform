@@ -5,6 +5,7 @@ import PDFDocument from 'pdfkit';
 import type { AgreementStage, LegalDocKind, Prisma } from '@prisma/client';
 import { prisma } from '../prisma';
 import { UPLOAD_DIR } from './upload';
+import { getPolicy, penaltyFor } from './salesPolicy';
 
 /**
  * Legal files, generated documents and the derived statuses around them.
@@ -106,7 +107,7 @@ export function complianceStatus(validUntil: Date | null, at = new Date()): { st
 
 export const PLACEHOLDERS = [
   'buyer_name', 'phone', 'booking_reference', 'unit_number', 'project_name', 'project_location', 'area', 'agreed_value',
-  'booking_amount', 'rate', 'base_amount', 'other_charges', 'gst_registration', 'grand_total', 'token_amount', 'balance_after_token', 'date', 'milestone_name', 'milestone_amount', 'milestone_due', 'outstanding', 'paid_amount', 'paid_on', 'payment_reference',
+  'booking_amount', 'rate', 'base_amount', 'other_charges', 'gst_registration', 'grand_total', 'token_amount', 'balance_after_token', 'date', 'milestone_name', 'milestone_amount', 'milestone_due', 'outstanding', 'penalty', 'total_due', 'paid_amount', 'paid_on', 'payment_reference',
 ] as const;
 
 export const GENERATED_KINDS: LegalDocKind[] = ['cost_sheet', 'allotment_letter', 'agreement', 'receipt', 'demand_note'];
@@ -182,7 +183,8 @@ export async function buildValues(ctx: RenderContext): Promise<Record<string, st
   if (ctx.milestoneId) {
     const m = await prisma.paymentMilestone.findFirstOrThrow({ where: { id: ctx.milestoneId, fileId: file.id }, include: { payments: true } });
     const state = milestoneState(m);
-    Object.assign(v, { milestone_name: m.name, milestone_amount: rupees(m.amount), milestone_due: dateText(m.dueOn), outstanding: rupees(state.outstanding) });
+    const penalty = penaltyFor(await getPolicy(), { outstanding: state.outstanding, instalment: m.amount, daysOverdue: state.daysOverdue });
+    Object.assign(v, { milestone_name: m.name, milestone_amount: rupees(m.amount), milestone_due: dateText(m.dueOn), outstanding: rupees(state.outstanding), penalty: rupees(penalty), total_due: rupees(state.outstanding + penalty) });
   }
   if (ctx.paymentId) {
     const p = await prisma.milestonePayment.findFirstOrThrow({ where: { id: ctx.paymentId, milestone: { fileId: file.id } } });
@@ -258,7 +260,12 @@ export async function generateDocument(kind: LegalDocKind, ctx: RenderContext, u
   const template = await getTemplate(kind);
   if (!template) throw new TemplateError('There is no template for this document.');
   const values = await buildValues(ctx);
-  const text = renderTemplate(template.body, values);
+  let text = renderTemplate(template.body, values);
+  // The demand letter must carry the penalty whatever the wording says: if the template does not
+  // mention it and one is due, it is stated plainly underneath.
+  if (kind === 'demand_note' && values.penalty && values.penalty !== rupees(0) && !/\{\{\s*penalty\s*\}\}/.test(template.body)) {
+    text += `\n\nLate-payment charge as per policy: ${values.penalty}.\nTotal payable including the charge: ${values.total_due}.`;
+  }
   const url = await writePdf(template.title, text, `Generated from booking ${values.booking_reference} on ${values.date}. Wording is a template and must be approved by counsel before use.`);
   const label = ctx.milestoneId ? ` — ${values.milestone_name}` : '';
   return prisma.legalDocument.create({

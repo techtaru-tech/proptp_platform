@@ -1,4 +1,4 @@
-import type { PlotMapBundle, PlotMapPlot, PlotMapPoint, PlotMapStatus, PublicPlotMap } from '../types';
+import type { PlotStage, PlotMapBundle, PlotMapPlot, PlotMapPoint, PlotMapStatus, PublicPlotMap } from '../types';
 import { api, uploadFiles } from './apiClient';
 
 /**
@@ -93,6 +93,11 @@ export const PLOT_STATUS_ORDER: PlotMapStatus[] = ['available', 'onHold', 'booke
  * SVG polygon, and chosen so the four stay apart for the common kinds of colour blindness —
  * green and amber differ in lightness as well as hue, and the two dark ones differ in hue.
  */
+export const PLOT_STAGES: { key: PlotStage; label: string }[] = [
+  { key: 'available', label: 'Available' }, { key: 'hold', label: 'Hold' }, { key: 'token', label: 'Token' },
+  { key: 'booked', label: 'Booked' }, { key: 'agreement', label: 'Agreement' }, { key: 'registered', label: 'Registered' },
+];
+
 export const PLOT_STATUS_COLOR: Record<PlotMapStatus, { fill: string; stroke: string; text: string; halo: string }> = {
   available: { fill: '#12b76a', stroke: '#027a48', text: '#05492f', halo: '#ffffff' },
   onHold: { fill: '#f79009', stroke: '#b54708', text: '#6b2e05', halo: '#ffffff' },

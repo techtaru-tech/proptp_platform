@@ -159,6 +159,9 @@ model Lead {
   interestedProjectId String?
   temperature         LeadTemperature?
   siteVisits          SiteVisit[]
+  /// Set instead of deleting. An archived lead disappears from every list and count but is kept,
+  /// with its history, and can be restored.
+  archivedAt          DateTime?
 
   status                       LeadStatus   @default(new)
   priority                     LeadPriority @default(normal)
@@ -1632,9 +1635,10 @@ model Booking {
   /// Server-computed at creation from the unit's commission rate — never accepted from the client.
   commission Int           @default(0)
 
-  investments Investment[]
-  earnings    EarningEntry[]
-  legalFile   LegalFile?
+  investments  Investment[]
+  earnings     EarningEntry[]
+  legalFile    LegalFile?
+  cancellation BookingCancellation?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2189,6 +2193,9 @@ model NotificationSettings {
 /// Every admin mutation writes one row. Replaces the frontend's in-memory audit array.
 model AuditEntry {
   id          String   @id @default(cuid())
+  /// What changed, field by field: [{ model, id, field, from, to }]. Absent on entries that only
+  /// describe an action, and capped so a bulk edit cannot write a novel.
+  changes     Json?
   userId      String
   userName    String
   action      String
@@ -3025,4 +3032,58 @@ model SiteVisit {
   @@index([leadId])
   @@index([scheduledAt, status])
   @@index([hostId])
+}
+
+// ---------------------------------------------------------------------------
+// Sales policy and booking cancellation
+//
+// One row of admin-editable rules (Settings > Sales policy): the late-payment penalty, what is
+// kept when a booking is cancelled and who may approve the refund, and whether a booking that has
+// not been verified yet shows as "Token" or already as "Booked".
+// ---------------------------------------------------------------------------
+
+model SalesPolicy {
+  id                     String   @id @default("singleton")
+  /// percent | fixed — a share of the overdue amount, or a flat rupee amount, per period.
+  penaltyType            String   @default("percent")
+  penaltyRate            Float    @default(1)
+  /// day | month
+  penaltyPeriod          String   @default("month")
+  /// Days after the due date before any penalty starts.
+  penaltyGraceDays       Int      @default(7)
+  /// The most a penalty can reach, as a percentage of the instalment. 0 means no cap.
+  penaltyCapPercent      Float    @default(10)
+  /// Share of what the buyer paid that is kept when a booking is cancelled.
+  refundDeductionPercent Float    @default(10)
+  /// admin (a full-access administrator) | leader (an account with the Leader role) | accounts (anyone with Payments access)
+  refundApprover         String   @default("admin")
+  /// Whether a booking still waiting to be verified shows as "Token" rather than "Booked".
+  showTokenStage         Boolean  @default(true)
+  updatedAt              DateTime @updatedAt
+}
+
+model BookingCancellation {
+  id               String    @id @default(cuid())
+  booking          Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId        String    @unique
+  reason           String
+  /// Worked out when the request is made, from what was paid and the policy at that moment, so a
+  /// later change to the policy does not move a request that is already waiting.
+  amountPaid       Int
+  deductionPercent Float
+  deductionAmount  Int
+  refundAmount     Int
+  /// pending | approved | rejected
+  status           String    @default("pending")
+  requestedById    String
+  requestedByName  String
+  requestedAt      DateTime  @default(now())
+  decidedById      String?
+  decidedByName    String?
+  decidedAt        DateTime?
+  decisionNote     String?
+  refundedAt       DateTime?
+  refundReference  String?
+
+  @@index([status])
 }

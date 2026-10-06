@@ -14,7 +14,7 @@ export interface LegalFileRow {
 }
 export interface MilestoneRow {
   id: string; name: string; dueOn: string; amount: number; demandedAt: string | null; paid: number; outstanding: number;
-  status: 'upcoming' | 'due' | 'partial' | 'paid' | 'overdue'; daysOverdue: number;
+  status: 'upcoming' | 'due' | 'partial' | 'paid' | 'overdue'; daysOverdue: number; penalty: number; totalDue: number;
   payments: { id: string; amount: number; paidOn: string; reference: string | null }[];
 }
 export interface LegalDoc { id: string; kind: string; title: string; url: string; generated: boolean; milestoneId: string | null; createdAt: string }
@@ -30,7 +30,7 @@ export interface ComplianceItem { id: string; source: 'approval' | 'vendor_docum
 export interface Approval { id: string; projectId: string; projectName: string; kind: string; referenceNo: string; issuedOn: string; validUntil: string | null; documentUrl: string | null; status: ComplianceStatus; daysLeft: number | null }
 export interface LandRecord { id: string; projectName: string; khasra: string; area: string | null; conversionOrder: string | null; mutation: 'pending' | 'applied' | 'completed'; titleDocUrl: string | null; notes: string | null }
 export interface LegalCase { id: string; title: string; counterparty: string; stage: string; nextHearing: string | null; closed: boolean; notes: string | null; projectName: string | null; buyerName: string | null; hearingPassed: boolean; documents: string[] }
-export interface OverdueItem { milestoneId: string; fileId: string; buyerName: string; phone: string; projectName: string; milestone: string; dueOn: string; amount: number; outstanding: number; daysOverdue: number; demandedAt: string | null }
+export interface OverdueItem { penalty: number; milestoneId: string; fileId: string; buyerName: string; phone: string; projectName: string; milestone: string; dueOn: string; amount: number; outstanding: number; daysOverdue: number; demandedAt: string | null }
 export interface Template { kind: string; title: string; body: string }
 
 export const listLegalFiles = (q: { stage?: string; overdue?: boolean; search?: string }) =>

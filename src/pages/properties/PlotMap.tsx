@@ -22,6 +22,7 @@ import { cn } from '../../utils/cn';
 import { formatCurrency, formatDateTime, formatFullCurrency } from '../../utils/format';
 import type { PlotMapMeta, PlotMapPlot, PlotMapStatus } from '../../types';
 import {
+  PLOT_STAGES,
   PLOT_STATUS_COLOR,
   PLOT_STATUS_LABEL,
   PLOT_STATUS_ORDER,
@@ -334,6 +335,11 @@ export function PlotMap() {
         </div>
       )}
 
+      <p className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted" aria-label="Plots by stage">
+        <span className="font-medium text-ink">By stage:</span>
+        {PLOT_STAGES.map((s) => <span key={s.key}>{s.label} <strong className="tabular-nums text-ink">{counts?.stages?.[s.key] ?? 0}</strong></span>)}
+      </p>
+
       <Card padded={false} className="mb-5">
         <div className="flex flex-wrap items-end gap-3 p-4">
           <RangeBox label="Size (sq ft)" min={filters.sizeMin} max={filters.sizeMax} onMin={(v) => setFilters((f) => ({ ...f, sizeMin: v }))} onMax={(v) => setFilters((f) => ({ ...f, sizeMax: v }))} />
@@ -484,6 +490,18 @@ function PlotDrawer({
             <span className="text-sm font-medium text-ink">{status ? PLOT_STATUS_LABEL[status] : 'Not linked to a plot'}</span>
             {plot.holdUntil && <span className="text-xs text-ink-muted">until {formatDateTime(plot.holdUntil)}</span>}
           </div>
+          {plot.stage && (
+            <ol aria-label="Plot stage" className="flex items-center gap-1 text-[11px]">
+              {PLOT_STAGES.map((s, i) => {
+                const reached = PLOT_STAGES.findIndex((x) => x.key === plot.stage) >= i;
+                return (
+                  <li key={s.key} aria-current={s.key === plot.stage ? 'step' : undefined} className={cn('flex-1 rounded px-1 py-1 text-center', s.key === plot.stage ? 'bg-brand-600 font-semibold text-white' : reached ? 'bg-brand-50 text-brand-700' : 'bg-surface-muted text-ink-faint')}>
+                    {s.label}
+                  </li>
+                );
+              })}
+            </ol>
+          )}
 
           {plot.unitId ? (
             <dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">

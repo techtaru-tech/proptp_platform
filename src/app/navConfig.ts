@@ -180,6 +180,7 @@ export const NAV_ITEMS: NavItem[] = [
       { label: 'Pending', to: '/bookings/pending' },
       { label: 'Booked', to: '/bookings/booked' },
       { label: 'Remaining Payments', to: '/bookings/remaining' },
+      { label: 'Cancellations', to: '/bookings/cancellations' },
     ],
   },
   {
@@ -289,6 +290,7 @@ export const NAV_ITEMS: NavItem[] = [
       { label: 'Admin Profile', to: '/settings/profile' },
       { label: 'Security', to: '/settings/security' },
       { label: 'Return Schedules', to: '/settings/schedules' },
+      { label: 'Sales Policy', to: '/settings/sales-policy' },
       { label: 'Referral Commission', to: '/settings/referral-commission' },
       { label: 'Badges / Ranks', to: '/settings/badges' },
       { label: 'Audit Log', to: '/settings/audit-log' },

@@ -6,6 +6,7 @@ import { fireTrigger } from '../services/automationEngine';
 import type { AuthedRequest } from '../services/auth';
 import {
   actorNameOf,
+  archivedLeadWhere,
   assignableUsers,
   canAssignTo,
   canUnassign,
@@ -166,6 +167,30 @@ leadsRouter.get('/assignees', async (req, res, next) => {
 leadsRouter.get('/project-options', async (_req, res, next) => {
   try {
     res.json(await prisma.project.findMany({ where: { status: 1 }, select: { id: true, projectName: true }, orderBy: { projectName: 'asc' } }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Archived leads the caller could see, newest first. Registered before `/:id`, which only reaches live leads. */
+leadsRouter.get('/archived', async (req, res, next) => {
+  try {
+    const scope = await scopeOf(req);
+    const rows = await prisma.lead.findMany({ where: archivedLeadWhere(scope), orderBy: { archivedAt: 'desc' }, take: 200, select: { id: true, firstName: true, lastName: true, phone: true, source: true, archivedAt: true, assignedUserId: true } });
+    res.json(rows.map((l) => ({ ...l, name: `${l.firstName} ${l.lastName}`.trim(), archivedAt: l.archivedAt?.toISOString() })));
+  } catch (err) {
+    next(err);
+  }
+});
+
+leadsRouter.post('/archived/:leadId/restore', async (req, res, next) => {
+  try {
+    const scope = await scopeOf(req);
+    const lead = await prisma.lead.findFirst({ where: { AND: [{ id: String(req.params.leadId) }, archivedLeadWhere(scope)] }, select: { id: true } });
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+    await prisma.lead.update({ where: { id: lead.id }, data: { archivedAt: null } });
+    await prisma.leadActivity.create({ data: { leadId: lead.id, type: 'restored', description: 'Lead restored from the archive.', userName: await actorNameOf(req) } });
+    res.json({ restored: true });
   } catch (err) {
     next(err);
   }
@@ -360,7 +385,7 @@ leadsRouter.post('/bulk/stage', async (req, res) => {
 leadsRouter.post('/bulk/delete', async (req, res) => {
   const { ids } = req.body as { ids: string[] };
   const allowed = await leadIdsInScope(await scopeOf(req), ids);
-  await prisma.lead.deleteMany({ where: { id: { in: allowed } } });
+  await prisma.lead.updateMany({ where: { id: { in: allowed } }, data: { archivedAt: new Date() } });
   res.status(204).send();
 });
 
@@ -592,8 +617,13 @@ leadsRouter.patch('/:id', async (req, res) => {
   res.json(updated);
 });
 
+/**
+ * "Delete" archives: the lead and everything on it stay in the database, out of every list, and can be
+ * restored. Nothing here removes a customer's record for good.
+ */
 leadsRouter.delete('/:id', async (req, res) => {
-  await prisma.lead.delete({ where: { id: req.params.id } }).catch(() => undefined);
+  await prisma.lead.update({ where: { id: req.params.id }, data: { archivedAt: new Date() } }).catch(() => undefined);
+  await prisma.leadActivity.create({ data: { leadId: req.params.id, type: 'archived', description: 'Lead archived.', userName: await actorNameOf(req) } }).catch(() => undefined);
   res.status(204).send();
 });
 

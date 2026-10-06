@@ -159,6 +159,8 @@ export interface AuditEntry {
   recordLabel: string;
   timestamp: string;
   description: string;
+  /** Field-by-field what changed, where the database layer saw it. */
+  changes?: { model: string; id: string; field: string; from: string | null; to: string | null }[];
 }
 
 // ============================================================================
@@ -1988,6 +1990,8 @@ export interface PlotMapPlot {
   source: 'manual' | 'detected';
   confirmed: boolean;
   status: PlotMapStatus | null;
+  /** The fuller life-cycle stage, derived from the hold, booking and legal file. */
+  stage: PlotStage | null;
   label: string;
   plotNumber: string | null;
   area: string | null;
@@ -1999,7 +2003,10 @@ export interface PlotMapPlot {
   holdUntil: string | null;
 }
 
+export type PlotStage = 'available' | 'hold' | 'token' | 'booked' | 'agreement' | 'registered';
+
 export interface PlotMapCounts {
+  stages: Record<PlotStage, number>;
   available: number;
   onHold: number;
   booked: number;

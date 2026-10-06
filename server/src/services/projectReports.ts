@@ -2,7 +2,8 @@ import { prisma } from '../prisma';
 import { projectProgress } from './construction';
 import { stockPosition, vendorPerformance } from './material';
 import { STAGE_ORDER, complianceStatus, currentStage, milestoneState } from './legal';
-import { isHoldActive, propertyStatus } from './derive';
+import { PLOT_STAGES, isHoldActive, plotStage, propertyStatus } from './derive';
+import { getPolicy, penaltyFor } from './salesPolicy';
 
 /**
  * The project and operations reports (Reports → Project reports).
@@ -147,6 +148,15 @@ async function inventory(p: ReportParams): Promise<Report> {
   const projects = await prisma.project.findMany({ where: p.projectId ? { id: p.projectId } : {}, include: { units: { select: { id: true, bookingStatus: true, totalInvestmentAmount: true } } }, orderBy: { projectName: 'asc' } });
   const holds = await prisma.plotHold.findMany({ where: { status: 1, holdEnd: { gt: new Date() } }, select: { unitId: true, status: true, holdEnd: true } });
   const held = new Set(holds.filter((h) => isHoldActive(h)).map((h) => h.unitId));
+  const policy = await getPolicy();
+  const liveBookings = await prisma.booking.findMany({
+    where: { propertyId: { in: projects.flatMap((p) => p.units.map((u) => u.id)) }, isDeposit: 0, status: { not: 'cancelled' } },
+    include: { legalFile: { include: { stages: { select: { id: true } }, registry: { select: { status: true } } } } },
+    orderBy: { createdAt: 'asc' },
+  });
+  const bookingOf = new Map<string, (typeof liveBookings)[number]>();
+  for (const b of liveBookings) if (!bookingOf.has(b.propertyId)) bookingOf.set(b.propertyId, b);
+  const stageRows: ReportTable['rows'] = [];
   const zero = () => ({ available: 0, onHold: 0, booked: 0, soldOut: 0 });
   const tot = { c: zero(), v: zero() };
   const rows: ReportTable['rows'] = [];
@@ -155,6 +165,9 @@ async function inventory(p: ReportParams): Promise<Report> {
     const c = zero(); const v = zero();
     for (const u of proj.units) { const s = propertyStatus(u, held.has(u.id)); c[s] += 1; v[s] += u.totalInvestmentAmount; }
     (Object.keys(c) as (keyof typeof c)[]).forEach((k) => { tot.c[k] += c[k]; tot.v[k] += v[k]; });
+    const st = Object.fromEntries(PLOT_STAGES.map((s) => [s, 0])) as Record<(typeof PLOT_STAGES)[number], number>;
+    for (const u of proj.units) st[plotStage(u, held.has(u.id), bookingOf.get(u.id), policy.showTokenStage)] += 1;
+    stageRows.push([proj.projectName, proj.units.length, ...PLOT_STAGES.map((s) => st[s])]);
     rows.push([proj.projectName, proj.units.length, c.available, c.onHold, c.booked, c.soldOut]);
     valueRows.push([proj.projectName, v.available, v.onHold, v.booked, v.soldOut, v.available + v.onHold + v.booked + v.soldOut]);
   }
@@ -162,6 +175,7 @@ async function inventory(p: ReportParams): Promise<Report> {
     key: 'inventory', title: 'Live inventory position', description: 'Read from the same plot status the plot map shows, including live holds.',
     summary: [{ label: 'Available', value: tot.c.available }, { label: 'Held', value: tot.c.onHold }, { label: 'Booked', value: tot.c.booked }, { label: 'Sold', value: tot.c.soldOut }, { label: 'Available value', value: inr(tot.v.available) }],
     tables: [
+      { title: 'By stage (hold → token → booked → agreement → registered)', columns: ['Project', 'Total plots', ...PLOT_STAGES.map(cap)], rows: stageRows },
       { title: 'By count', columns: ['Project', 'Total plots', 'Available', 'Held', 'Booked', 'Sold'], rows },
       { title: 'By value (₹)', columns: ['Project', 'Available', 'Held', 'Booked', 'Sold', 'Total'], rows: valueRows, money: [1, 2, 3, 4, 5] },
     ],
@@ -189,6 +203,8 @@ async function legalStatus(p: ReportParams): Promise<Report> {
 
 async function collections(p: ReportParams): Promise<Report> {
   const files = await prisma.legalFile.findMany({ where: p.projectId ? { projectId: p.projectId } : {}, include: { project: { select: { projectName: true } }, milestones: { include: { payments: true } } } });
+  const policy = await getPolicy();
+  let penaltyTotal = 0;
   const today = Date.now();
   const proj = new Map<string, { due: number; collected: number; outstanding: number; plans: number }>();
   const age = { '1–30 days': 0, '31–60 days': 0, '61–90 days': 0, 'Over 90 days': 0 };
@@ -206,7 +222,9 @@ async function collections(p: ReportParams): Promise<Report> {
         e.outstanding += s.outstanding; overdueTotal += s.outstanding;
         const k = s.daysOverdue <= 30 ? '1–30 days' : s.daysOverdue <= 60 ? '31–60 days' : s.daysOverdue <= 90 ? '61–90 days' : 'Over 90 days';
         age[k] += s.outstanding;
-        items.push([f.buyerName, f.phone, f.project.projectName, m.name, day(m.dueOn), s.daysOverdue, s.outstanding]);
+        const pen = penaltyFor(policy, { outstanding: s.outstanding, instalment: m.amount, daysOverdue: s.daysOverdue });
+        penaltyTotal += pen;
+        items.push([f.buyerName, f.phone, f.project.projectName, m.name, day(m.dueOn), s.daysOverdue, s.outstanding, pen]);
       }
     }
     proj.set(f.project.projectName, e);
@@ -214,11 +232,11 @@ async function collections(p: ReportParams): Promise<Report> {
   items.sort((a, b) => Number(b[5]) - Number(a[5]));
   return {
     key: 'collections', title: 'Collections against payment plans', description: 'Overdue = past its due date with an amount still outstanding.',
-    summary: [{ label: 'Planned', value: inr(planTotal) }, { label: 'Collected', value: inr(collectedTotal) }, { label: 'Overdue', value: inr(overdueTotal) }, { label: 'Buyers overdue', value: new Set(items.map((i) => i[1])).size }],
+    summary: [{ label: 'Planned', value: inr(planTotal) }, { label: 'Collected', value: inr(collectedTotal) }, { label: 'Overdue', value: inr(overdueTotal) }, { label: 'Penalty accrued', value: inr(penaltyTotal) }, { label: 'Buyers overdue', value: new Set(items.map((i) => i[1])).size }],
     tables: [
       { title: 'By project', columns: ['Project', 'Plans', 'Due to date', 'Collected', 'Overdue'], rows: [...proj.entries()].map(([n, e]) => [n, e.plans, e.due, e.collected, e.outstanding]), money: [2, 3, 4] },
       { title: 'Overdue ageing', columns: ['Age', 'Outstanding'], rows: Object.entries(age), money: [1] },
-      { title: 'Overdue instalments', columns: ['Buyer', 'Phone', 'Project', 'Milestone', 'Due', 'Days overdue', 'Outstanding'], rows: items, money: [6] },
+      { title: 'Overdue instalments', columns: ['Buyer', 'Phone', 'Project', 'Milestone', 'Due', 'Days overdue', 'Outstanding', 'Penalty'], rows: items, money: [6, 7] },
     ],
   };
 }

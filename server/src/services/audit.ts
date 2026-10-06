@@ -2,6 +2,7 @@ import type { NextFunction, Response } from 'express';
 import { prisma } from '../prisma';
 import type { AuthedRequest } from './auth';
 import { moduleForPath } from './permissions';
+import { currentStore, requestStore, MAX_CHANGES, type RequestStore } from './requestContext';
 
 /**
  * Every admin mutation writes one AuditEntry. Replaces the frontend's in-memory audit
@@ -22,6 +23,8 @@ export async function writeAudit(req: AuthedRequest, input: AuditInput): Promise
   // Tells the catch-all middleware that this request already has a hand-written entry, which
   // names the record and what changed far better than a path ever could.
   (req as AuditedRequest).auditWritten = true;
+  const store = (req as AuditedRequest).auditStore ?? currentStore();
+  const changes = (store?.changes ?? []).slice(0, MAX_CHANGES);
   try {
     const actor = req.auth
       ? await prisma.user.findUnique({ where: { id: req.auth.sub }, select: { id: true, name: true } })
@@ -35,6 +38,8 @@ export async function writeAudit(req: AuthedRequest, input: AuditInput): Promise
         recordId: input.recordId,
         recordLabel: input.recordLabel,
         description: input.description ?? input.action,
+        // Whatever the database layer saw change while handling this request.
+        ...(changes.length ? { changes: changes as never } : {}),
       },
     });
   } catch (err) {
@@ -54,6 +59,16 @@ export async function writeAudit(req: AuthedRequest, input: AuditInput): Promise
 
 interface AuditedRequest extends AuthedRequest {
   auditWritten?: boolean;
+  /** The request's change log, held here because the finish event no longer runs inside it. */
+  auditStore?: RequestStore;
+}
+
+/** Opens the per-request change log the Prisma layer fills in. Mounted first, so every later handler runs inside it. */
+export function auditContext(req: AuditedRequest, _res: Response, next: NextFunction) {
+  requestStore.run({ changes: [] }, () => {
+    req.auditStore = currentStore();
+    next();
+  });
 }
 
 const MUTATING = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);

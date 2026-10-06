@@ -462,6 +462,7 @@ export function adminAudit(entry: AuditEntry) {
     recordLabel: entry.recordLabel,
     timestamp: isoRequired(entry.createdAt),
     description: entry.description,
+    changes: Array.isArray(entry.changes) ? entry.changes : [],
   };
 }
 

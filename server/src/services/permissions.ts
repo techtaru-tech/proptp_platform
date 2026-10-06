@@ -81,6 +81,7 @@ const PATH_MODULE_ENTRIES = [
   { prefix: '/plot-holds', module: 'properties' },
   { prefix: '/project-maps', module: 'properties' },
   { prefix: '/bookings', module: 'bookings' },
+  { prefix: '/booking-cancellations', module: 'bookings' },
   { prefix: '/funds', module: 'payments' },
   { prefix: '/kyc', module: 'payments' },
   { prefix: '/investments', module: 'investments' },
@@ -101,6 +102,7 @@ const PATH_MODULE_ENTRIES = [
 
   { prefix: '/platform-settings', module: 'settings' },
   { prefix: '/settings', module: 'settings' },
+  { prefix: '/sales-policy', module: 'settings' },
   { prefix: '/audit', module: 'settings' },
   { prefix: '/panel-roles', module: 'settings' },
   { prefix: '/panel-users', module: 'settings' },

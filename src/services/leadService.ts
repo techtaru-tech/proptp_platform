@@ -247,3 +247,7 @@ export async function importLeads(
 ): Promise<ImportSummary> {
   return api.post<ImportSummary>('/leads/import', { rows, defaultPipelineId, defaultStageId });
 }
+
+export interface ArchivedLead { id: string; name: string; phone: string; source: string; archivedAt: string }
+export const listArchivedLeads = () => api.get<ArchivedLead[]>('/leads/archived');
+export const restoreLead = (id: string) => api.post(`/leads/archived/${id}/restore`);

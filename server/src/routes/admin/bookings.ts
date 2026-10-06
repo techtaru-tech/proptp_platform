@@ -184,6 +184,8 @@ adminBookingsRouter.post('/:id/status', async (req: AuthedRequest, res, next) =>
   try {
     const nextStatus = BOOKING_STATUS_BY_ID[Number(req.body?.status)];
     if (!nextStatus) return res.status(400).json({ error: 'status must be 0, 1, 2 or 3.' });
+    // Cancelling frees the plot and reverses money, so it goes through a request someone else approves.
+    if (nextStatus === 'cancelled') return res.status(400).json({ error: 'Use “Request cancellation” on the booking — it needs an approval and works out the refund.' });
     const updated = await prisma.booking.update({
       where: { id: String(req.params.id) },
       data: { status: nextStatus },

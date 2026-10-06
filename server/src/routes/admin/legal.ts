@@ -3,6 +3,7 @@ import type { AgreementStage, LegalDocKind, MutationStatus, RegistryStatus } fro
 import { prisma } from '../../prisma';
 import type { AuthedRequest } from '../../services/auth';
 import { writeAudit } from '../../services/audit';
+import { getPolicy, penaltyFor } from '../../services/salesPolicy';
 import {
   GENERATED_KINDS, PLACEHOLDERS, STAGE_ORDER, TemplateError, complianceStatus, currentStage, generateDocument, getTemplate,
   milestoneState, openLegalFileFor, syncLegalFiles, unknownPlaceholders,
@@ -84,12 +85,17 @@ adminLegalRouter.get('/files/:id', async (req, res, next) => {
       },
     });
     if (!f) return res.status(404).json({ error: 'Legal file not found.' });
+    const policy = await getPolicy();
     res.json({
       ...summarise(f),
       reference: f.booking.reference, bookingAmount: f.booking.amount,
       unit: `${f.booking.unit.propertyNumber} · ${f.booking.unit.propertyArea} ${f.booking.unit.propertyMeasurement}`.trim(),
       documents: f.documents, stages: f.stages, registry: f.registry, cases: f.cases,
-      milestones: f.milestones.map((m) => ({ ...m, ...milestoneState(m) })),
+      milestones: f.milestones.map((m) => {
+        const st = milestoneState(m);
+        const penalty = penaltyFor(policy, { outstanding: st.outstanding, instalment: m.amount, daysOverdue: st.daysOverdue });
+        return { ...m, ...st, penalty, totalDue: st.outstanding + penalty };
+      }),
       nextStage: STAGE_ORDER[(currentStage(f.stages) ? STAGE_ORDER.indexOf(currentStage(f.stages)!) : -1) + 1] ?? null,
     });
   } catch (err) {
@@ -472,12 +478,13 @@ adminLegalRouter.get('/compliance', async (_req, res, next) => {
 adminLegalRouter.get('/overdue', async (_req, res, next) => {
   try {
     const rows = await prisma.paymentMilestone.findMany({ where: { dueOn: { lt: new Date() } }, include: { payments: true, file: { select: { id: true, buyerName: true, phone: true, project: { select: { projectName: true } } } } } });
+    const policy = await getPolicy();
     const overdue = rows.map((m) => ({ m, s: milestoneState(m) })).filter((x) => x.s.status === 'overdue');
     res.json({
       total: overdue.reduce((s, x) => s + x.s.outstanding, 0),
       items: overdue.sort((a, b) => b.s.daysOverdue - a.s.daysOverdue).map(({ m, s }) => ({
         milestoneId: m.id, fileId: m.file.id, buyerName: m.file.buyerName, phone: m.file.phone, projectName: m.file.project.projectName,
-        milestone: m.name, dueOn: m.dueOn.toISOString(), amount: m.amount, outstanding: s.outstanding, daysOverdue: s.daysOverdue, demandedAt: m.demandedAt?.toISOString() ?? null,
+        milestone: m.name, dueOn: m.dueOn.toISOString(), amount: m.amount, outstanding: s.outstanding, daysOverdue: s.daysOverdue, penalty: penaltyFor(policy, { outstanding: s.outstanding, instalment: m.amount, daysOverdue: s.daysOverdue }), demandedAt: m.demandedAt?.toISOString() ?? null,
       })),
     });
   } catch (err) {

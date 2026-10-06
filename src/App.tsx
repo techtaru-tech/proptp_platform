@@ -82,6 +82,8 @@ import { ConstructionHome } from './pages/construction/ConstructionHome';
 import { ConstructionProject } from './pages/construction/ConstructionProject';
 import { ReviewUpdates } from './pages/construction/ReviewUpdates';
 import { OpsRules } from './pages/automation/OpsRules';
+import { SalesPolicySettings } from './pages/settings/SalesPolicySettings';
+import { Cancellations } from './pages/bookings/Cancellations';
 import { Cameras } from './pages/cameras/Cameras';
 import { CameraDetail } from './pages/cameras/CameraDetail';
 import { LegalFiles } from './pages/legal/LegalFiles';
@@ -326,6 +328,8 @@ function App() {
                 <Route path="/settings/security" element={<SecuritySettings />} />
                 <Route path="/settings/schedules" element={<ScheduleManage />} />
                 <Route path="/settings/referral-commission" element={<ReferralCommissionSettings />} />
+                <Route path="/settings/sales-policy" element={<SalesPolicySettings />} />
+                <Route path="/bookings/cancellations" element={<Cancellations />} />
                 <Route path="/settings/badges" element={<BadgeSettings />} />
                 <Route path="/settings/audit-log" element={<AuditLogPage />} />
               </Route>

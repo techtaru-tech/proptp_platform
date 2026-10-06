@@ -135,11 +135,20 @@ export async function scopeOf(req: Request): Promise<Scope> {
 
 /** The `where` that limits a lead query to what this scope may read. */
 export function leadScopeWhere(scope: Scope): Prisma.LeadWhereInput {
-  if (scope.kind === 'all') return {};
+  // An archived lead is out of every list, count and report — for everyone, administrators included.
+  const live: Prisma.LeadWhereInput = { archivedAt: null };
+  if (scope.kind === 'all') return live;
   if (scope.seesUnassigned) {
-    return { OR: [{ assignedUserId: { in: scope.userIds } }, { assignedUserId: null }] };
+    return { AND: [live, { OR: [{ assignedUserId: { in: scope.userIds } }, { assignedUserId: null }] }] };
   }
-  return { assignedUserId: { in: scope.userIds } };
+  return { AND: [live, { assignedUserId: { in: scope.userIds } }] };
+}
+
+/** Archived leads the caller could otherwise see — for the Archived view and for restoring. */
+export function archivedLeadWhere(scope: Scope): Prisma.LeadWhereInput {
+  const archived: Prisma.LeadWhereInput = { archivedAt: { not: null } };
+  if (scope.kind === 'all') return archived;
+  return { AND: [archived, scope.seesUnassigned ? { OR: [{ assignedUserId: { in: scope.userIds } }, { assignedUserId: null }] } : { assignedUserId: { in: scope.userIds } }] };
 }
 
 /** Adds the scope to an existing lead filter without disturbing its own `OR`/`AND`. */

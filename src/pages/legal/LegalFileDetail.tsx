@@ -92,7 +92,7 @@ export function LegalFileDetail() {
                 <tr key={m.id} className="border-t border-line">
                   <td className="px-5 py-2.5 font-medium">{m.name}{m.demandedAt && <span className="block text-xs font-normal text-ink-muted">Demand sent {formatDate(m.demandedAt)}</span>}</td>
                   <td className="px-3">{formatDate(m.dueOn)}</td><td className="px-3 text-right tabular-nums">{formatCurrency(m.amount)}</td><td className="px-3 text-right tabular-nums">{formatCurrency(m.paid)}</td>
-                  <td className="px-3"><Badge tone={TONE[m.status]}>{m.status === 'overdue' ? `Overdue ${m.daysOverdue}d` : label(m.status)}</Badge></td>
+                  <td className="px-3"><Badge tone={TONE[m.status]}>{m.status === 'overdue' ? `Overdue ${m.daysOverdue}d` : label(m.status)}</Badge>{m.penalty > 0 && <span className="mt-0.5 block text-xs text-danger-700">+ {formatCurrency(m.penalty)} penalty</span>}</td>
                   <td className="px-5 text-right">{m.outstanding > 0 && <span className="flex justify-end gap-1">
                     <Button variant="ghost" size="sm" onClick={() => setDialog({ t: 'pay', m })}>Record payment</Button>
                     <Button variant="ghost" size="sm" onClick={() => run(() => raiseDemand(m.id), 'Demand note created')}>Demand note</Button></span>}</td>

@@ -1,6 +1,7 @@
 import type { PlotShape, PropertyUnit } from '@prisma/client';
 import { prisma } from '../prisma';
-import { isHoldActive, propertyStatus, type AppPropertyStatus } from './derive';
+import { PLOT_STAGES, isHoldActive, plotStage, propertyStatus, type AppPropertyStatus, type PlotStage } from './derive';
+import { getPolicy } from './salesPolicy';
 
 /**
  * The plot map's read model.
@@ -52,6 +53,8 @@ export interface MapPlot {
   confirmed: boolean;
   /** Null for a shape not yet linked to a unit — it has no status to show. */
   status: AppPropertyStatus | null;
+  /** The fuller life-cycle stage (token, agreement, registered…). `status` stays the four-way split the app uses. */
+  stage: PlotStage | null;
   label: string;
   plotNumber: string | null;
   area: string | null;
@@ -72,7 +75,7 @@ export interface MapPlot {
 export async function buildMapPlots(projectId: string, shapes: PlotShape[]): Promise<MapPlot[]> {
   const unitIds = shapes.map((s) => s.unitId).filter((id): id is string => !!id);
 
-  const [units, holds] = await Promise.all([
+  const [units, holds, bookings, policy] = await Promise.all([
     unitIds.length
       ? prisma.propertyUnit.findMany({
           where: { id: { in: unitIds } },
@@ -85,7 +88,18 @@ export async function buildMapPlots(projectId: string, shapes: PlotShape[]): Pro
           orderBy: { holdEnd: 'desc' },
         })
       : Promise.resolve([]),
+    unitIds.length
+      ? prisma.booking.findMany({
+          where: { propertyId: { in: unitIds }, isDeposit: 0, status: { not: 'cancelled' } },
+          include: { legalFile: { include: { stages: { select: { id: true } }, registry: { select: { status: true } } } } },
+          orderBy: { createdAt: 'asc' },
+        })
+      : Promise.resolve([]),
+    getPolicy(),
   ]);
+  // The unit's live booking: the earliest one that has not been cancelled.
+  const bookingByUnit = new Map<string, (typeof bookings)[number]>();
+  for (const b of bookings) if (!bookingByUnit.has(b.propertyId)) bookingByUnit.set(b.propertyId, b);
 
   const unitById = new Map(units.map((u) => [u.id, u as UnitForMap]));
   // Newest live hold per unit; `isHoldActive` still decides whether it counts.
@@ -105,6 +119,7 @@ export async function buildMapPlots(projectId: string, shapes: PlotShape[]): Pro
         source: shape.source,
         confirmed: shape.confirmed,
         status: null,
+        stage: null,
         label: shape.label ?? '',
         plotNumber: null,
         area: null,
@@ -125,6 +140,7 @@ export async function buildMapPlots(projectId: string, shapes: PlotShape[]): Pro
       source: shape.source,
       confirmed: shape.confirmed,
       status: propertyStatus(unit, held),
+      stage: plotStage(unit, held, bookingByUnit.get(unit.id), policy.showTokenStage),
       label: shape.label || unit.propertyNumber,
       plotNumber: unit.propertyNumber,
       area: `${unit.propertyArea} ${unit.propertyMeasurement}`.trim(),
@@ -147,6 +163,8 @@ export interface MapCounts {
   unmapped: number;
   total: number;
   value: { available: number; onHold: number; booked: number; soldOut: number; total: number };
+  /** The same plots counted by life-cycle stage. */
+  stages: Record<PlotStage, number>;
 }
 
 /** The live counts and value managers read straight off the map. */
@@ -159,6 +177,7 @@ export function countPlots(plots: MapPlot[]): MapCounts {
     unmapped: 0,
     total: 0,
     value: { available: 0, onHold: 0, booked: 0, soldOut: 0, total: 0 },
+    stages: Object.fromEntries(PLOT_STAGES.map((s) => [s, 0])) as Record<PlotStage, number>,
   };
 
   for (const plot of plots) {
@@ -167,6 +186,7 @@ export function countPlots(plots: MapPlot[]): MapCounts {
       continue;
     }
     counts[plot.status] += 1;
+    if (plot.stage) counts.stages[plot.stage] += 1;
     counts.total += 1;
     counts.value[plot.status] += plot.price;
     counts.value.total += plot.price;

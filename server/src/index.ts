@@ -19,7 +19,7 @@ import { aiSdrRouter } from './routes/aiSdrAgents';
 import { emailSequencesRouter } from './routes/emailSequences';
 import { emailTemplatesRouter } from './routes/emailTemplates';
 import { callsRouter } from './routes/calls';
-import { auditMutations } from './services/audit';
+import { auditMutations, auditContext } from './services/audit';
 import { whatsappTemplatesRouter } from './routes/admin/whatsappTemplates';
 import { adminLeaveRouter } from './routes/admin/leave';
 import { adminPayrollRouter } from './routes/admin/payroll';
@@ -38,6 +38,8 @@ import { adminUsersRouter, adminKycRouter } from './routes/admin/users';
 import { adminTeamsRouter } from './routes/admin/teams';
 import { crmTeamRouter } from './routes/crmTeam';
 import { siteVisitsRouter } from './routes/siteVisits';
+import { adminSalesPolicyRouter } from './routes/admin/salesPolicy';
+import { adminBookingCancellationsRouter } from './routes/admin/bookingCancellations';
 import { adminConstructionRouter } from './routes/admin/construction';
 import { appConstructionRouter } from './routes/app/construction';
 import { adminVendorsRouter, adminMaterialsRouter } from './routes/admin/vendors';
@@ -158,6 +160,7 @@ app.use('/api/v1/app/account', appAccountRouter);
 // Everything past this guard needs an admin JWT, except the small public allowlist
 // inside `adminGuard` (login, webhooks, public forms).
 // ---------------------------------------------------------------------------
+app.use('/api', auditContext);
 app.use('/api', adminGuard);
 // After the guard, so the actor is known and partner-app traffic never reaches it: every
 // mutation past this point is recorded unless its handler already described the change.
@@ -169,6 +172,8 @@ app.use('/api/connections', connectionsRouter);
 app.use('/api/leads', leadsRouter);
 app.use('/api/crm-team', crmTeamRouter);
 app.use('/api/site-visits', siteVisitsRouter);
+app.use('/api/sales-policy', adminSalesPolicyRouter);
+app.use('/api/booking-cancellations', adminBookingCancellationsRouter);
 app.use('/api/construction', adminConstructionRouter);
 app.use('/api/legal', adminLegalRouter);
 app.use('/api/ops-rules', adminOpsRulesRouter);

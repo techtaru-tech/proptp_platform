@@ -15,6 +15,7 @@ import { useAsync } from '../../hooks/useAsync';
 import { BuyerConstructionCard } from '../construction/BuyerConstructionCard';
 import { LegalFileLink } from '../legal/LegalFileLink';
 import { CostSheetCard } from './CostSheetCard';
+import { BookingCancellationCard } from './BookingCancellationCard';
 import { useToast } from '../../context/ToastContext';
 import {
   getBookingDetail,
@@ -133,6 +134,7 @@ export function BookingDetail() {
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <BuyerConstructionCard bookingId={booking.id} />
         <CostSheetCard bookingId={booking.id} />
+        <BookingCancellationCard bookingId={booking.id} isDeposit={booking.isDeposit === 1} onChanged={() => setReloadKey((k) => k + 1)} />
         <LegalFileLink bookingId={booking.id} />
 
         {/* Customer */}

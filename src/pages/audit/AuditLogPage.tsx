@@ -127,6 +127,23 @@ export function AuditLogPage() {
             <Row label="Record" value={selected.recordLabel} />
             <Row label="Timestamp" value={formatDateTime(selected.timestamp)} />
             <Row label="Description" value={selected.description} />
+            {selected.changes && selected.changes.length > 0 && (
+              <div className="mt-2 border-t border-line pt-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">What changed</p>
+                <ul className="space-y-2">
+                  {selected.changes.map((c, i) => (
+                    <li key={i} className="rounded-lg bg-surface-subtle px-3 py-2 text-sm">
+                      <span className="font-medium text-ink">{c.field}</span> <span className="text-xs text-ink-faint">· {c.model}</span>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                        <code className="rounded bg-danger-50 px-1.5 py-0.5 text-xs text-danger-700 line-through">{c.from ?? 'empty'}</code>
+                        <span className="text-ink-faint">→</span>
+                        <code className="rounded bg-success-50 px-1.5 py-0.5 text-xs text-success-700">{c.to ?? 'empty'}</code>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </dl>
         )}
       </Drawer>
