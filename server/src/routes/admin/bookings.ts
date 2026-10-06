@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import type { Booking, Prisma } from '@prisma/client';
 import { prisma } from '../../prisma';
-import { openLegalFileFor } from '../../services/legal';
+import { openLegalFileFor, costSheetForBooking, TemplateError } from '../../services/legal';
 import { writeAudit } from '../../services/audit';
 import type { AuthedRequest } from '../../services/auth';
 import { BOOKING_STATUS_BY_ID, PAYMENT_MODE_BY_ID, adminAudit, adminBooking, adminUnit } from '../../services/adminMappers';
@@ -164,6 +164,18 @@ adminBookingsRouter.get('/units/:unitId/history', async (req, res, next) => {
     });
     res.json({ bookings: bookings.map(bookingRow) });
   } catch (err) {
+    next(err);
+  }
+});
+
+/** The cost sheet for this booking's plot, as a PDF. Needs no legal file, so it can be handed over when the token is taken. */
+adminBookingsRouter.post('/:id/cost-sheet', async (req: AuthedRequest, res, next) => {
+  try {
+    const sheet = await costSheetForBooking(String(req.params.id), req.auth!.sub);
+    if (!sheet) return res.status(404).json({ error: 'Booking not found.' });
+    res.json(sheet);
+  } catch (err) {
+    if (err instanceof TemplateError) return res.status(422).json({ error: err.message });
     next(err);
   }
 });

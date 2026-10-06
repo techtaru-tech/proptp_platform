@@ -196,6 +196,35 @@ export async function buildValues(ctx: RenderContext): Promise<Record<string, st
 
 export class TemplateError extends Error {}
 
+/**
+ * The cost sheet for a booking, available before the legal file exists — it is needed when the
+ * token is taken, which can be before the booking is confirmed. If the booking already has a legal
+ * file the sheet is filed there too; otherwise it is simply handed back.
+ */
+export async function costSheetForBooking(bookingId: string, userId: string) {
+  const booking = await prisma.booking.findUnique({ where: { id: bookingId }, include: { unit: { include: { project: true } }, legalFile: { select: { id: true } } } });
+  if (!booking) return null;
+  const unit = booking.unit;
+  const total = unit.totalInvestmentAmount + unit.charges + unit.gstAndRegistration;
+  const token = unit.tokenAmount > 0 ? unit.tokenAmount : booking.amount;
+  const values: Record<string, string> = {
+    buyer_name: booking.bookingName, phone: booking.phone, booking_reference: booking.reference, unit_number: unit.propertyNumber,
+    project_name: unit.project.projectName, project_location: unit.project.projectLocation, area: `${unit.propertyArea} ${unit.propertyMeasurement}`.trim(),
+    agreed_value: rupees(unit.totalInvestmentAmount), rate: rupees(unit.perAreaAmount), base_amount: rupees(unit.totalInvestmentAmount),
+    other_charges: rupees(unit.charges), gst_registration: rupees(unit.gstAndRegistration), grand_total: rupees(total), token_amount: rupees(token),
+    balance_after_token: rupees(Math.max(0, total - token)), booking_amount: rupees(booking.amount), date: dateText(new Date()),
+  };
+  const template = await getTemplate('cost_sheet');
+  if (!template) throw new TemplateError('There is no cost sheet template.');
+  const text = renderTemplate(template.body, values);
+  const url = await writePdf(template.title, text, `Generated from booking ${booking.reference} on ${values.date}. Wording is a template and must be approved by counsel before use.`);
+  if (booking.legalFile) {
+    const doc = await prisma.legalDocument.create({ data: { fileId: booking.legalFile.id, kind: 'cost_sheet', title: template.title, url, generated: true, createdById: userId } });
+    return { url: doc.url, title: doc.title, filed: true };
+  }
+  return { url, title: template.title, filed: false };
+}
+
 export function renderTemplate(body: string, values: Record<string, string>): string {
   const missing = placeholdersIn(body).filter((p) => values[p] === undefined);
   if (missing.length) {

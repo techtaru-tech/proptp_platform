@@ -14,6 +14,7 @@ import { Timeline, type TimelineEntry } from '../../components/ui/Timeline';
 import { useAsync } from '../../hooks/useAsync';
 import { BuyerConstructionCard } from '../construction/BuyerConstructionCard';
 import { LegalFileLink } from '../legal/LegalFileLink';
+import { CostSheetCard } from './CostSheetCard';
 import { useToast } from '../../context/ToastContext';
 import {
   getBookingDetail,
@@ -131,6 +132,7 @@ export function BookingDetail() {
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <BuyerConstructionCard bookingId={booking.id} />
+        <CostSheetCard bookingId={booking.id} />
         <LegalFileLink bookingId={booking.id} />
 
         {/* Customer */}
