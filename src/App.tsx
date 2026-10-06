@@ -71,7 +71,6 @@ import { KycApprovals } from './pages/wallet/KycApprovals';
 
 import { IncentiveRequestList } from './pages/incentives/IncentiveRequestList';
 
-import { AgentList } from './pages/users/AgentList';
 import { EmployeeList } from './pages/users/EmployeeList';
 import { LeaderList } from './pages/users/LeaderList';
 import { TeamLeaderList } from './pages/users/TeamLeaderList';
@@ -286,7 +285,7 @@ function App() {
 
                 <Route path="/incentive-requests" element={<IncentiveRequestList />} />
 
-                <Route path="/users/agents" element={<AgentList />} />
+                <Route path="/users/agents" element={<Navigate to="/channel-partners" replace />} />
                 <Route path="/users/employees" element={<EmployeeList />} />
                 <Route path="/users/leaders" element={<LeaderList />} />
                 <Route path="/users/team-leaders" element={<TeamLeaderList />} />

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -33,7 +33,7 @@ export function ChannelPartnerDetail() {
   return (
     <div>
       <PageHeader title={p.name} description={`${p.partnerCode} · ${p.phone}${p.city ? ` · ${p.city}` : ''}`} breadcrumb={[{ label: 'Channel partners', to: '/channel-partners' }, { label: p.name }]}
-        actions={<Badge tone={p.kycStatus === 1 ? 'success' : p.kycStatus === 2 ? 'danger' : 'warning'}>KYC {KYC_LABEL[p.kycStatus].toLowerCase()}</Badge>} />
+        actions={<><Link to={`/users/${p.id}`} className="rounded-lg border border-line px-3 py-1.5 text-sm font-medium focus-ring">Account &amp; referrals</Link><Badge tone={p.kycStatus === 1 ? 'success' : p.kycStatus === 2 ? 'danger' : 'warning'}>KYC {KYC_LABEL[p.kycStatus].toLowerCase()}</Badge></>} />
       <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Leads registered" value={p.leads.length} tone="brand" />
         <StatCard label="Bookings" value={p.bookings.filter((x) => x.status !== 'cancelled').length} tone="success" />

@@ -222,15 +222,14 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     label: 'Partners / Users',
-    to: '/users/agents',
+    to: '/channel-partners',
     icon: Users,
     module: 'partners',
     children: [
-      { label: 'Agents', to: '/users/agents' },
+      { label: 'Channel partners', to: '/channel-partners' },
       { label: 'Employees', to: '/users/employees' },
       { label: 'Team Leaders', to: '/users/team-leaders' },
       { label: 'Leaders', to: '/users/leaders' },
-      { label: 'Channel partners', to: '/channel-partners' },
     ],
   },
   { label: 'Teams / Referrals', to: '/teams', icon: Network, module: 'teams' },

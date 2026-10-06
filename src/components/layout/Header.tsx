@@ -29,7 +29,7 @@ import { cn } from '../../utils/cn';
 const QUICK_ACTIONS = [
   { label: 'Add Property', to: '/projects/new', icon: Plus },
   { label: 'View Bookings', to: '/bookings', icon: ClipboardList },
-  { label: 'Users', to: '/users/agents', icon: Users },
+  { label: 'Users', to: '/channel-partners', icon: Users },
   { label: 'Attendance', to: '/attendance/today', icon: Fingerprint },
   { label: 'Reports', to: '/reports', icon: BarChart3 },
 ];

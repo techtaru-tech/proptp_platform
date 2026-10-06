@@ -35,7 +35,7 @@ const STATUS_SELECT_OPTIONS = [
 function listPathForRole(role: RoleId): string {
   switch (role) {
     case RoleId.Agent:
-      return '/users/agents';
+      return '/channel-partners';
     case RoleId.Employee:
       return '/users/employees';
     case RoleId.Leader:
@@ -43,14 +43,14 @@ function listPathForRole(role: RoleId): string {
     case RoleId.TeamLeader:
       return '/users/team-leaders';
     default:
-      return '/users/agents';
+      return '/channel-partners';
   }
 }
 
 function listLabelForRole(role: RoleId): string {
   switch (role) {
     case RoleId.Agent:
-      return 'Agents';
+      return 'Channel partners';
     case RoleId.Employee:
       return 'Employees';
     case RoleId.Leader:
