@@ -30,13 +30,15 @@ export function SourcePerformanceReport() {
   const columns: DataTableColumn<SourcePerformanceRow>[] = [
     { key: 'label', header: 'Source', render: (r) => <span className="font-medium text-ink">{r.label}</span> },
     { key: 'total', header: 'Total Leads', align: 'right', render: (r) => r.total },
-    { key: 'won', header: 'Won', align: 'right', render: (r) => r.won },
+    { key: 'siteVisits', header: 'Site Visits', align: 'right', render: (r) => r.siteVisits },
+    { key: 'won', header: 'Booked', align: 'right', render: (r) => r.won },
     { key: 'lost', header: 'Lost', align: 'right', render: (r) => r.lost },
-    { key: 'conversionRate', header: 'Conversion', align: 'right', render: (r) => `${r.conversionRate}%` },
+    { key: 'conversionRate', header: 'Lead → Booking', align: 'right', render: (r) => `${r.conversionRate}%` },
+    { key: 'visitToBooking', header: 'Visit → Booking', align: 'right', render: (r) => `${r.visitToBooking}%` },
     { key: 'wonValue', header: 'Won Value', align: 'right', render: (r) => formatCurrency(r.wonValue) },
   ];
 
-  const csvRows = () => rows.map((r) => ({ Source: r.label, 'Total Leads': r.total, Won: r.won, Lost: r.lost, 'Conversion %': r.conversionRate, 'Won Value': r.wonValue }));
+  const csvRows = () => rows.map((r) => ({ Source: r.label, 'Total Leads': r.total, 'Site Visits': r.siteVisits, Booked: r.won, Lost: r.lost, 'Lead to Booking %': r.conversionRate, 'Visit to Booking %': r.visitToBooking, 'Won Value': r.wonValue }));
 
   return (
     <div className="flex flex-col gap-4">

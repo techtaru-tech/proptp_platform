@@ -14,6 +14,12 @@ import { Avatar } from '../../components/ui/Avatar';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Badge } from '../../components/ui/Badge';
 import { Tabs, type TabItem } from '../../components/ui/Tabs';
+import { TemperatureBadge } from '../../components/leads/TemperatureBadge';
+import { VisitList } from '../../components/leads/VisitList';
+import { ScheduleVisitModal } from '../../components/leads/VisitModals';
+import { listSiteVisits } from '../../services/siteVisitService';
+import { LEAD_SOURCE_META } from '../../constants/leadSources';
+import type { LeadTemperature } from '../../types';
 import { Modal } from '../../components/ui/Modal';
 import { ConfirmationDialog } from '../../components/ui/ConfirmationDialog';
 import { Timeline, type TimelineEntry } from '../../components/ui/Timeline';
@@ -28,7 +34,7 @@ import {
 import { useAsync } from '../../hooks/useAsync';
 import { useToast } from '../../context/ToastContext';
 import {
-  getLead, updateLead, updateLeadStatus, moveLeadStage, assignLead, toggleStar, listAssignableUsers, getLeadHistory,
+  getLead, updateLead, updateLeadStatus, moveLeadStage, assignLead, toggleStar, listAssignableUsers, getLeadHistory, listProjectOptions,
 } from '../../services/leadService';
 import { getLeadActivities, getLeadNotes, addLeadNote, logManualActivity } from '../../services/activityService';
 import { getFollowUpsForLead, createFollowUp, updateFollowUpStatus, rescheduleFollowUp } from '../../services/followUpService';
@@ -91,6 +97,12 @@ export function LeadDetail() {
 
   // ---- Edit modal ----
   const [editOpen, setEditOpen] = useState(false);
+  const [visitOpen, setVisitOpen] = useState(false);
+  // Held here, not inside Tabs: saving something reloads the lead and would otherwise drop you back on Overview.
+  const [activeTab, setActiveTab] = useState('overview');
+  const [visitReload, setVisitReload] = useState(0);
+  const { data: projectOptions } = useAsync(() => listProjectOptions().catch(() => []), []);
+  const { data: visits } = useAsync(() => (id ? listSiteVisits({ view: 'all', leadId: id }) : Promise.resolve([])), [id, visitReload]);
   const [editValues, setEditValues] = useState<LeadFormValues | null>(null);
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -287,6 +299,7 @@ export function LeadDetail() {
     { key: 'overview', label: 'Overview' },
     { key: 'activities', label: 'Activities', icon: <ActivityIcon size={13} />, badge: activities?.length || undefined },
     { key: 'followups', label: 'Follow-ups', badge: followUps?.filter((f) => f.status === 'pending').length || undefined },
+    { key: 'visits', label: 'Site visits', badge: visits?.length || undefined },
     { key: 'notes', label: 'Notes', icon: <StickyNote size={13} />, badge: notes?.length || undefined },
     { key: 'history', label: 'History', icon: <GitBranch size={13} /> },
   ];
@@ -301,6 +314,7 @@ export function LeadDetail() {
           <>
             <StatusBadge kind="leadStatus" status={lead.status} />
             <StatusBadge kind="leadPriority" status={lead.priority} dot={false} />
+            <TemperatureBadge value={lead.temperature} />
             {lead.receivedOutsideBusinessHours && (
               <span title="This lead arrived while Business Hours (Settings > Business Hours) marked the office closed.">
                 <Badge tone="shell">
@@ -371,7 +385,7 @@ export function LeadDetail() {
         </div>
       </Card>
 
-      <Tabs items={tabItems}>
+      <Tabs items={tabItems} value={activeTab} onChange={setActiveTab}>
         {(activeKey) => (
           <>
             {activeKey === 'overview' && (
@@ -383,6 +397,9 @@ export function LeadDetail() {
                     <Row label="Expected Close" value={lead.expectedCloseDate ? formatDate(lead.expectedCloseDate) : '—'} />
                     <Row label="Lead Score" value={lead.leadScore} />
                     <Row label="Next Follow-up" value={lead.nextFollowUpAt ? formatDate(lead.nextFollowUpAt) : '—'} />
+                    <Row label="Original source" value={LEAD_SOURCE_META[lead.originalSource ?? lead.source]?.label ?? lead.originalSource ?? lead.source} />
+                    {lead.originalSource && lead.originalSource !== lead.source && <Row label="Now worked as" value={LEAD_SOURCE_META[lead.source]?.label ?? lead.source} />}
+                    <Row label="Interested project" value={lead.interestedProjectId ? (projectOptions?.find((p) => p.id === lead.interestedProjectId)?.projectName ?? '—') : '—'} />
                     {lead.status === 'won' && <Row label="Won Value" value={lead.wonValue ? formatCurrency(lead.wonValue) : '—'} />}
                     {lead.status === 'lost' && <Row label="Lost Reason" value={lead.lostReason ?? '—'} />}
                   </dl>
@@ -399,6 +416,13 @@ export function LeadDetail() {
                   <div className="space-y-3">
                     <ManagementRow icon={UserCog} label="Assigned To" value={assignee?.name ?? (lead.assignedUserId ? userDisplayName(lead.assignedUserId) : lead.assignedTo ?? 'Unassigned')} onClick={mayAssignLeads() ? () => { setAssignValue(lead.assignedUserId ?? ''); setAssignOpen(true); } : undefined} />
                     <ManagementRow icon={GitBranch} label="Pipeline Stage" value={stage ? `${pipeline?.name} · ${stage.name}` : 'Unassigned'} onClick={() => { setStagePipeline(lead.pipelineId ?? pipelines[0]?.id ?? ""); setStageValue(lead.pipelineStageId ?? ''); setStageOpen(true); }} />
+                    <div className="flex w-full items-center justify-between gap-3 rounded-lg border border-line px-3.5 py-2">
+                      <label htmlFor="leadTemperature" className="text-sm text-ink-muted">Temperature</label>
+                      <select id="leadTemperature" name="leadTemperature" value={lead.temperature ?? ''} className="rounded-md border border-line-strong bg-white px-2 py-1 text-sm focus-ring"
+                        onChange={async (e) => { await updateLead(lead.id, { temperature: (e.target.value || null) as LeadTemperature | null }); setReloadKey((k) => k + 1); }}>
+                        <option value="">Not rated</option><option value="hot">Hot</option><option value="warm">Warm</option><option value="cold">Cold</option>
+                      </select>
+                    </div>
                     <ManagementRow icon={Flag} label="Status" value={<StatusBadge kind="leadStatus" status={lead.status} dot={false} />} onClick={() => { setStatusValue(lead.status); setLostReason(lead.lostReason ?? ''); setStatusOpen(true); }} />
                   </div>
                 </Card>
@@ -589,6 +613,16 @@ export function LeadDetail() {
               </Card>
             )}
 
+            {activeKey === 'visits' && (
+              <Card padded={false}>
+                <div className="flex items-center justify-between border-b border-line px-5 py-3">
+                  <CardHeader title="Site visits" subtitle="Scheduled, done and missed visits for this buyer" />
+                  <Button variant="primary" size="sm" onClick={() => setVisitOpen(true)}>Schedule a visit</Button>
+                </div>
+                <VisitList visits={visits ?? []} showLead={false} onChanged={() => { setVisitReload((k) => k + 1); setReloadKey((k) => k + 1); }} empty="No site visits yet" />
+              </Card>
+            )}
+
             {activeKey === 'history' && (
               <Card>
                 <CardHeader title="Stage & Assignment History" subtitle="Audit trail of ownership and pipeline movement" />
@@ -635,6 +669,8 @@ export function LeadDetail() {
           </div>
         </Modal>
       )}
+
+      {visitOpen && <ScheduleVisitModal leadId={lead.id} leadName={leadFullName(lead)} defaultProjectId={lead.interestedProjectId} defaultHostId={lead.assignedUserId} onClose={() => setVisitOpen(false)} onSaved={() => { setVisitOpen(false); setVisitReload((k) => k + 1); setReloadKey((k) => k + 1); }} />}
 
       {/* Assign modal */}
       <Modal

@@ -1,4 +1,4 @@
-import type { Lead, LeadPriority, LeadSource, LeadStatus } from '../types';
+import type { Lead, LeadPriority, LeadSource, LeadStatus, LeadTemperature } from '../types';
 import { refAssignees } from '../data/referenceData';
 import { api, toQueryString } from './apiClient';
 import type { ListParams, ListResult } from './mockClient';
@@ -18,6 +18,7 @@ export interface LeadListParams extends ListParams {
   pipelineId?: string | 'all';
   stageId?: string | 'all';
   assignedUserId?: string | 'all';
+  temperature?: LeadTemperature | 'none' | 'all';
   tagId?: string | 'all';
   starred?: boolean;
   /** Created on or after / on or before these days, inclusive. YYYY-MM-DD, read as IST. */
@@ -31,6 +32,16 @@ export interface LeadListParams extends ListParams {
   adName?: string;
   formName?: string;
 }
+
+export const listProjectOptions = () => api.get<{ id: string; projectName: string }[]>('/leads/project-options');
+
+export const LEAD_TEMPERATURE_OPTIONS: { value: LeadTemperature | 'none' | 'all'; label: string }[] = [
+  { value: 'all', label: 'Any temperature' },
+  { value: 'hot', label: 'Hot' },
+  { value: 'warm', label: 'Warm' },
+  { value: 'cold', label: 'Cold' },
+  { value: 'none', label: 'Not rated' },
+];
 
 /** The filter choices, shared so the Leads table and a WhatsApp broadcast offer the same set. */
 export const LEAD_STATUS_OPTIONS: { value: LeadStatus | 'all'; label: string }[] = [
@@ -118,6 +129,12 @@ export function listSourceOptions(): { value: LeadSource; label: string }[] {
     { value: 'meta', label: 'Meta' },
     { value: 'google_ads', label: 'Google Ads' },
     { value: 'web_form', label: 'Website Form' },
+    { value: 'walk_in', label: 'Walk-in' },
+    { value: 'referral', label: 'Referral' },
+    { value: 'portal', label: 'Real-estate portal' },
+    { value: 'channel_partner', label: 'Channel partner' },
+    { value: 'direct_enquiry', label: 'Direct enquiry' },
+    { value: 'dlt_sms', label: 'SMS campaign' },
     { value: 'whatsapp', label: 'WhatsApp' },
     { value: 'instagram', label: 'Instagram' },
     { value: 'linkedin', label: 'LinkedIn' },

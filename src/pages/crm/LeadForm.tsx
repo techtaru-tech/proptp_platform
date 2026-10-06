@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
-import { listSourceOptions, listAssignableUsers } from '../../services/leadService';
+import { listSourceOptions, listAssignableUsers, listProjectOptions } from '../../services/leadService';
+import { useAsync } from '../../hooks/useAsync';
 import { mayAssignLeads, mayUnassignLeads } from '../../data/referenceData';
 import { usePipelineReferenceData } from '../../hooks/usePipelineReferenceData';
 import {
@@ -22,6 +23,8 @@ export interface LeadFormValues {
   preferredLocations: string[];
   source: LeadSource;
   priority: LeadPriority;
+  temperature: string;
+  interestedProjectId: string;
   assignedUserId: string;
   pipelineId: string;
   pipelineStageId: string;
@@ -47,6 +50,8 @@ export function defaultLeadFormValues(): LeadFormValues {
     preferredLocations: [],
     source: 'manual',
     priority: 'normal',
+    temperature: '',
+    interestedProjectId: '',
     assignedUserId: '',
     pipelineId: '',
     pipelineStageId: '',
@@ -70,6 +75,8 @@ export function leadToFormValues(lead: Lead): LeadFormValues {
     preferredLocations: lead.preferredLocations ?? [],
     source: lead.source,
     priority: lead.priority,
+    temperature: lead.temperature ?? '',
+    interestedProjectId: lead.interestedProjectId ?? '',
     assignedUserId: lead.assignedUserId ?? '',
     pipelineId: lead.pipelineId ?? '',
     pipelineStageId: lead.pipelineStageId ?? '',
@@ -186,6 +193,7 @@ export function LeadRequirementFields({ values, onChange }: FieldsProps) {
  * first stage once pipeline data has loaded — mirroring the old static defaultLeadFormValues()
  * behavior, without requiring pipeline data inside a plain (non-hook) sync function. */
 export function LeadDetailsFields({ values, onChange, isNewLead }: Omit<FieldsProps, 'errors'> & { isNewLead?: boolean }) {
+  const { data: projectOptions } = useAsync(() => listProjectOptions().catch(() => []), []);
   const { pipelines, stagesForPipeline, defaultPipeline, isLoading } = usePipelineReferenceData();
   const pipelineStages = values.pipelineId ? stagesForPipeline(values.pipelineId) : [];
 
@@ -216,6 +224,20 @@ export function LeadDetailsFields({ values, onChange, isNewLead }: Omit<FieldsPr
           { value: 'high', label: 'High' },
           { value: 'urgent', label: 'Urgent' },
         ]}
+      />
+      <Select
+        label="Temperature"
+        name="temperature"
+        value={values.temperature}
+        onChange={(e) => onChange({ temperature: e.target.value })}
+        options={[{ value: '', label: 'Not rated' }, { value: 'hot', label: 'Hot' }, { value: 'warm', label: 'Warm' }, { value: 'cold', label: 'Cold' }]}
+      />
+      <Select
+        label="Interested project"
+        name="interestedProjectId"
+        value={values.interestedProjectId}
+        onChange={(e) => onChange({ interestedProjectId: e.target.value })}
+        options={[{ value: '', label: 'Not decided' }, ...(projectOptions ?? []).map((p) => ({ value: p.id, label: p.projectName }))]}
       />
       {mayAssignLeads() ? (
         <Select
@@ -303,6 +325,8 @@ export function leadFormValuesToPayload(values: LeadFormValues): Partial<Lead> {
     preferredLocations: values.preferredLocations,
     source: values.source,
     priority: values.priority,
+    temperature: (values.temperature || null) as Lead['temperature'],
+    interestedProjectId: values.interestedProjectId || undefined,
     assignedUserId: values.assignedUserId || undefined,
     pipelineId: values.pipelineId || undefined,
     pipelineStageId: values.pipelineStageId || undefined,

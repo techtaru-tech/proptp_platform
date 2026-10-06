@@ -9,6 +9,7 @@ import { seedConstruction } from './seedConstruction';
 import { seedVendors } from './seedVendors';
 import { seedLegal } from './seedLegal';
 import { seedOpsRules } from './seedOpsRules';
+import { seedSales } from './seedSales';
 
 const prisma = new PrismaClient();
 
@@ -31,13 +32,15 @@ async function main() {
       isDefault: true,
       stages: {
         create: [
-          { id: 'STG-SALES-1', name: 'New Lead', color: '#6366f1', sortOrder: 1 },
+          { id: 'STG-SALES-1', name: 'New', color: '#6366f1', sortOrder: 1 },
           { id: 'STG-SALES-2', name: 'Contacted', color: '#3b82f6', sortOrder: 2 },
-          { id: 'STG-SALES-3', name: 'Qualified', color: '#f59e0b', sortOrder: 3 },
-          { id: 'STG-SALES-4', name: 'Proposal Sent', color: '#8b5cf6', sortOrder: 4 },
-          { id: 'STG-SALES-5', name: 'Negotiation', color: '#ec4899', sortOrder: 5 },
-          { id: 'STG-SALES-6', name: 'Won', color: '#22c55e', sortOrder: 6, isWon: true, winProbability: 100 },
-          { id: 'STG-SALES-7', name: 'Lost', color: '#ef4444', sortOrder: 7, isLost: true, winProbability: 0 },
+          { id: 'STG-SALES-8', name: 'Connected', color: '#0ea5e9', sortOrder: 3 },
+          { id: 'STG-SALES-3', name: 'Qualified', color: '#f59e0b', sortOrder: 4 },
+          { id: 'STG-SALES-9', name: 'Site Visit Planned', color: '#14b8a6', sortOrder: 5 },
+          { id: 'STG-SALES-10', name: 'Site Visit Done', color: '#8b5cf6', sortOrder: 6 },
+          { id: 'STG-SALES-5', name: 'Negotiation', color: '#ec4899', sortOrder: 7 },
+          { id: 'STG-SALES-6', name: 'Booking', color: '#22c55e', sortOrder: 8, isWon: true, winProbability: 100 },
+          { id: 'STG-SALES-7', name: 'Lost / Closed', color: '#ef4444', sortOrder: 9, isLost: true, winProbability: 0 },
         ],
       },
     },
@@ -141,6 +144,7 @@ async function main() {
   await seedVendors(prisma);
   await seedLegal(prisma);
   await seedOpsRules(prisma);
+  await seedSales(prisma);
 
   console.log('');
   console.log('Done. Admin sign-in:');

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  BarChart3, Clock3, Filter, Funnel, Gauge, LineChart, Radar, Trophy, UserCog, Zap,
+  BarChart3, CalendarCheck, Clock3, Filter, Funnel, Gauge, LineChart, Radar, Trophy, UserCog, Zap,
 } from 'lucide-react';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { Tabs, type TabItem } from '../../../components/ui/Tabs';
@@ -14,11 +14,13 @@ import { RevenueByRepReport } from './RevenueByRepReport';
 import { AutomationStatsReport } from './AutomationStatsReport';
 import { ResponseTimeReport } from './ResponseTimeReport';
 import { FormAnalyticsReport } from './FormAnalyticsReport';
+import { SiteVisitReport } from './SiteVisitReport';
 
 const REPORTS = [
   { key: 'lead-volume', label: 'Lead Volume', icon: <LineChart size={14} />, Component: LeadVolumeReport },
   { key: 'source-performance', label: 'Source Performance', icon: <BarChart3 size={14} />, Component: SourcePerformanceReport },
   { key: 'source-attribution', label: 'Source Attribution', icon: <Radar size={14} />, Component: SourceAttributionReport },
+  { key: 'site-visits', label: 'Site Visits', icon: <CalendarCheck size={14} />, Component: SiteVisitReport },
   { key: 'pipeline-funnel', label: 'Pipeline Funnel', icon: <Funnel size={14} />, Component: PipelineFunnelReport },
   { key: 'pipeline-bottlenecks', label: 'Pipeline Bottlenecks', icon: <Gauge size={14} />, Component: PipelineBottlenecksReport },
   { key: 'agent-performance', label: 'Agent Performance', icon: <UserCog size={14} />, Component: AgentPerformanceReport },

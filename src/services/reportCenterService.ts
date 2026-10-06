@@ -33,9 +33,13 @@ export interface SourcePerformanceRow {
   source: string;
   label: string;
   total: number;
+  /** Leads from this source that had at least one visit completed. */
+  siteVisits: number;
   won: number;
   lost: number;
   conversionRate: number;
+  /** Bookings as a share of the leads that visited. */
+  visitToBooking: number;
   wonValue: number;
 }
 

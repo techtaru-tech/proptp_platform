@@ -105,7 +105,7 @@ export function LegalFileDetail() {
         <Card className="lg:col-span-2">
           <CardHeader title="Documents" subtitle="Generated documents are filled from the booking, never retyped."
             action={<div className="flex flex-wrap gap-2">
-              {(['allotment_letter', 'agreement', 'receipt'] as const).map((k) => (
+              {(['cost_sheet', 'allotment_letter', 'agreement', 'receipt'] as const).map((k) => (
                 <Button key={k} variant="outline" size="sm" leftIcon={<Wand2 size={13} />} onClick={() => run(() => generateDoc(f.id, { kind: k }), `${label(k)} generated`)}>{label(k)}</Button>))}
               <Button variant="outline" size="sm" leftIcon={<Plus size={13} />} onClick={() => setDialog({ t: 'upload' })}>Upload</Button></div>} />
           {f.documents.length === 0 ? <p className="text-sm text-ink-muted">No documents yet.</p> : (

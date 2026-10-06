@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Bot, Download, Filter, GitBranch, MailPlus, MoonStar, Plus, Star, Tag as TagIcon, Trash2, Upload, UserCog, X, Zap } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
+import { TemperatureBadge } from '../../components/leads/TemperatureBadge';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
 import { Input } from '../../components/ui/Input';
@@ -18,7 +19,7 @@ import { useAsync } from '../../hooks/useAsync';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useToast } from '../../context/ToastContext';
 import {
-  listLeads, listAssignableUsers, listSourceOptions, toggleStar, deleteLead,
+  listLeads, listAssignableUsers, listSourceOptions, LEAD_TEMPERATURE_OPTIONS, toggleStar, deleteLead,
   bulkAssign, bulkChangeStatus, bulkChangePriority, bulkChangeSource, bulkAddTag, bulkRemoveTag, bulkMoveStage, bulkDelete,
   listLeadIds,
   listAdSources,
@@ -33,7 +34,7 @@ import { enrollLeadsInSequence, listEmailSequences } from '../../services/emailS
 import { usePipelineReferenceData } from '../../hooks/usePipelineReferenceData';
 import { exportToCsv } from '../../services/reportService';
 import { formatDate, formatTime, leadFullName } from '../../utils/format';
-import type { Automation, EmailSequence, Lead, LeadPriority, LeadSource, LeadStatus } from '../../types';
+import type { Automation, EmailSequence, Lead, LeadPriority, LeadSource, LeadStatus, LeadTemperature } from '../../types';
 
 /** The server caps a page at 100, so the picker must not offer more. */
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
@@ -54,6 +55,7 @@ export function LeadList() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<LeadStatus | 'all'>('all');
   const [priority, setPriority] = useState<LeadPriority | 'all'>('all');
+  const [temperature, setTemperature] = useState<LeadTemperature | 'none' | 'all'>('all');
   const [source, setSource] = useState('all');
   const [pipelineId, setPipelineId] = useState('all');
   const [stageId, setStageId] = useState('all');
@@ -90,6 +92,7 @@ export function LeadList() {
     search: debouncedSearch,
     status,
     priority,
+    temperature,
     source: source as LeadListParams['source'],
     pipelineId,
     stageId,
@@ -113,8 +116,8 @@ export function LeadList() {
   const stagesForSelectedPipeline = pipelineId !== 'all' ? stagesForPipeline(pipelineId) : [];
 
   const hasActiveFilters = useMemo(
-    () => !!(search || status !== 'all' || priority !== 'all' || source !== 'all' || pipelineId !== 'all' || stageId !== 'all' || assignedUserId !== 'all' || starredOnly || campaignName !== 'all' || adName !== 'all' || formName !== 'all' || dateFrom || dateTo || lastActivityFrom || lastActivityTo),
-    [search, status, priority, source, pipelineId, stageId, assignedUserId, starredOnly, campaignName, adName, formName, dateFrom, dateTo, lastActivityFrom, lastActivityTo]
+    () => !!(search || status !== 'all' || priority !== 'all' || temperature !== 'all' || source !== 'all' || pipelineId !== 'all' || stageId !== 'all' || assignedUserId !== 'all' || starredOnly || campaignName !== 'all' || adName !== 'all' || formName !== 'all' || dateFrom || dateTo || lastActivityFrom || lastActivityTo),
+    [search, status, priority, temperature, source, pipelineId, stageId, assignedUserId, starredOnly, campaignName, adName, formName, dateFrom, dateTo, lastActivityFrom, lastActivityTo]
   );
 
   const resetFilters = () => {
@@ -136,6 +139,7 @@ export function LeadList() {
   const activeFilterChips = [
     status !== 'all' && { key: 'status', label: `Status: ${status}`, clear: () => setStatus('all') },
     priority !== 'all' && { key: 'priority', label: `Priority: ${priority}`, clear: () => setPriority('all') },
+    temperature !== 'all' && { key: 'temperature', label: `Temperature: ${temperature === 'none' ? 'not rated' : temperature}`, clear: () => setTemperature('all') },
     source !== 'all' && { key: 'source', label: `Source: ${listSourceOptions().find((s) => s.value === source)?.label ?? source}`, clear: () => setSource('all') },
     pipelineId !== 'all' && { key: 'pipeline', label: `Pipeline: ${pipelines.find((p) => p.id === pipelineId)?.name}`, clear: () => { setPipelineId('all'); setStageId('all'); } },
     stageId !== 'all' && { key: 'stage', label: `Stage: ${stageById(stageId)?.name}`, clear: () => setStageId('all') },
@@ -308,6 +312,8 @@ export function LeadList() {
         source: l.source,
         status: l.status,
         priority: l.priority,
+        temperature: l.temperature ?? '',
+        originalSource: l.originalSource ?? '',
         dealValue: l.dealValue ?? '',
         createdAt: l.createdAt,
       }))
@@ -357,6 +363,7 @@ export function LeadList() {
     { key: 'source', header: 'Source', render: (l) => <LeadSourceBadge source={l.source} otherSource={l.otherSource} /> },
     { key: 'status', header: 'Status', render: (l) => <StatusBadge kind="leadStatus" status={l.status} /> },
     { key: 'priority', header: 'Priority', render: (l) => <StatusBadge kind="leadPriority" status={l.priority} dot={false} /> },
+    { key: 'temperature', header: 'Temperature', render: (l) => <TemperatureBadge value={l.temperature} /> },
     {
       key: 'stage',
       header: 'Stage',
@@ -583,6 +590,7 @@ export function LeadList() {
       <Drawer isOpen={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filters">
         <div className="space-y-4">
           <Select label="Status" value={status} onChange={(e) => { setStatus(e.target.value as LeadStatus | 'all'); setPage(1); }} options={LEAD_STATUS_OPTIONS} />
+          <Select label="Temperature" name="temperatureFilter" value={temperature} onChange={(e) => { setTemperature(e.target.value as LeadTemperature | 'none' | 'all'); setPage(1); }} options={LEAD_TEMPERATURE_OPTIONS} />
           <Select label="Priority" value={priority} onChange={(e) => { setPriority(e.target.value as LeadPriority | 'all'); setPage(1); }} options={LEAD_PRIORITY_OPTIONS} />
           <Select
             label="Ad form"

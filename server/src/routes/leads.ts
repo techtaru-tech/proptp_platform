@@ -33,6 +33,7 @@ leadsRouter.get('/', async (req, res) => {
     pipelineId,
     stageId,
     assignedUserId,
+    temperature,
     campaignName,
     adName,
     formName,
@@ -52,7 +53,7 @@ leadsRouter.get('/', async (req, res) => {
   const scope = await scopeOf(req);
   const where = inLeadScope(
     buildLeadWhere({
-      search, status, priority, source, pipelineId, stageId, assignedUserId,
+      search, status, priority, source, pipelineId, stageId, assignedUserId, temperature,
       campaignName, adName, formName, dateFrom, dateTo, lastActivityFrom, lastActivityTo,
     }),
     scope
@@ -161,17 +162,26 @@ leadsRouter.get('/assignees', async (req, res, next) => {
   }
 });
 
+/** The projects a sales user can name as a buyer's interest or a visit — without needing the Projects module. */
+leadsRouter.get('/project-options', async (_req, res, next) => {
+  try {
+    res.json(await prisma.project.findMany({ where: { status: 1 }, select: { id: true, projectName: true }, orderBy: { projectName: 'asc' } }));
+  } catch (err) {
+    next(err);
+  }
+});
+
 leadsRouter.get('/ids', async (req, res, next) => {
   try {
     const {
-      search, status, priority, source, pipelineId, stageId, assignedUserId,
+      search, status, priority, source, pipelineId, stageId, assignedUserId, temperature,
       campaignName, adName, formName, dateFrom, dateTo, lastActivityFrom, lastActivityTo,
     } =
       req.query as Record<string, string>;
     const scope = await scopeOf(req);
     const where = inLeadScope(
       buildLeadWhere({
-        search, status, priority, source, pipelineId, stageId, assignedUserId,
+        search, status, priority, source, pipelineId, stageId, assignedUserId, temperature,
         campaignName, adName, formName, dateFrom, dateTo, lastActivityFrom, lastActivityTo,
       }),
       scope
@@ -208,8 +218,14 @@ async function resolveNewLeadOwner(
   return { ok: true, userId: wanted };
 }
 
+const TEMPERATURES = ['hot', 'warm', 'cold'];
+
 leadsRouter.post('/', async (req, res) => {
   const body = req.body;
+  if (body.temperature && !TEMPERATURES.includes(body.temperature)) return res.status(400).json({ error: 'Temperature must be hot, warm or cold.' });
+  if (body.interestedProjectId && !(await prisma.project.count({ where: { id: String(body.interestedProjectId) } }))) {
+    return res.status(400).json({ error: 'That project does not exist.' });
+  }
   const scope = await scopeOf(req);
   const owner = await resolveNewLeadOwner(scope, body.assignedUserId);
   if (!owner.ok) return res.status(403).json({ error: owner.error });
@@ -228,6 +244,8 @@ leadsRouter.post('/', async (req, res) => {
       source: body.source ?? 'manual',
       priority: body.priority ?? 'normal',
       assignedUserId: owner.userId || undefined,
+      temperature: TEMPERATURES.includes(body.temperature) ? body.temperature : undefined,
+      interestedProjectId: body.interestedProjectId || undefined,
       pipelineId: body.pipelineId || undefined,
       pipelineStageId: body.pipelineStageId || undefined,
       stageEnteredAt: body.pipelineStageId ? new Date() : undefined,
@@ -536,7 +554,14 @@ leadsRouter.get('/:id', async (req, res) => {
 
 leadsRouter.patch('/:id', async (req, res) => {
   const scope = await scopeOf(req);
-  const { id: _id, createdAt: _c, updatedAt: _u, assignedUserId, ...fields } = req.body ?? {};
+  // originalSource is never writable — the database also keeps it fixed, this just says so plainly.
+  const { id: _id, createdAt: _c, updatedAt: _u, assignedUserId, originalSource: _o, ...fields } = req.body ?? {};
+  if (fields.temperature !== undefined && fields.temperature !== null && !TEMPERATURES.includes(fields.temperature)) {
+    return res.status(400).json({ error: 'Temperature must be hot, warm or cold.' });
+  }
+  if (fields.interestedProjectId && !(await prisma.project.count({ where: { id: String(fields.interestedProjectId) } }))) {
+    return res.status(400).json({ error: 'That project does not exist.' });
+  }
 
   // The edit form sends the whole record back, assignee included. Only an actual change of
   // owner is an assignment — and that one has to be somebody this caller may assign to.

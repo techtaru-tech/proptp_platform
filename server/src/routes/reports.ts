@@ -236,32 +236,41 @@ reportsRouter.get('/lead-volume', async (req, res) => {
 reportsRouter.get('/source-performance-report', async (req, res) => {
   const { source } = req.query as Record<string, string>;
   const dateRange = parseDateRange(req.query as Record<string, string>);
-  const where: Record<string, unknown> = {};
+  const where: Prisma.LeadWhereInput = {};
   if (Object.keys(dateRange).length > 0) where.createdAt = dateRange;
-  if (source?.trim()) where.source = { contains: source.trim(), mode: 'insensitive' };
+  // Attribution is by the channel that first earned the lead, so a later transfer or edit of the
+  // working source cannot move a booking from one channel to another.
+  if (source?.trim()) where.originalSource = { contains: source.trim(), mode: 'insensitive' };
 
   const scope = await scopeOf(req);
-  const [totals, won, lost, wonValueAgg] = await Promise.all([
-    prisma.lead.groupBy({ by: ['source'], where: inLeadScope(where, scope), _count: { _all: true } }),
-    prisma.lead.groupBy({ by: ['source'], where: inLeadScope({ ...where, status: 'won' }, scope), _count: { _all: true } }),
-    prisma.lead.groupBy({ by: ['source'], where: inLeadScope({ ...where, status: 'lost' }, scope), _count: { _all: true } }),
-    prisma.lead.groupBy({ by: ['source'], where: inLeadScope({ ...where, status: 'won' }, scope), _sum: { wonValue: true } }),
+  const key = (v: string | null) => v ?? 'unknown';
+  const [totals, won, lost, wonValueAgg, visited] = await Promise.all([
+    prisma.lead.groupBy({ by: ['originalSource'], where: inLeadScope(where, scope), _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['originalSource'], where: inLeadScope({ ...where, status: 'won' }, scope), _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['originalSource'], where: inLeadScope({ ...where, status: 'lost' }, scope), _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ['originalSource'], where: inLeadScope({ ...where, status: 'won' }, scope), _sum: { wonValue: true } }),
+    prisma.lead.groupBy({ by: ['originalSource'], where: inLeadScope({ ...where, siteVisits: { some: { status: 'done' } } }, scope), _count: { _all: true } }),
   ]);
-  const wonMap = new Map(won.map((g) => [g.source, g._count._all]));
-  const lostMap = new Map(lost.map((g) => [g.source, g._count._all]));
-  const valueMap = new Map(wonValueAgg.map((g) => [g.source, g._sum.wonValue ?? 0]));
+  const wonMap = new Map(won.map((g) => [key(g.originalSource), g._count._all]));
+  const lostMap = new Map(lost.map((g) => [key(g.originalSource), g._count._all]));
+  const valueMap = new Map(wonValueAgg.map((g) => [key(g.originalSource), g._sum.wonValue ?? 0]));
+  const visitMap = new Map(visited.map((g) => [key(g.originalSource), g._count._all]));
 
   const rows = totals
     .map((g) => {
       const total = g._count._all;
-      const wonCount = wonMap.get(g.source) ?? 0;
+      const k = key(g.originalSource);
+      const wonCount = wonMap.get(k) ?? 0;
+      const visits = visitMap.get(k) ?? 0;
       return {
-        source: g.source,
+        source: k,
         total,
+        siteVisits: visits,
         won: wonCount,
-        lost: lostMap.get(g.source) ?? 0,
+        lost: lostMap.get(k) ?? 0,
         conversionRate: total > 0 ? Math.round((wonCount / total) * 1000) / 10 : 0,
-        wonValue: valueMap.get(g.source) ?? 0,
+        visitToBooking: visits > 0 ? Math.round((wonCount / visits) * 1000) / 10 : 0,
+        wonValue: valueMap.get(k) ?? 0,
       };
     })
     .sort((a, b) => b.total - a.total);
@@ -594,4 +603,116 @@ reportsRouter.get('/form-analytics-summary', async (req, res) => {
     totalLeadsInRange: rows.reduce((sum, r) => sum + r.leadsInRange, 0),
     forms: rows.sort((a, b) => b.submissionsInRange - a.submissionsInRange),
   });
+});
+
+// ---------------------------------------------------------------------------
+// Site visits -> bookings, and the telecaller's day
+// ---------------------------------------------------------------------------
+
+/**
+ * Visits against what came of them, by project, by the executive who hosted, and by the lead's
+ * original source. A visit counts as converted when its lead is now won — read from the lead, so
+ * there is no second place to mark it.
+ */
+reportsRouter.get('/site-visits', async (req, res, next) => {
+  try {
+    const scope = await scopeOf(req);
+    const range = parseDateRange(req.query as Record<string, string>);
+    const where: Prisma.SiteVisitWhereInput = {
+      AND: [scope.kind === 'all' ? {} : { OR: [{ lead: leadScopeWhere(scope) }, { hostId: { in: scope.userIds } }] }, Object.keys(range).length ? { scheduledAt: range } : {}],
+    };
+    const visits = await prisma.siteVisit.findMany({
+      where,
+      select: { status: true, leadId: true, project: { select: { projectName: true } }, host: { select: { id: true, name: true } }, lead: { select: { status: true, originalSource: true, source: true } } },
+    });
+    const group = (keyOf: (v: (typeof visits)[number]) => string) => {
+      const m = new Map<string, { name: string; scheduled: number; done: number; noShow: number; cancelled: number; leadsDone: Set<string>; converted: Set<string> }>();
+      for (const v of visits) {
+        const name = keyOf(v);
+        const e = m.get(name) ?? { name, scheduled: 0, done: 0, noShow: 0, cancelled: 0, leadsDone: new Set(), converted: new Set() };
+        e.scheduled += 1;
+        if (v.status === 'done') { e.done += 1; e.leadsDone.add(v.leadId); if (v.lead.status === 'won') e.converted.add(v.leadId); }
+        if (v.status === 'no_show') e.noShow += 1;
+        if (v.status === 'cancelled') e.cancelled += 1;
+        m.set(name, e);
+      }
+      return [...m.values()]
+        .map((e) => ({ name: e.name, scheduled: e.scheduled, done: e.done, noShow: e.noShow, cancelled: e.cancelled, booked: e.converted.size, conversionRate: e.leadsDone.size ? Math.round((e.converted.size / e.leadsDone.size) * 1000) / 10 : 0 }))
+        .sort((a, b) => b.scheduled - a.scheduled);
+    };
+    const total = group(() => 'All')[0] ?? { scheduled: 0, done: 0, noShow: 0, cancelled: 0, booked: 0, conversionRate: 0 };
+    res.json({
+      total,
+      byProject: group((v) => v.project.projectName),
+      byExecutive: group((v) => v.host?.name ?? 'Unassigned'),
+      bySource: group((v) => v.lead.originalSource ?? v.lead.source),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Each telecaller's day: calls, connected calls, follow-ups, visits and bookings, over the
+ * caller's own team. "Zero activity" lists people who did nothing in the period and were not on
+ * approved leave — so management sees silence without penalising a day off.
+ */
+reportsRouter.get('/telecallers', async (req, res, next) => {
+  try {
+    const scope = await scopeOf(req);
+    const q = req.query as Record<string, string>;
+    const day = (s?: string) => (s && /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null);
+    const fromDay = day(q.from) ?? new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    const toDay = day(q.to) ?? fromDay;
+    const from = new Date(`${fromDay}T00:00:00.000+05:30`);
+    const to = new Date(`${toDay}T23:59:59.999+05:30`);
+    if (to < from) return res.status(400).json({ error: 'The end date cannot be before the start date.' });
+    if ((to.getTime() - from.getTime()) / 86_400_000 > 92) return res.status(400).json({ error: 'Choose a range of at most 92 days.' });
+
+    const people = await prisma.user.findMany({
+      where: { status: 'active', role: { in: ['employee', 'team_leader', 'leader'] }, ...(scope.kind === 'all' ? {} : { id: { in: scope.userIds } }) },
+      select: { id: true, name: true, role: true },
+      orderBy: { name: 'asc' },
+    });
+    const ids = people.map((p) => p.id);
+    const inRange = { gte: from, lte: to };
+    const [calls, newLeads, fuDone, fuOpen, visits, won, leave] = await Promise.all([
+      prisma.callLog.findMany({ where: { agentUserId: { in: ids }, startedAt: inRange }, select: { agentUserId: true, status: true, durationSeconds: true } }),
+      prisma.lead.groupBy({ by: ['assignedUserId'], where: { assignedUserId: { in: ids }, createdAt: inRange }, _count: { _all: true } }),
+      prisma.leadFollowUp.groupBy({ by: ['assignedUserId'], where: { assignedUserId: { in: ids }, completedAt: inRange }, _count: { _all: true } }),
+      prisma.leadFollowUp.groupBy({ by: ['assignedUserId'], where: { assignedUserId: { in: ids }, status: { in: ['pending', 'rescheduled'] }, dueAt: { lt: new Date() } }, _count: { _all: true } }),
+      prisma.siteVisit.findMany({ where: { hostId: { in: ids }, scheduledAt: inRange }, select: { hostId: true, status: true } }),
+      prisma.lead.groupBy({ by: ['assignedUserId'], where: { assignedUserId: { in: ids }, status: 'won', wonAt: inRange }, _count: { _all: true } }),
+      prisma.leaveRequest.findMany({ where: { userId: { in: ids }, status: 'approved', startDate: { lte: to }, endDate: { gte: from } }, select: { userId: true } }),
+    ]);
+    const cnt = (rows: { assignedUserId: string | null; _count: { _all: number } }[]) => new Map(rows.map((r) => [r.assignedUserId as string, r._count._all]));
+    const [nl, fd, fo, wn] = [cnt(newLeads), cnt(fuDone), cnt(fuOpen), cnt(won)];
+    const onLeave = new Set(leave.map((l) => l.userId));
+
+    const rows = people.map((p) => {
+      const mine = calls.filter((c) => c.agentUserId === p.id);
+      const connected = mine.filter((c) => c.status === 'answered');
+      const v = visits.filter((x) => x.hostId === p.id);
+      const row = {
+        userId: p.id, name: p.name, role: p.role, onLeave: onLeave.has(p.id),
+        calls: mine.length, connected: connected.length, connectedRate: mine.length ? Math.round((connected.length / mine.length) * 100) : 0,
+        talkMinutes: Math.round(connected.reduce((s, c) => s + c.durationSeconds, 0) / 60),
+        newLeads: nl.get(p.id) ?? 0, followUpsDone: fd.get(p.id) ?? 0, followUpsOverdue: fo.get(p.id) ?? 0,
+        visitsScheduled: v.length, visitsDone: v.filter((x) => x.status === 'done').length, bookings: wn.get(p.id) ?? 0,
+      };
+      return { ...row, zeroActivity: row.calls === 0 && row.followUpsDone === 0 && row.visitsScheduled === 0 && !row.onLeave };
+    });
+    // Anybody who made no calls, did no follow-ups and hosted no visits and does not take calls at all is not a telecaller.
+    const active = rows.filter((r) => r.calls + r.followUpsDone + r.visitsScheduled + r.newLeads + r.followUpsOverdue + r.bookings > 0 || r.onLeave || r.zeroActivity);
+    const sum = (k: 'calls' | 'connected' | 'followUpsDone' | 'visitsScheduled' | 'bookings' | 'newLeads') => active.reduce((s, r) => s + r[k], 0);
+    res.json({
+      from: fromDay, to: toDay,
+      totals: { calls: sum('calls'), connected: sum('connected'), followUpsDone: sum('followUpsDone'), visitsScheduled: sum('visitsScheduled'), bookings: sum('bookings'), newLeads: sum('newLeads') },
+      rows: active.sort((a, b) => b.calls - a.calls || a.name.localeCompare(b.name)),
+      zeroActivity: rows.filter((r) => r.zeroActivity).map((r) => ({ userId: r.userId, name: r.name })),
+      onLeave: rows.filter((r) => r.onLeave).map((r) => ({ userId: r.userId, name: r.name })),
+    });
+  } catch (err) {
+    next(err);
+  }
 });

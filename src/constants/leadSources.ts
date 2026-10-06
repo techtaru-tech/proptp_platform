@@ -19,6 +19,12 @@ export const LEAD_SOURCE_META: Record<string, { label: string; color: string }> 
   jotform: { label: 'JotForm', color: '#ff6100' },
   calendly: { label: 'Calendly', color: '#006bff' },
   web_form: { label: 'Website Form', color: '#0f1d35' },
+  walk_in: { label: 'Walk-in', color: '#0d9488' },
+  referral: { label: 'Referral', color: '#7c3aed' },
+  portal: { label: 'Real-estate portal', color: '#ea580c' },
+  channel_partner: { label: 'Channel partner', color: '#be185d' },
+  direct_enquiry: { label: 'Direct enquiry', color: '#475569' },
+  dlt_sms: { label: 'SMS campaign', color: '#2563eb' },
   manual: { label: 'Manual', color: '#667085' },
   other: { label: 'Other', color: '#98a2b3' },
 };

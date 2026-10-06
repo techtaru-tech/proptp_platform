@@ -765,8 +765,17 @@ export type LeadSource =
   | 'jotform'
   | 'calendly'
   | 'web_form'
+  | 'walk_in'
+  | 'referral'
+  | 'portal'
+  | 'channel_partner'
+  | 'direct_enquiry'
+  | 'dlt_sms'
   | 'manual'
   | 'other';
+
+/** How warm the buyer is, as the sales team reads it. Separate from `priority`, which is how urgent the lead is to work. */
+export type LeadTemperature = 'hot' | 'warm' | 'cold';
 
 /** Matches `App\Enums\FollowUpStatus` on `lead_tasks`. */
 export type FollowUpStatus = 'pending' | 'completed' | 'missed' | 'rescheduled';
@@ -845,6 +854,10 @@ export interface Lead {
   landingPage?: string;
   referrerUrl?: string;
 
+  /** The channel that first earned the lead. Fixed for life; `source` is the working source and may change. */
+  originalSource?: string;
+  interestedProjectId?: string;
+  temperature?: LeadTemperature | null;
   status: LeadStatus;
   priority: LeadPriority;
   leadScore: number;

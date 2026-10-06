@@ -60,6 +60,8 @@ export const NAV_ITEMS: NavItem[] = [
       { label: 'Pipeline', to: '/crm/pipeline' },
       { label: 'Kanban', to: '/crm/pipeline/kanban' },
       { label: 'Follow-ups', to: '/crm/follow-ups' },
+      { label: 'Site Visits', to: '/crm/site-visits' },
+      { label: 'Telecaller Activity', to: '/crm/telecallers', teamOnly: true },
       { label: 'Task Calendar', to: '/crm/calendar' },
       { label: 'Forms', to: '/crm/forms' },
       { label: 'Report Center', to: '/crm/report-center' },

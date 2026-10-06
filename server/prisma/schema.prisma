@@ -19,6 +19,14 @@ enum LeadStatus {
   lost
 }
 
+/// How warm the buyer is, as the sales team reads it. Separate from `priority` (how urgent the
+/// lead is to work), because a hot lead can be low-urgency today and the two are reported apart.
+enum LeadTemperature {
+  hot
+  warm
+  cold
+}
+
 enum LeadPriority {
   low
   normal
@@ -142,6 +150,15 @@ model Lead {
   utmTerm     String?
   landingPage String?
   referrerUrl String?
+
+  /// Where the lead *first* came from. Never changes once set, so a later transfer or referral
+  /// cannot rewrite which channel earned it. `source` stays the current/working source.
+  originalSource      String?
+  /// Which project this buyer is interested in — the lead's destination alongside its owner.
+  interestedProject   Project?         @relation("LeadInterest", fields: [interestedProjectId], references: [id], onDelete: SetNull)
+  interestedProjectId String?
+  temperature         LeadTemperature?
+  siteVisits          SiteVisit[]
 
   status                       LeadStatus   @default(new)
   priority                     LeadPriority @default(normal)
@@ -1110,6 +1127,8 @@ model User {
   issuesOwned        SiteIssue[]            @relation("IssueOwner")
   issuesRaised       SiteIssue[]            @relation("IssueRaiser")
   camerasOwned       Camera[]               @relation("CameraOwner")
+  visitsHosted       SiteVisit[]            @relation("VisitHost")
+  visitsCreated      SiteVisit[]            @relation("VisitCreator")
   vendorProfile      Vendor?                @relation("VendorLogin")
   materialCreated    MaterialEntry[]        @relation("MaterialCreator")
   materialIssued     MaterialIssue[]        @relation("MaterialIssuer")
@@ -1414,6 +1433,8 @@ model Project {
   constructionActivities ConstructionActivity[]
   siteIssues             SiteIssue[]
   cameras                Camera[]
+  interestedLeads        Lead[]                 @relation("LeadInterest")
+  siteVisits             SiteVisit[]
   materialEntries        MaterialEntry[]
   materialIssues         MaterialIssue[]
   workOrders             WorkOrder[]
@@ -2671,6 +2692,7 @@ enum LegalDocKind {
   receipt
   demand_note
   correspondence
+  cost_sheet
   other
 }
 
@@ -2953,4 +2975,54 @@ model CameraImage {
   @@unique([cameraId, fileHash])
   @@index([cameraId, capturedAt])
   @@index([review])
+}
+
+// ---------------------------------------------------------------------------
+// Site visits
+//
+// A visit belongs to a lead and a project. Scheduling one moves the lead to "Site Visit Planned"
+// and raises a reminder; completing it records the outcome, moves the lead to "Site Visit Done"
+// and schedules the follow-up. Conversion (visit -> booking) is read from the lead afterwards,
+// never typed in.
+// ---------------------------------------------------------------------------
+
+enum SiteVisitStatus {
+  scheduled
+  confirmed
+  done
+  cancelled
+  no_show
+}
+
+model SiteVisit {
+  id           String           @id @default(cuid())
+  lead         Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId       String
+  project      Project          @relation(fields: [projectId], references: [id])
+  projectId    String
+  scheduledAt  DateTime
+  status       SiteVisitStatus  @default(scheduled)
+  /// The sales executive taking them round.
+  host         User?            @relation("VisitHost", fields: [hostId], references: [id], onDelete: SetNull)
+  hostId       String?
+  visitorCount Int              @default(1)
+  confirmedAt  DateTime?
+  completedAt  DateTime?
+  /// interested | thinking | not_interested | ready_to_book — what the buyer said at the end.
+  outcome      String?
+  interest     LeadTemperature?
+  feedback     String?
+  nextAction   String?
+  cancelReason String?
+  /// The reminder raised for this visit, closed when the visit is done or cancelled.
+  reminderId   String?
+  followUpId   String?
+  createdBy    User             @relation("VisitCreator", fields: [createdById], references: [id])
+  createdById  String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([leadId])
+  @@index([scheduledAt, status])
+  @@index([hostId])
 }

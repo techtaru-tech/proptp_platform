@@ -51,6 +51,7 @@ const PATH_MODULE_ENTRIES = [
   // CRM
   { prefix: '/leads', module: 'crm' },
   { prefix: '/crm-team', module: 'crm' },
+  { prefix: '/site-visits', module: 'crm' },
   { prefix: '/lead-fields', module: 'crm' },
   { prefix: '/pipelines', module: 'crm' },
   { prefix: '/tags', module: 'crm' },

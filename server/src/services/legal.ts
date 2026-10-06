@@ -106,12 +106,16 @@ export function complianceStatus(validUntil: Date | null, at = new Date()): { st
 
 export const PLACEHOLDERS = [
   'buyer_name', 'phone', 'booking_reference', 'unit_number', 'project_name', 'project_location', 'area', 'agreed_value',
-  'booking_amount', 'date', 'milestone_name', 'milestone_amount', 'milestone_due', 'outstanding', 'paid_amount', 'paid_on', 'payment_reference',
+  'booking_amount', 'rate', 'base_amount', 'other_charges', 'gst_registration', 'grand_total', 'token_amount', 'balance_after_token', 'date', 'milestone_name', 'milestone_amount', 'milestone_due', 'outstanding', 'paid_amount', 'paid_on', 'payment_reference',
 ] as const;
 
-export const GENERATED_KINDS: LegalDocKind[] = ['allotment_letter', 'agreement', 'receipt', 'demand_note'];
+export const GENERATED_KINDS: LegalDocKind[] = ['cost_sheet', 'allotment_letter', 'agreement', 'receipt', 'demand_note'];
 
 const DEFAULT_TEMPLATES: Record<string, { title: string; body: string }> = {
+  cost_sheet: {
+    title: 'Cost Sheet',
+    body: `COST SHEET\n\nDate: {{date}}\nBooking reference: {{booking_reference}}\nBuyer: {{buyer_name}} ({{phone}})\n\nProject: {{project_name}}, {{project_location}}\nPlot: {{unit_number}}   Area: {{area}}\n\nRate per unit area ............ {{rate}}\nBasic cost of plot ............ {{base_amount}}\nOther applicable charges ...... {{other_charges}}\nGST and registration .......... {{gst_registration}}\n--------------------------------------------\nTOTAL COST .................... {{grand_total}}\n\nToken / booking amount ........ {{token_amount}}\nBalance after token ........... {{balance_after_token}}\n\nThe balance is payable as per the payment plan agreed with you. Charges shown are as recorded for this plot at the time of booking.\n\nFor Rosium Developers Pvt. Ltd.`,
+  },
   allotment_letter: {
     title: 'Allotment Letter',
     body: `Date: {{date}}\nBooking reference: {{booking_reference}}\n\nTo,\n{{buyer_name}}\nPhone: {{phone}}\n\nSubject: Allotment of plot {{unit_number}}, {{project_name}}\n\nDear {{buyer_name}},\n\nWe are pleased to confirm the allotment of plot {{unit_number}}, admeasuring {{area}}, in {{project_name}}, {{project_location}}, against your booking amount of {{booking_amount}}. The agreed total value of the plot is {{agreed_value}}.\n\nThe balance shall be payable as per the payment plan agreed with you. This letter is subject to the terms of the agreement to be executed between us.\n\nFor Rosium Developers Pvt. Ltd.\n\nAuthorised Signatory`,
@@ -168,6 +172,11 @@ export async function buildValues(ctx: RenderContext): Promise<Record<string, st
     buyer_name: file.buyerName, phone: file.phone, booking_reference: booking.reference, unit_number: unit.propertyNumber,
     project_name: unit.project.projectName, project_location: unit.project.projectLocation,
     area: `${unit.propertyArea} ${unit.propertyMeasurement}`.trim(), agreed_value: rupees(file.agreedValue),
+    // The unit's total is area x rate; charges and GST/registration are payable on top of it.
+    rate: rupees(unit.perAreaAmount), base_amount: rupees(unit.totalInvestmentAmount), other_charges: rupees(unit.charges),
+    gst_registration: rupees(unit.gstAndRegistration), grand_total: rupees(unit.totalInvestmentAmount + unit.charges + unit.gstAndRegistration),
+    token_amount: rupees(unit.tokenAmount > 0 ? unit.tokenAmount : booking.amount),
+    balance_after_token: rupees(Math.max(0, unit.totalInvestmentAmount + unit.charges + unit.gstAndRegistration - (unit.tokenAmount > 0 ? unit.tokenAmount : booking.amount))),
     booking_amount: rupees(booking.amount), date: dateText(new Date()),
   };
   if (ctx.milestoneId) {

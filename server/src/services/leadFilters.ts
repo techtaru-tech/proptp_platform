@@ -15,6 +15,8 @@ export interface LeadFilter {
   pipelineId?: string;
   stageId?: string;
   assignedUserId?: string;
+  /** hot | warm | cold, or `none` for leads nobody has rated yet. */
+  temperature?: string;
   tagId?: string;
   starred?: boolean;
   /** Created between these two dates, inclusive of both. Plain YYYY-MM-DD, read as IST. */
@@ -82,6 +84,10 @@ export function buildLeadWhere(filter: LeadFilter): Prisma.LeadWhereInput {
   const assignedUserId = chosen(filter.assignedUserId);
   if (assignedUserId === 'none') where.assignedUserId = null;
   else if (assignedUserId) where.assignedUserId = assignedUserId;
+
+  const temperature = chosen(filter.temperature);
+  if (temperature === 'none') where.temperature = null;
+  else if (temperature === 'hot' || temperature === 'warm' || temperature === 'cold') where.temperature = temperature;
 
   const tagId = chosen(filter.tagId);
   if (tagId) where.tags = { some: { tagId } };
