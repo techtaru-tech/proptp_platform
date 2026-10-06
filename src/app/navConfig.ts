@@ -299,6 +299,7 @@ export const NAV_ITEMS: NavItem[] = [
       { label: 'Telephony', to: '/settings/telephony' },
       { label: 'Email', to: '/settings/email' },
       { label: 'WhatsApp', to: '/settings/whatsapp' },
+      { label: 'SMS (DLT)', to: '/settings/sms' },
       { label: 'Attendance Policy', to: '/settings/attendance' },
       { label: 'Notifications', to: '/settings/notifications' },
       { label: 'Admin Profile', to: '/settings/profile' },

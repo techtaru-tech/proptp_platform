@@ -10,7 +10,7 @@ import { healthOf, newKey } from '../../services/cameras';
 export const adminCamerasRouter = Router();
 
 const shape = (c: any) => ({
-  id: c.id, name: c.name, projectId: c.projectId, projectName: c.project?.projectName, placement: c.placement, ownerId: c.ownerId, ownerName: c.owner?.name ?? null,
+  id: c.id, name: c.name, projectId: c.projectId, projectName: c.project?.projectName, placement: c.placement, liveUrl: c.liveUrl, ownerId: c.ownerId, ownerName: c.owner?.name ?? null,
   active: c.active, expectedEveryMinutes: c.expectedEveryMinutes, keyPrefix: c.keyPrefix, lastImageAt: c.lastImageAt?.toISOString() ?? null,
   lastSeenAt: c.lastSeenAt?.toISOString() ?? null, ...healthOf(c),
 });
@@ -61,6 +61,11 @@ adminCamerasRouter.patch('/:id', async (req: AuthedRequest, res, next) => {
     const data: Prisma.CameraUncheckedUpdateInput = {};
     if (req.body?.name !== undefined) { const n = String(req.body.name).trim(); if (!n) return res.status(400).json({ error: 'The name cannot be empty.' }); data.name = n; }
     if (req.body?.placement !== undefined) data.placement = String(req.body.placement).trim() || null;
+    if (req.body?.liveUrl !== undefined) {
+      const u = String(req.body.liveUrl).trim();
+      if (u && !/^https?:\/\//i.test(u)) return res.status(400).json({ error: 'The live address must start with http:// or https://.' });
+      data.liveUrl = u || null;
+    }
     if (req.body?.ownerId !== undefined) data.ownerId = req.body.ownerId ? String(req.body.ownerId) : null;
     if (req.body?.active !== undefined) data.active = !!req.body.active;
     if (req.body?.expectedEveryMinutes !== undefined) {

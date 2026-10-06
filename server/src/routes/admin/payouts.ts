@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../prisma';
+import { payableEntries } from '../../services/partners';
 import { writeAudit } from '../../services/audit';
 import type { AuthedRequest } from '../../services/auth';
 import { adminCommissionStatement, adminPayout } from '../../services/adminMappers';
@@ -158,6 +159,12 @@ adminPayoutsRouter.post('/:id/release', async (req: AuthedRequest, res, next) =>
       });
     }
 
+    // Brokerage is paid only once its milestone is reached (Settings > Sales policy).
+    const payable = await payableEntries(payout.user.id);
+    if (payout.amount > payable.total) {
+      return res.status(409).json({ error: `Only ₹${payable.total.toLocaleString('en-IN')} of this partner's earnings has reached its milestone${payable.waitingTotal ? ` (₹${payable.waitingTotal.toLocaleString('en-IN')} is still waiting for it)` : ''}. The payout of ₹${payout.amount.toLocaleString('en-IN')} cannot be released yet.` });
+    }
+
     const updated = await prisma.$transaction(async (tx) => {
       await tx.payoutRequest.update({ where: { id }, data: { status: 'released' } });
       await tx.payoutStatusEvent.create({
@@ -167,7 +174,7 @@ adminPayoutsRouter.post('/:id/release', async (req: AuthedRequest, res, next) =>
       // Everything this partner had pending is now paid out, which is what makes the app's
       // released/in_process/pending earnings split move.
       await tx.earningEntry.updateMany({
-        where: { userId: payout.user.id, status: { in: ['pending', 'confirmed'] } },
+        where: { id: { in: payable.ids } },
         data: { status: 'released' },
       });
       return tx.payoutRequest.findUniqueOrThrow({ where: { id }, include: payoutInclude });

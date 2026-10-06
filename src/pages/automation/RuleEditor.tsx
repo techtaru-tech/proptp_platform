@@ -151,11 +151,11 @@ function ActionFields({ index, step, def, catalogue, onChange }: { index: number
       </div>
       {isNotify && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Select label="Channel" name={`chan-${index}`} value={a.channel ?? 'in_app'} onChange={(e) => onChange({ channel: e.target.value as 'in_app' | 'email' | 'whatsapp' })}
-            options={[{ value: 'in_app', label: 'In the app / panel' }, { value: 'email', label: 'Email' }, { value: 'whatsapp', label: 'WhatsApp' }]} />
-          {a.channel === 'whatsapp' && (
+          <Select label="Channel" name={`chan-${index}`} value={a.channel ?? 'in_app'} onChange={(e) => onChange({ channel: e.target.value as 'in_app' | 'email' | 'whatsapp' | 'sms' })}
+            options={[{ value: 'in_app', label: 'In the app / panel' }, { value: 'email', label: 'Email' }, { value: 'sms', label: 'SMS (DLT)' }, { value: 'whatsapp', label: 'WhatsApp' }]} />
+          {(a.channel === 'whatsapp' || a.channel === 'sms') && (
             <>
-              <Input label="Approved template name" name={`tpl-${index}`} value={a.templateName ?? ''} onChange={(e) => onChange({ templateName: e.target.value })} />
+              <Input label={a.channel === 'sms' ? 'SMS template name' : 'Approved template name'} name={`tpl-${index}`} value={a.templateName ?? ''} onChange={(e) => onChange({ templateName: e.target.value })} />
               <Input label="Template values, in order" name={`tplp-${index}`} value={(a.templateParams ?? []).join(', ')} onChange={(e) => onChange({ templateParams: e.target.value.split(',').map((x) => x.trim()).filter(Boolean) })} hint="e.g. buyer, amount" />
             </>
           )}

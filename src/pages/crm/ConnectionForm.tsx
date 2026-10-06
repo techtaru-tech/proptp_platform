@@ -10,7 +10,7 @@ import { OAUTH_CAPABLE_SOURCES, type LeadSource } from '../../types';
 /** The real `LeadSource` enum has exactly these 19 values available when creating a connection — no free-text/custom source. */
 export const CONNECTOR_SOURCE_OPTIONS: { value: LeadSource; label: string }[] = [
   'meta', 'instagram', 'tiktok', 'linkedin', 'whatsapp', 'viber', 'telegram', 'twitter', 'snapchat', 'pinterest',
-  'google_ads', 'youtube', 'microsoft_ads', 'email', 'typeform', 'jotform', 'calendly', 'web_form', 'manual',
+  'google_ads', 'youtube', 'microsoft_ads', 'email', 'typeform', 'jotform', 'calendly', 'web_form', 'portal', 'manual',
 ].map((value) => ({ value: value as LeadSource, label: LEAD_SOURCE_META[value]?.label ?? value }));
 
 export interface ConnectionFormValues {

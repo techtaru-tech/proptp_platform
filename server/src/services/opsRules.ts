@@ -6,6 +6,7 @@ import { complianceStatus, currentStage, generateDocument, milestoneState, openL
 import { notify } from './notify';
 import { sendRawEmail } from './email';
 import { sendTemplateToNumber } from './whatsapp';
+import { sendSms } from './sms';
 import { healthOf } from './cameras';
 
 /**
@@ -27,7 +28,7 @@ import { healthOf } from './cameras';
 // ---------------------------------------------------------------------------
 
 export type ActionKind = 'notify' | 'create_task' | 'generate_demand_note' | 'create_payment_schedule' | 'release_hold' | 'close_file_mark_sold';
-export const CHANNELS = ['in_app', 'email', 'whatsapp'] as const;
+export const CHANNELS = ['in_app', 'email', 'whatsapp', 'sms'] as const;
 export type Channel = (typeof CHANNELS)[number];
 
 export interface Step {
@@ -423,7 +424,8 @@ export function validateRule(trigger: string, steps: unknown): string | null {
       if (a.kind === 'notify') {
         if (a.channel && !CHANNELS.includes(a.channel)) return `${n}: unknown channel.`;
         if (a.channel === 'whatsapp' && !a.templateName) return `${n}: WhatsApp needs an approved template name.`;
-        if (a.recipients.includes('buyer') && (a.channel ?? 'in_app') === 'in_app') return `${n}: a buyer has no app login — pick email or WhatsApp for them.`;
+        if (a.channel === 'sms' && !a.templateName) return `${n}: SMS needs the name of an approved DLT template.`;
+        if (a.recipients.includes('buyer') && (a.channel ?? 'in_app') === 'in_app') return `${n}: a buyer has no app login — pick email, SMS or WhatsApp for them.`;
       }
       if (!String(a.message ?? '').trim()) return `${n}: write the message.`;
       const bad = placeholdersIn(`${a.title ?? ''} ${a.message ?? ''}`).filter((p) => !def.placeholders.includes(p));
@@ -496,6 +498,13 @@ async function execute(rule: OpsRule, step: Step, subject: Subject): Promise<Out
           try { await sendRawEmail(u.email, title, `<p>${message.replace(/\n/g, '<br>')}</p>`); delivered += 1; } catch (e) { notes.push(`${u.name}: ${(e as Error).message}`); }
         }
         if (toBuyer) notes.push('buyer: no email address on record');
+      } else if (channel === 'sms') {
+        const targets = [...users.map((u) => ({ name: u.name, phone: u.phone })), ...(toBuyer && subject.buyer ? [{ name: subject.buyer.name, phone: subject.buyer.phone }] : [])];
+        const params = (a.templateParams ?? []).map((p) => subject.values[p] ?? '');
+        for (const t of targets) {
+          const r = await sendSms({ to: t.phone, templateName: a.templateName!, params });
+          if (r.ok) delivered += 1; else notes.push(`${t.name}: ${r.detail}`);
+        }
       } else {
         const targets = [...users.map((u) => ({ name: u.name, phone: u.phone })), ...(toBuyer && subject.buyer ? [{ name: subject.buyer.name, phone: subject.buyer.phone }] : [])];
         const account = await prisma.whatsAppAccount.findFirst({ orderBy: { createdAt: 'asc' } });

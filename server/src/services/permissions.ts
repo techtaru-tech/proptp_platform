@@ -79,6 +79,7 @@ const PATH_MODULE_ENTRIES = [
   { prefix: '/materials', module: 'vendors' },
   { prefix: '/vendor-portal', module: 'vendor_portal' },
   { prefix: '/partner-portal', module: 'partner_portal' },
+  { prefix: '/sms', module: 'settings' },
   { prefix: '/channel-partners', module: 'partners' },
   { prefix: '/units', module: 'properties' },
   { prefix: '/plot-holds', module: 'properties' },

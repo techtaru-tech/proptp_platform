@@ -7,7 +7,7 @@ export interface RuleStep {
   delayHours: number;
   repeatEveryHours?: number | null;
   action: {
-    kind: ActionKind; recipients?: string[]; channel?: 'in_app' | 'email' | 'whatsapp'; title?: string; message?: string;
+    kind: ActionKind; recipients?: string[]; channel?: 'in_app' | 'email' | 'whatsapp' | 'sms'; title?: string; message?: string;
     templateName?: string; templateLanguage?: string; templateParams?: string[]; dueInHours?: number;
     schedule?: { name: string; percent: number; offsetDays: number }[];
   };

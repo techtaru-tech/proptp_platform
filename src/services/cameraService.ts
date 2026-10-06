@@ -4,7 +4,7 @@ import { api } from './apiClient';
 
 export type Health = 'live' | 'stale' | 'offline' | 'never' | 'off';
 export interface CameraRow {
-  id: string; name: string; projectId: string; projectName: string; placement: string | null; ownerId: string | null; ownerName: string | null;
+  id: string; name: string; projectId: string; projectName: string; placement: string | null; liveUrl: string | null; ownerId: string | null; ownerName: string | null;
   active: boolean; expectedEveryMinutes: number; keyPrefix: string; lastImageAt: string | null; lastSeenAt: string | null;
   health: Health; silentMinutes: number | null; imagesToday: number; flagged: number; latestUrl: string | null;
 }

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Flag, KeyRound, Trash2 } from 'lucide-react';
+import { Flag, KeyRound, Link2, Radio, Trash2 } from 'lucide-react';
+import { Modal } from '../../components/ui/Modal';
+import { Input } from '../../components/ui/Input';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -32,6 +34,8 @@ export function CameraDetail({ flaggedOnly = false }: { flaggedOnly?: boolean })
   const [reload, setReload] = useState(0);
   const [secret, setSecret] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
+  const [live, setLive] = useState<null | 'view' | 'set'>(null);
+  const [liveUrl, setLiveUrl] = useState('');
   const cams = useAsync(() => listCameras(), [reload]);
   const cam = cams.data?.find((c) => c.id === id);
   const imgs = useAsync(() => listImages({ cameraId: id, review: flaggedOnly ? 'flagged' : review, date, page }), [id, review, date, page, reload, flaggedOnly]);
@@ -54,6 +58,8 @@ export function CameraDetail({ flaggedOnly = false }: { flaggedOnly?: boolean })
         breadcrumb={[{ label: 'Site cameras', to: '/cameras' }, { label: flaggedOnly ? 'Flagged' : cam?.name ?? '…' }]}
         actions={cam && (
           <div className="flex gap-2">
+            {cam.liveUrl && <Button variant="primary" leftIcon={<Radio size={14} />} onClick={() => setLive('view')}>Live view</Button>}
+            <Button variant="outline" leftIcon={<Link2 size={14} />} onClick={() => { setLiveUrl(cam.liveUrl ?? ''); setLive('set'); }}>{cam.liveUrl ? 'Live address' : 'Add live address'}</Button>
             <Button variant="outline" leftIcon={<KeyRound size={14} />} onClick={rotate}>Rotate key</Button>
             <Button variant="outline" onClick={async () => { await updateCamera(cam.id, { active: !cam.active }); refresh(); }}>{cam.active ? 'Switch off' : 'Switch on'}</Button>
             <Button variant="ghost" className="text-danger-600" aria-label="Remove camera" onClick={() => setRemoving(true)}><Trash2 size={14} /></Button>
@@ -74,6 +80,18 @@ export function CameraDetail({ flaggedOnly = false }: { flaggedOnly?: boolean })
               {cam.health === 'never' ? 'Nothing has arrived from this camera yet. Set the uploader up on the PC it saves to — use “Rotate key” to get a key and the steps.' : 'Nothing has arrived for a long while. Check that the PC is on and online, and that the scheduled uploader is still running.'}
             </p>)}
         </Card>)}
+
+      {cam && live === 'view' && cam.liveUrl && (
+        <Modal isOpen onClose={() => setLive(null)} size="lg" title={`Live: ${cam.name}`}>
+          <LiveFrame url={cam.liveUrl} />
+        </Modal>
+      )}
+      {cam && live === 'set' && (
+        <Modal isOpen onClose={() => setLive(null)} title="Live address" footer={<><Button variant="outline" onClick={() => setLive(null)}>Cancel</Button>
+          <Button variant="primary" onClick={async () => { try { await updateCamera(cam.id, { liveUrl }); setLive(null); refresh(); } catch (e) { toast({ title: 'Could not save', description: (e as Error).message, variant: 'error' }); } }}>Save</Button></>}>
+          <Input label="Where can this camera be watched live?" name="camLive" value={liveUrl} onChange={(e) => setLiveUrl(e.target.value)} hint="An https:// address: a video stream (HLS .m3u8 or MP4), an MJPEG feed, or the camera app's web page. Leave empty to remove it." />
+        </Modal>
+      )}
 
       {!flaggedOnly && (
         <div className="mb-4 flex flex-wrap items-end gap-3">
@@ -105,6 +123,19 @@ export function CameraDetail({ flaggedOnly = false }: { flaggedOnly?: boolean })
       {secret && cam && <KeyReveal camera={cam} secret={secret} onClose={() => setSecret(null)} />}
       <ConfirmationDialog isOpen={removing} onClose={() => setRemoving(false)} onConfirm={remove} title="Remove this camera?" description={cam ? `“${cam.name}” and its list of pictures will be removed. Site issues already raised from it stay.` : undefined} confirmLabel="Remove camera" variant="danger" />
       {!cam && !flaggedOnly && <Link to="/cameras" />}
+    </div>
+  );
+}
+
+/** Shows whatever the address serves: a video stream, a still/MJPEG feed, or a web page. */
+function LiveFrame({ url }: { url: string }) {
+  const path = url.split('?')[0].toLowerCase();
+  if (/\.(mp4|webm|m3u8)$/.test(path)) return <video src={url} controls autoPlay muted playsInline className="aspect-video w-full rounded-lg bg-black" />;
+  if (/\.(jpg|jpeg|png|mjpg|mjpeg|cgi)$/.test(path) || /mjpe?g|snapshot/.test(path)) return <img src={url} alt="Live view" className="w-full rounded-lg bg-black" />;
+  return (
+    <div>
+      <iframe src={url} title="Live view" className="aspect-video w-full rounded-lg border border-line bg-black" allow="autoplay; fullscreen" />
+      <p className="mt-2 text-xs text-ink-muted">If this stays blank, the camera's page does not allow being shown here. <a className="font-medium text-brand-700" href={url} target="_blank" rel="noreferrer">Open it in a new tab</a>.</p>
     </div>
   );
 }

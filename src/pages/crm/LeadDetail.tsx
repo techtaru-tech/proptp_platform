@@ -14,6 +14,7 @@ import { Avatar } from '../../components/ui/Avatar';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Badge } from '../../components/ui/Badge';
 import { Tabs, type TabItem } from '../../components/ui/Tabs';
+import { SendSmsModal } from '../../components/leads/SendSmsModal';
 import { TemperatureBadge } from '../../components/leads/TemperatureBadge';
 import { VisitList } from '../../components/leads/VisitList';
 import { ScheduleVisitModal } from '../../components/leads/VisitModals';
@@ -100,6 +101,7 @@ export function LeadDetail() {
   const [visitOpen, setVisitOpen] = useState(false);
   // Held here, not inside Tabs: saving something reloads the lead and would otherwise drop you back on Overview.
   const [activeTab, setActiveTab] = useState('overview');
+  const [smsOpen, setSmsOpen] = useState(false);
   const [visitReload, setVisitReload] = useState(0);
   const { data: projectOptions } = useAsync(() => listProjectOptions().catch(() => []), []);
   const { data: visits } = useAsync(() => (id ? listSiteVisits({ view: 'all', leadId: id }) : Promise.resolve([])), [id, visitReload]);
@@ -312,6 +314,7 @@ export function LeadDetail() {
         breadcrumb={[{ label: 'CRM', to: '/crm' }, { label: 'Leads', to: '/crm/leads' }, { label: leadFullName(lead) }]}
         actions={
           <>
+            <Button variant="outline" size="sm" onClick={() => setSmsOpen(true)}>Send SMS</Button>
             <StatusBadge kind="leadStatus" status={lead.status} />
             <StatusBadge kind="leadPriority" status={lead.priority} dot={false} />
             <TemperatureBadge value={lead.temperature} />
@@ -326,6 +329,8 @@ export function LeadDetail() {
           </>
         }
       />
+
+      {smsOpen && <SendSmsModal leadId={lead.id} onClose={() => setSmsOpen(false)} />}
 
       <Card className="mb-6">
         <div className="flex flex-wrap items-start justify-between gap-4">

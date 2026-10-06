@@ -52,6 +52,19 @@ export async function brokerageFor(partnerId: string) {
   };
 }
 
+/**
+ * What a partner may be paid out right now: the earnings still unpaid whose milestone has been reached.
+ * Referral and joining bonuses have no milestone, so they are always eligible.
+ */
+export async function payableEntries(userId: string) {
+  const [policy, entries] = await Promise.all([
+    getPolicy(),
+    prisma.earningEntry.findMany({ where: { userId, status: { in: ['pending', 'confirmed'] } }, include: brokerageInclude }),
+  ]);
+  const ok = entries.filter((e) => e.kind !== 'bookingCommission' || !e.booking || milestoneReached(policy, e.booking as never));
+  return { ids: ok.map((e) => e.id), total: ok.reduce((n, e) => n + e.amount, 0), waitingTotal: entries.reduce((n, e) => n + e.amount, 0) - ok.reduce((n, e) => n + e.amount, 0) };
+}
+
 /** The day a registered lead stops being the partner's own. */
 export const protectedUntil = (createdAt: Date, policy: Policy) => new Date(createdAt.getTime() + policy.leadProtectionDays * 86_400_000);
 

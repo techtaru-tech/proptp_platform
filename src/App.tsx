@@ -35,6 +35,7 @@ import { CallHistory } from './pages/crm/CallHistory';
 import { TelephonySettingsPage } from './pages/settings/TelephonySettingsPage';
 import { EmailSettingsPage } from './pages/settings/EmailSettingsPage';
 import { WhatsAppSettingsPage } from './pages/settings/WhatsAppSettingsPage';
+import { SmsSettingsPage } from './pages/settings/SmsSettingsPage';
 import { Conversations } from './pages/crm/Conversations';
 import { AiSdrAgentBuilder } from './pages/crm/AiSdrAgentBuilder';
 import { AiSdrAgentDetail } from './pages/crm/AiSdrAgentDetail';
@@ -331,6 +332,7 @@ function App() {
                 <Route path="/settings/telephony" element={<TelephonySettingsPage />} />
                 <Route path="/settings/email" element={<EmailSettingsPage />} />
                 <Route path="/settings/whatsapp" element={<WhatsAppSettingsPage />} />
+                <Route path="/settings/sms" element={<SmsSettingsPage />} />
                 <Route path="/settings/attendance" element={<AttendancePolicySettings />} />
                 <Route path="/settings/notifications" element={<NotificationSettings />} />
                 <Route path="/settings/profile" element={<AdminProfileSettings />} />

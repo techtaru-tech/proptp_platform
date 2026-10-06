@@ -130,7 +130,7 @@ model Lead {
   budgetRange        String?
   /// Plural: a buyer will happily look at Tonk Road *and* Ajmer Road, and forcing one of them
   /// only meant the agent typed the other into the notes.
-  preferredLocations String[]
+  preferredLocations String[] @default([])
 
   source             String
   otherSource        String?
@@ -2970,6 +2970,8 @@ model Camera {
   keyPrefix            String
   lastImageAt          DateTime?
   lastSeenAt           DateTime?
+  /// Where a live picture can be watched from, if the camera offers one (an HLS, MJPEG or web-page address).
+  liveUrl              String?
   createdAt            DateTime  @default(now())
 
   images CameraImage[]
@@ -3160,4 +3162,44 @@ model PartnerDispute {
   resolvedAt     DateTime?
 
   @@index([partnerId, status])
+}
+
+/// The SMS provider account. One row, edited in Settings > SMS.
+model SmsSettings {
+  id          String   @id @default("default")
+  provider    String   @default("msg91")
+  enabled     Boolean  @default(false)
+  /// Encrypted at rest.
+  authKey     String?
+  /// The six-letter sender (header) registered with DLT.
+  senderId    String   @default("")
+  /// The principal entity id registered with DLT.
+  dltEntityId String   @default("")
+  updatedAt   DateTime @updatedAt
+}
+
+/// A DLT-approved message. Only these can be sent: the body must match what the operator approved.
+model SmsTemplate {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  dltTemplateId String
+  /// The approved wording, with {#var#} where a value goes.
+  body          String
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+}
+
+model SmsLog {
+  id           String   @id @default(cuid())
+  to           String
+  templateName String
+  text         String
+  /// sent | failed
+  status       String
+  detail       String   @default("")
+  leadId       String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([leadId])
 }

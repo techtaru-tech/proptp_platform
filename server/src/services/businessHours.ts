@@ -33,7 +33,9 @@ export async function isWithinBusinessHours(at: Date = new Date()): Promise<bool
   const settings = await getBusinessHoursSettings();
   if (!settings.enabled) return true;
 
-  const schedule = (settings.schedule as unknown as DaySchedule[] | null) ?? [];
+  // A schedule that is not the per-weekday list (older data) is treated as unconfigured, not as a crash.
+  if (!Array.isArray(settings.schedule)) return true;
+  const schedule = settings.schedule as unknown as DaySchedule[];
   const today = schedule.find((d) => d.day === at.getDay());
   if (!today || !today.isOpen) return false;
 

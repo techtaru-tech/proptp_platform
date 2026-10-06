@@ -111,15 +111,12 @@ export async function seedWorkplace(
       id: 'singleton',
       enabled: true,
       timezone: 'Asia/Kolkata',
-      schedule: {
-        mon: { open: '10:00', close: '19:00', closed: false },
-        tue: { open: '10:00', close: '19:00', closed: false },
-        wed: { open: '10:00', close: '19:00', closed: false },
-        thu: { open: '10:00', close: '19:00', closed: false },
-        fri: { open: '10:00', close: '19:00', closed: false },
-        sat: { open: '10:00', close: '16:00', closed: false },
-        sun: { open: '10:00', close: '19:00', closed: true },
-      },
+      // One entry per weekday, Sunday = 0: the shape the Business Hours page and the lead flag read.
+      schedule: [
+        { day: 0, isOpen: false, openTime: '10:00', closeTime: '19:00' },
+        ...[1, 2, 3, 4, 5].map((day) => ({ day, isOpen: true, openTime: '10:00', closeTime: '19:00' })),
+        { day: 6, isOpen: true, openTime: '10:00', closeTime: '16:00' },
+      ],
       closedMessage: 'Our office is closed right now. We will call you back on the next working day.',
     },
   });
