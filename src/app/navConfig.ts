@@ -22,6 +22,7 @@ import {
   Workflow,
   Camera,
   Briefcase,
+  Handshake,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -34,7 +35,7 @@ export interface NavChild {
 
 /** Matches the module keys the server enforces — see server/src/services/permissions.ts. */
 export type ModuleKey =
-  | 'dashboard' | 'crm' | 'tasks' | 'projects' | 'construction' | 'vendors' | 'legal' | 'ops_rules' | 'cameras' | 'vendor_portal' | 'properties' | 'bookings' | 'payments' | 'investments'
+  | 'dashboard' | 'crm' | 'tasks' | 'projects' | 'construction' | 'vendors' | 'legal' | 'ops_rules' | 'cameras' | 'vendor_portal' | 'partner_portal' | 'properties' | 'bookings' | 'payments' | 'investments'
   | 'partners' | 'teams' | 'attendance' | 'payouts' | 'incentives' | 'support' | 'notifications'
   | 'reports' | 'settings';
 
@@ -145,6 +146,18 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
+    label: 'Partner Portal',
+    to: '/partner-portal',
+    icon: Handshake,
+    module: 'partner_portal',
+    children: [
+      { label: 'My leads', to: '/partner-portal' },
+      { label: 'My bookings', to: '/partner-portal/bookings' },
+      { label: 'My brokerage', to: '/partner-portal/brokerage' },
+      { label: 'Disputes', to: '/partner-portal/disputes' },
+    ],
+  },
+  {
     label: 'Projects',
     to: '/projects',
     icon: Building2,
@@ -217,6 +230,7 @@ export const NAV_ITEMS: NavItem[] = [
       { label: 'Employees', to: '/users/employees' },
       { label: 'Team Leaders', to: '/users/team-leaders' },
       { label: 'Leaders', to: '/users/leaders' },
+      { label: 'Channel partners', to: '/channel-partners' },
     ],
   },
   { label: 'Teams / Referrals', to: '/teams', icon: Network, module: 'teams' },

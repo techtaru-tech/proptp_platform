@@ -57,6 +57,8 @@ export function moduleForPath(pathname: string): ModuleKey | null {
     { prefix: '/cameras', module: 'cameras' },
     { prefix: '/vendors', module: 'vendors' },
     { prefix: '/vendor-portal', module: 'vendor_portal' },
+    { prefix: '/partner-portal', module: 'partner_portal' },
+    { prefix: '/channel-partners', module: 'partners' },
     { prefix: '/projects', module: 'projects' },
     { prefix: '/properties', module: 'properties' },
     { prefix: '/bookings', module: 'bookings' },

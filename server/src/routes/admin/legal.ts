@@ -86,6 +86,14 @@ adminLegalRouter.get('/files', async (req, res, next) => {
     if (stage === 'none') items = items.filter((i) => !i.agreementStage);
     else if (STAGE_ORDER.includes(stage as AgreementStage)) items = items.filter((i) => i.agreementStage === stage);
     if (req.query.overdue === '1') items = items.filter((i) => i.overdueMilestones > 0);
+    // Where the unit stands after the agreement: in progress, registered but not handed over, or handed over.
+    const registry = String(req.query.registry ?? 'all');
+    if (registry !== 'all') {
+      const possession = new Map(rows.map((r) => [r.id, !!r.registry?.possessionOn]));
+      if (registry === 'in_progress') items = items.filter((i) => i.registryStatus !== 'registered');
+      else if (registry === 'possession_pending') items = items.filter((i) => i.registryStatus === 'registered' && !possession.get(i.id));
+      else if (registry === 'possessed') items = items.filter((i) => possession.get(i.id));
+    }
     res.json(items);
   } catch (err) {
     next(err);

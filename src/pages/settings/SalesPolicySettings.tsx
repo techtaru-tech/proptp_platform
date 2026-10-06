@@ -62,6 +62,15 @@ export function SalesPolicySettings() {
 
         <div className="flex flex-col gap-5">
           <Card>
+            <CardHeader title="Channel partner brokerage" subtitle="How a partner's registered leads and brokerage are treated." />
+            <div className="flex flex-col gap-4">
+              <Input label="Lead protection (days)" name="leadProtectionDays" type="number" min={0} value={f.leadProtectionDays} onChange={num('leadProtectionDays')} hint="A buyer a partner registers stays theirs for this long." />
+              <Input label="Tax deducted from brokerage (%)" name="brokerageTdsPercent" type="number" min={0} max={100} step="any" value={f.brokerageTdsPercent} onChange={num('brokerageTdsPercent')} hint="0 deducts nothing." />
+              <Select label="Brokerage becomes payable when" name="brokerageEligibleAt" value={f.brokerageEligibleAt} onChange={(e) => set('brokerageEligibleAt', e.target.value as SalesPolicy['brokerageEligibleAt'])}
+                options={[{ value: 'booking', label: 'The booking is confirmed' }, { value: 'agreement', label: 'The agreement is signed' }, { value: 'registry', label: 'The unit is registered' }]} />
+            </div>
+          </Card>
+          <Card>
             <CardHeader title="Required documents" subtitle="What every buyer's legal file must hold, verified, before it counts as complete." />
             <div className="grid grid-cols-2 gap-2">
               {DOC_KINDS.map((k) => (

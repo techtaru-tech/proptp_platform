@@ -114,7 +114,7 @@ export function Header() {
   const { toggleSidebar, setMobileSidebarOpen } = useUI();
   const { session, logout } = useAuth();
   // A vendor's portal has no partner directory or cross-module shortcuts to search or jump to.
-  const isVendor = (session?.accountRole as string | undefined) === 'vendor';
+  const isVendor = ['vendor', 'agent'].includes((session?.accountRole as string | undefined) ?? '');
   const location = useLocation();
   const navigate = useNavigate();
   const crumb = resolveBreadcrumb(location.pathname);

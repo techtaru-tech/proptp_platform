@@ -3,6 +3,10 @@ import { prisma } from '../../prisma';
 import { adminAttendance, adminBooking, adminTicket, attendanceStatus } from '../../services/adminMappers';
 import { dayKey, dayString } from '../../services/dates';
 import { paidAmountFromBookings, remainingAmount } from '../../services/derive';
+import type { AuthedRequest } from '../../services/auth';
+import { resolveAccess } from '../../services/permissions';
+import { leadScopeWhere, scopeOf } from '../../services/hierarchy';
+import { milestoneState } from '../../services/legal';
 
 export const adminDashboardRouter = Router();
 
@@ -216,6 +220,77 @@ adminDashboardRouter.get('/recent', async (req, res, next) => {
       attendance: attendanceRows.map(adminAttendance),
       tickets: tickets.map(adminTicket),
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * The management view: the sales pipeline, bookings, collections, post-sales and partner business,
+ * each figure with the page that lists the records behind it. A section appears only for someone
+ * who may open the module it comes from, and leads are counted within the person's own scope.
+ */
+adminDashboardRouter.get('/management', async (req: AuthedRequest, res, next) => {
+  try {
+    const access = await resolveAccess(req.auth!.sub);
+    const has = (m: string) => access.isFullAccess || (access.modules as string[]).includes(m);
+    const out: Record<string, unknown> = {};
+
+    if (has('crm')) {
+      const where = { ...leadScopeWhere(await scopeOf(req)) };
+      const [byStage, bySource, open] = await Promise.all([
+        prisma.lead.groupBy({ by: ['pipelineStageId'], where: { ...where, pipelineStageId: { not: null } }, _count: { _all: true }, _sum: { dealValue: true } }),
+        prisma.lead.groupBy({ by: ['originalSource'], where, _count: { _all: true } }),
+        prisma.lead.aggregate({ where: { ...where, dealValue: { not: null }, stage: { is: { isWon: false, isLost: false } } }, _count: { _all: true }, _sum: { dealValue: true } }),
+      ]);
+      const stages = await prisma.pipelineStage.findMany({ where: { id: { in: byStage.map((s) => s.pipelineStageId!) } }, select: { id: true, name: true, pipelineId: true, sortOrder: true } });
+      const sid = new Map(stages.map((s) => [s.id, s]));
+      // One pipeline at a time reads sensibly: the one that holds most of the leads.
+      const perPipeline = new Map<string, number>();
+      for (const r of byStage) perPipeline.set(sid.get(r.pipelineStageId!)?.pipelineId ?? '', (perPipeline.get(sid.get(r.pipelineStageId!)?.pipelineId ?? '') ?? 0) + r._count._all);
+      const main = [...perPipeline.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+      out.pipeline = byStage
+        .filter((r) => sid.get(r.pipelineStageId!)?.pipelineId === main)
+        .sort((a, b) => sid.get(a.pipelineStageId!)!.sortOrder - sid.get(b.pipelineStageId!)!.sortOrder)
+        .map((r) => ({ stageId: r.pipelineStageId, name: sid.get(r.pipelineStageId!)!.name, leads: r._count._all, value: r._sum.dealValue ?? 0, to: `/crm/leads?stageId=${r.pipelineStageId}` }));
+      out.expectedBusiness = { leads: open._count._all, value: open._sum.dealValue ?? 0, to: '/crm/leads' };
+      out.sources = bySource.map((r) => ({ source: r.originalSource ?? 'unknown', leads: r._count._all, to: r.originalSource ? `/crm/leads?source=${r.originalSource}` : '/crm/leads' })).sort((a, b) => b.leads - a.leads).slice(0, 8);
+    }
+
+    if (has('bookings')) {
+      const rows = await prisma.booking.groupBy({ by: ['status'], where: { isDeposit: 0 }, _count: { _all: true }, _sum: { amount: true } });
+      const pick = (...s: string[]) => rows.filter((r) => s.includes(r.status)).reduce((a, r) => ({ count: a.count + r._count._all, amount: a.amount + (r._sum.amount ?? 0) }), { count: 0, amount: 0 });
+      out.bookings = { pending: { ...pick('pending'), to: '/bookings/pending' }, confirmed: { ...pick('booked', 'partPaid'), to: '/bookings/booked' } };
+    }
+
+    if (has('legal')) {
+      const [milestones, files, registries, loans] = await Promise.all([
+        prisma.paymentMilestone.findMany({ where: { file: { closedAt: null } }, include: { payments: true } }),
+        prisma.legalFile.findMany({ select: { closedAt: true, stages: { select: { id: true } } } }),
+        prisma.registry.findMany({ select: { status: true, possessionOn: true } }),
+        prisma.bankLoan.count({ where: { status: 'applied' } }),
+      ]);
+      let outstanding = 0, overdue = 0, overdueCount = 0;
+      for (const m of milestones) { const s = milestoneState(m); outstanding += s.outstanding; if (s.status === 'overdue') { overdue += s.outstanding; overdueCount += 1; } }
+      out.collections = { outstanding, overdue, overdueCount, to: '/legal?overdue=1' };
+      const registered = registries.filter((r) => r.status === 'registered');
+      out.postSales = {
+        openFiles: files.filter((f) => !f.closedAt).length,
+        agreementNotStarted: { count: files.filter((f) => f.stages.length === 0).length, to: '/legal?stage=none' },
+        registryInProgress: { count: files.length - registered.length, to: '/legal?registry=in_progress' },
+        possessionPending: { count: registered.filter((r) => !r.possessionOn).length, to: '/legal?registry=possession_pending' },
+        possessed: { count: registered.filter((r) => r.possessionOn).length, to: '/legal?registry=possessed' },
+        loansAwaitingBank: loans,
+      };
+    }
+
+    if (has('partners')) {
+      const rows = await prisma.booking.groupBy({ by: ['userId'], where: { isDeposit: 0, status: { not: 'cancelled' }, user: { is: { role: 'agent' } } }, _count: { _all: true }, _sum: { amount: true }, orderBy: { _sum: { amount: 'desc' } }, take: 5 });
+      const users = await prisma.user.findMany({ where: { id: { in: rows.map((r) => r.userId!) } }, select: { id: true, name: true } });
+      const name = new Map(users.map((u) => [u.id, u.name]));
+      out.partners = rows.map((r) => ({ id: r.userId, name: name.get(r.userId!) ?? 'Partner', bookings: r._count._all, value: r._sum.amount ?? 0, to: `/channel-partners/${r.userId}` }));
+    }
+    res.json(out);
   } catch (err) {
     next(err);
   }

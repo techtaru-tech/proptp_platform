@@ -96,6 +96,9 @@ import { VendorDetail } from './pages/vendors/VendorDetail';
 import { Materials } from './pages/vendors/Materials';
 import { VendorBills } from './pages/vendors/VendorBills';
 import { VendorOnly } from './pages/vendorPortal/VendorOnly';
+import { ChannelPartners } from './pages/partners/ChannelPartners';
+import { ChannelPartnerDetail } from './pages/partners/ChannelPartnerDetail';
+import { PartnerOnly, PartnerHome, PartnerBookings, PartnerBrokerage, PartnerDisputes } from './pages/partnerPortal/PartnerPortal';
 import { PortalViewShell } from './pages/vendorPortal/PortalViewShell';
 import { PortalHome } from './pages/vendorPortal/PortalHome';
 import { PortalMaterial } from './pages/vendorPortal/PortalMaterial';
@@ -211,6 +214,12 @@ function App() {
                   <Route path="material" element={<PortalMaterial />} />
                   <Route path="bills" element={<PortalBills />} />
                 </Route>
+                <Route path="/channel-partners" element={<ChannelPartners />} />
+                <Route path="/channel-partners/:id" element={<ChannelPartnerDetail />} />
+                <Route path="/partner-portal" element={<PartnerOnly><PartnerHome /></PartnerOnly>} />
+                <Route path="/partner-portal/bookings" element={<PartnerOnly><PartnerBookings /></PartnerOnly>} />
+                <Route path="/partner-portal/brokerage" element={<PartnerOnly><PartnerBrokerage /></PartnerOnly>} />
+                <Route path="/partner-portal/disputes" element={<PartnerOnly><PartnerDisputes /></PartnerOnly>} />
                 <Route path="/vendor-portal" element={<VendorOnly><PortalHome /></VendorOnly>} />
                 <Route path="/vendor-portal/material" element={<VendorOnly><PortalMaterial /></VendorOnly>} />
                 <Route path="/vendor-portal/bills" element={<VendorOnly><PortalBills /></VendorOnly>} />

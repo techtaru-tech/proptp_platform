@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
@@ -17,11 +17,13 @@ import { STAGES, getOverdue, label, listLegalFiles } from '../../services/legalS
 
 export function LegalFiles() {
   const navigate = useNavigate();
-  const [stage, setStage] = useState('all');
-  const [overdue, setOverdue] = useState(false);
+  const [params] = useSearchParams();
+  const [stage, setStage] = useState(params.get('stage') || 'all');
+  const [overdue, setOverdue] = useState(params.get('overdue') === '1');
+  const [registry, setRegistry] = useState(params.get('registry') || 'all');
   const [search, setSearch] = useState('');
   const q = useDebounce(search, 300);
-  const { data, isLoading, error } = useAsync(() => listLegalFiles({ stage, overdue, search: q }), [stage, overdue, q]);
+  const { data, isLoading, error } = useAsync(() => listLegalFiles({ stage, overdue, registry, search: q }), [stage, overdue, registry, q]);
   const od = useAsync(() => getOverdue(), []);
 
   return (
@@ -37,6 +39,8 @@ export function LegalFiles() {
         <SearchInput value={search} onChange={setSearch} placeholder="Search buyer, phone or booking…" />
         <Select aria-label="Agreement stage" name="stageFilter" value={stage} onChange={(e) => setStage(e.target.value)} wrapperClassName="w-48"
           options={[{ value: 'all', label: 'Any agreement stage' }, { value: 'none', label: 'Not started' }, ...STAGES.map((s) => ({ value: s, label: label(s) }))]} />
+        <Select aria-label="Registry" name="registryFilter" value={registry} onChange={(e) => setRegistry(e.target.value)} wrapperClassName="w-56"
+          options={[{ value: 'all', label: 'Any registry status' }, { value: 'in_progress', label: 'Registry in progress' }, { value: 'possession_pending', label: 'Registered, not handed over' }, { value: 'possessed', label: 'Possession given' }]} />
         <button type="button" aria-pressed={overdue} onClick={() => setOverdue((v) => !v)}
           className={`rounded-lg border px-3 py-1.5 text-sm focus-ring ${overdue ? 'border-danger-600 bg-danger-50 text-danger-700' : 'border-line text-ink-muted'}`}>Overdue only</button>
       </div>

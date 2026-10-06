@@ -45,8 +45,8 @@ export interface LegalCase { id: string; title: string; counterparty: string; st
 export interface OverdueItem { penalty: number; milestoneId: string; fileId: string; buyerName: string; phone: string; projectName: string; milestone: string; dueOn: string; amount: number; outstanding: number; daysOverdue: number; demandedAt: string | null }
 export interface Template { kind: string; title: string; body: string }
 
-export const listLegalFiles = (q: { stage?: string; overdue?: boolean; search?: string }) =>
-  api.get<LegalFileRow[]>(`/legal/files?stage=${q.stage ?? 'all'}&search=${encodeURIComponent(q.search ?? '')}${q.overdue ? '&overdue=1' : ''}`);
+export const listLegalFiles = (q: { stage?: string; overdue?: boolean; registry?: string; search?: string }) =>
+  api.get<LegalFileRow[]>(`/legal/files?stage=${q.stage ?? 'all'}&search=${encodeURIComponent(q.search ?? '')}${q.overdue ? '&overdue=1' : ''}${q.registry && q.registry !== 'all' ? `&registry=${q.registry}` : ''}`);
 export const getLegalFile = (id: string) => api.get<LegalFileDetail>(`/legal/files/${id}`);
 export const legalFileForBooking = (bookingId: string) => api.get<{ id: string }>(`/legal/bookings/${bookingId}`).catch(() => undefined);
 export const recordStage = (id: string, input: { stage: AgreementStage; at: string; responsible: string; note?: string }) => api.post(`/legal/files/${id}/agreement`, input);

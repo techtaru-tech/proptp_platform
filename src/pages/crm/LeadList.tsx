@@ -57,9 +57,9 @@ export function LeadList() {
   const [status, setStatus] = useState<LeadStatus | 'all'>('all');
   const [priority, setPriority] = useState<LeadPriority | 'all'>('all');
   const [temperature, setTemperature] = useState<LeadTemperature | 'none' | 'all'>('all');
-  const [source, setSource] = useState('all');
+  const [source, setSource] = useState(searchParams.get('source') || 'all');
   const [pipelineId, setPipelineId] = useState('all');
-  const [stageId, setStageId] = useState('all');
+  const [stageId, setStageId] = useState(searchParams.get('stageId') || 'all');
   const [assignedUserId, setAssignedUserId] = useState(searchParams.get('assignedUserId') || 'all');
   const [starredOnly, setStarredOnly] = useState(false);
   const [campaignName, setCampaignName] = useState('all');

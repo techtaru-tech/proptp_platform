@@ -162,6 +162,8 @@ model Lead {
   /// Set instead of deleting. An archived lead disappears from every list and count but is kept,
   /// with its history, and can be restored.
   archivedAt          DateTime?
+  /// The channel partner who registered this lead. Their protection window runs from createdAt; it is never stored.
+  partnerId           String?
 
   status                       LeadStatus   @default(new)
   priority                     LeadPriority @default(normal)
@@ -214,6 +216,7 @@ model Lead {
   @@index([sourceConnectionId])
   @@index([status])
   @@index([createdAt])
+  @@index([partnerId])
 }
 
 /// A field the CRM does not ship with — "Budget", "Property type", whatever a lead form asks.
@@ -1095,10 +1098,12 @@ model User {
   /// Set on the Team, not here — the inverse of Team.leader.
   ledTeam Team?   @relation("TeamLeader")
 
-  aadhaarNumber String?
-  panNumber     String?
+  aadhaarNumber        String?
+  panNumber            String?
   /// Real `users.adhar_verification`: 0 = pending, 1 = verified, 2 = rejected.
-  kycStatus     Int     @default(0)
+  kycStatus            Int      @default(0)
+  /// For a channel partner: the projects they may sell. Empty means no restriction has been set.
+  authorisedProjectIds String[] @default([])
 
   /// Real `users.balance` — spendable wallet balance, in whole rupees.
   walletBalance Int @default(0)
@@ -3075,6 +3080,12 @@ model SalesPolicy {
   showTokenStage         Boolean  @default(true)
   /// Document kinds every buyer's file must hold, verified, before it counts as complete.
   requiredDocKinds       String[] @default(["kyc", "booking_form", "agreement"])
+  /// How long a channel partner's registered lead stays theirs, counted from registration.
+  leadProtectionDays     Int      @default(30)
+  /// Tax deducted from a partner's brokerage before it is paid, as a percentage. 0 deducts nothing.
+  brokerageTdsPercent    Float    @default(0)
+  /// When brokerage becomes payable: booking (confirmed) | agreement (signed) | registry (registered).
+  brokerageEligibleAt    String   @default("booking")
   updatedAt              DateTime @updatedAt
 }
 
@@ -3130,4 +3141,23 @@ model LoanDisbursement {
   createdAt DateTime @default(now())
 
   @@index([loanId])
+}
+
+/// A disagreement between a channel partner and the company over a lead's ownership or a brokerage amount.
+model PartnerDispute {
+  id             String    @id @default(cuid())
+  partnerId      String
+  bookingId      String?
+  leadId         String?
+  title          String
+  details        String    @default("")
+  /// open | resolved
+  status         String    @default("open")
+  resolution     String?
+  raisedByName   String
+  resolvedByName String?
+  createdAt      DateTime  @default(now())
+  resolvedAt     DateTime?
+
+  @@index([partnerId, status])
 }

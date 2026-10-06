@@ -22,6 +22,7 @@ import {
   getDashboardSnapshot, getRecentBookings, getRecentPayments, getTodayAttendanceSample, getRecentTickets,
   type DashboardRange,
 } from '../../services/dashboardService';
+import { BusinessOverview } from './BusinessOverview';
 import { projectNameForBooking } from '../../services/bookingService';
 import { unitLabelForPayment, projectNameForPayment } from '../../services/paymentService';
 import { userDisplayName } from '../../data/referenceData';
@@ -117,6 +118,8 @@ export function Dashboard() {
           </>
         }
       />
+
+      <BusinessOverview />
 
       {/* Quick actions */}
       <div className="mb-6 flex flex-wrap gap-2.5">

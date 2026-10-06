@@ -11,6 +11,9 @@ export interface SalesPolicy {
   refundApprover: 'admin' | 'leader' | 'accounts';
   showTokenStage: boolean;
   requiredDocKinds: string[];
+  leadProtectionDays: number;
+  brokerageTdsPercent: number;
+  brokerageEligibleAt: 'booking' | 'agreement' | 'registry';
   updatedAt: string;
 }
 export const getSalesPolicy = () => api.get<SalesPolicy>('/sales-policy');

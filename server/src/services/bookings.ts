@@ -117,6 +117,14 @@ export async function createBooking(input: CreateBookingInput) {
 
     const isDeposit = input.isDeposit ?? 0;
 
+    // A channel partner sells only the projects they are authorised for, when any have been set.
+    if (input.userId && isDeposit === 0) {
+      const seller = await tx.user.findUnique({ where: { id: input.userId }, select: { authorisedProjectIds: true } });
+      if (seller?.authorisedProjectIds.length && !seller.authorisedProjectIds.includes(unit.projectId)) {
+        throw new BookingError('project_not_authorised', 'You are not authorised to sell this project.', 403);
+      }
+    }
+
     if (isDeposit === 0) {
       if (unit.bookingStatus !== 0) {
         throw new BookingError('property_unavailable', 'That plot is no longer available.', 409);

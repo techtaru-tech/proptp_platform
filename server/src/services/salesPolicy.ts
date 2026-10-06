@@ -33,6 +33,9 @@ export function validatePolicy(b: Record<string, unknown>): { data?: Partial<Pol
   };
   const err =
     docKinds('requiredDocKinds', 'Required documents') ||
+    oneOf('brokerageEligibleAt', 'Brokerage becomes payable at', ['booking', 'agreement', 'registry']) ||
+    num('leadProtectionDays', 'Lead protection', 0, 365, true) ||
+    num('brokerageTdsPercent', 'The brokerage tax', 0, 100) ||
     oneOf('penaltyType', 'Penalty type', ['percent', 'fixed']) ||
     oneOf('penaltyPeriod', 'Penalty period', ['day', 'month']) ||
     oneOf('refundApprover', 'Refund approver', ['admin', 'leader', 'accounts']) ||
