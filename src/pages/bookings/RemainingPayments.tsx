@@ -5,6 +5,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
+import { MoneyInput } from '../../components/ui/MoneyInput';
 import { Select } from '../../components/ui/Select';
 import { ACCEPT_DOCUMENT, FileUploadField } from '../../components/ui/FileUpload';
 import { Modal } from '../../components/ui/Modal';
@@ -291,7 +292,7 @@ export function RemainingPayments() {
             <p className="text-sm text-ink-muted">
               Remaining on {addPaymentRow.booking.id}: <span className="font-medium text-ink">{formatCurrency(addPaymentRow.remainingAmount)}</span>
             </p>
-            <Input label="Amount (₹)" type="number" min={0} value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} />
+            <MoneyInput label="Amount (₹)" type="number" min={0} value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} />
             <Select
               label="Payment mode"
               value={String(paymentMode)}

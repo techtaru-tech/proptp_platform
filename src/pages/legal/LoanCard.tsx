@@ -4,6 +4,7 @@ import { Card, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
+import { MoneyInput } from '../../components/ui/MoneyInput';
 import { Select } from '../../components/ui/Select';
 import { DatePicker } from '../../components/ui/DatePicker';
 import { Modal } from '../../components/ui/Modal';
@@ -82,7 +83,7 @@ function LoanDialog({ fileId, loan, onClose, onSaved }: { fileId: string; loan: 
         <DatePicker label="Applied on" name="loanApplied" value={f.appliedOn} onChange={set('appliedOn')} />
         {sanctioned && <>
           <DatePicker label="Sanctioned on" name="loanSanctioned" value={f.sanctionedOn} onChange={set('sanctionedOn')} />
-          <Input label="Sanctioned amount (₹)" name="loanAmount" type="number" min={1} value={f.sanctionedAmount} onChange={set('sanctionedAmount')} />
+          <MoneyInput label="Sanctioned amount (₹)" name="loanAmount" type="number" min={1} value={f.sanctionedAmount} onChange={set('sanctionedAmount')} />
         </>}
         <Input label="Note" name="loanNote" value={f.note} onChange={set('note')} />
       </div>
@@ -103,7 +104,7 @@ function PayDialog({ fileId, loan, onClose, onSaved }: { fileId: string; loan: L
   return (
     <Modal isOpen onClose={onClose} title="Loan disbursement" footer={<><Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button><Button variant="primary" onClick={go} isLoading={saving} disabled={!(Number(f.amount) > 0)}>Save</Button></>}>
       <div className="flex flex-col gap-4">
-        <Input label="Amount (₹)" name="disbAmount" type="number" min={1} max={loan.remaining} value={f.amount} onChange={(e) => setF((x) => ({ ...x, amount: e.target.value }))} hint={`${formatCurrency(loan.remaining)} still to come`} />
+        <MoneyInput label="Amount (₹)" name="disbAmount" type="number" min={1} max={loan.remaining} value={f.amount} onChange={(e) => setF((x) => ({ ...x, amount: e.target.value }))} hint={`${formatCurrency(loan.remaining)} still to come`} />
         <DatePicker label="Paid on" name="disbDate" value={f.paidOn} onChange={(e) => setF((x) => ({ ...x, paidOn: e.target.value }))} />
         <Input label="Reference" name="disbRef" value={f.reference} onChange={(e) => setF((x) => ({ ...x, reference: e.target.value }))} placeholder="UTR" />
       </div>

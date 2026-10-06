@@ -4,6 +4,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { MoneyInput } from '../../components/ui/MoneyInput';
 import { Modal } from '../../components/ui/Modal';
 import { Badge as BadgeChip } from '../../components/ui/Badge';
 import { useAsync } from '../../hooks/useAsync';
@@ -153,10 +154,10 @@ export function BadgeSettings() {
           <Input label="Rank level" type="number" min={1} value={form.rankLevel} onChange={(e) => setForm((f) => ({ ...f, rankLevel: Number(e.target.value) }))} />
           <Input label="Description" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Min invest (₹)" type="number" min={0} value={form.minInvest} onChange={(e) => setForm((f) => ({ ...f, minInvest: Number(e.target.value) }))} />
-            <Input label="Min deposit (₹)" type="number" min={0} value={form.minDeposit} onChange={(e) => setForm((f) => ({ ...f, minDeposit: Number(e.target.value) }))} />
-            <Input label="Min earning (₹)" type="number" min={0} value={form.minEarning} onChange={(e) => setForm((f) => ({ ...f, minEarning: Number(e.target.value) }))} />
-            <Input label="Bonus (₹)" type="number" min={0} value={form.bonus} onChange={(e) => setForm((f) => ({ ...f, bonus: Number(e.target.value) }))} />
+            <MoneyInput label="Min invest (₹)" type="number" min={0} value={form.minInvest} onChange={(e) => setForm((f) => ({ ...f, minInvest: Number(e.target.value) }))} />
+            <MoneyInput label="Min deposit (₹)" type="number" min={0} value={form.minDeposit} onChange={(e) => setForm((f) => ({ ...f, minDeposit: Number(e.target.value) }))} />
+            <MoneyInput label="Min earning (₹)" type="number" min={0} value={form.minEarning} onChange={(e) => setForm((f) => ({ ...f, minEarning: Number(e.target.value) }))} />
+            <MoneyInput label="Bonus (₹)" type="number" min={0} value={form.bonus} onChange={(e) => setForm((f) => ({ ...f, bonus: Number(e.target.value) }))} />
           </div>
         </div>
       </Modal>

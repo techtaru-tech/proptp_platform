@@ -6,7 +6,11 @@ export interface OrganizationSettings {
   contactEmail: string;
   contactPhone: string;
   address: string;
+  pointsEnabled: boolean;
+  pointsPerRupee: number;
 }
+
+export const getDisplaySettings = () => api.get<{ pointsEnabled: boolean; pointsPerRupee: number }>('/auth/display');
 
 export interface NotificationSettings {
   emailAlerts: boolean;

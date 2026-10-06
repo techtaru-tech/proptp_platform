@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card, CardHeader } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
+import { MoneyInput } from '../../components/ui/MoneyInput';
+import { formatFullCurrency, moneyUnit } from '../../utils/format';
 import { Select } from '../../components/ui/Select';
 import { Button } from '../../components/ui/Button';
 import { Toggle } from '../../components/ui/Toggle';
@@ -30,7 +32,7 @@ export function SalesPolicySettings() {
     catch (e) { toast({ title: 'Could not save', description: (e as Error).message, variant: 'error' }); }
     finally { setSaving(false); }
   };
-  const unit = f.penaltyType === 'percent' ? '% of the overdue amount' : '₹ flat';
+  const unit = '% of the overdue amount';
   const sample = (() => {
     const late = Math.max(0, 40 - f.penaltyGraceDays);
     const periods = f.penaltyPeriod === 'day' ? late : Math.ceil(late / 30);
@@ -48,15 +50,17 @@ export function SalesPolicySettings() {
           <CardHeader title="Late-payment penalty" subtitle="Charged on an overdue instalment, simple (not compounding)." />
           <div className="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-3">
-              <Select label="Charged as" name="penaltyType" value={f.penaltyType} onChange={(e) => set('penaltyType', e.target.value as SalesPolicy['penaltyType'])} options={[{ value: 'percent', label: 'A percentage' }, { value: 'fixed', label: 'A flat amount (₹)' }]} />
+              <Select label="Charged as" name="penaltyType" value={f.penaltyType} onChange={(e) => set('penaltyType', e.target.value as SalesPolicy['penaltyType'])} options={[{ value: 'percent', label: 'A percentage' }, { value: 'fixed', label: `A flat amount (${moneyUnit()})` }]} />
               <Select label="For every" name="penaltyPeriod" value={f.penaltyPeriod} onChange={(e) => set('penaltyPeriod', e.target.value as SalesPolicy['penaltyPeriod'])} options={[{ value: 'day', label: 'Day late' }, { value: 'month', label: 'Month late' }]} />
             </div>
-            <Input label={`Rate (${unit})`} name="penaltyRate" type="number" min={0} step="any" value={f.penaltyRate} onChange={num('penaltyRate')} />
+            {f.penaltyType === 'percent'
+              ? <Input label={`Rate (${unit})`} name="penaltyRate" type="number" min={0} step="any" value={f.penaltyRate} onChange={num('penaltyRate')} />
+              : <MoneyInput label="Rate (₹ flat)" name="penaltyRate" type="number" min={0} step="any" value={f.penaltyRate} onChange={num('penaltyRate')} />}
             <div className="grid grid-cols-2 gap-3">
               <Input label="Grace days" name="penaltyGraceDays" type="number" min={0} value={f.penaltyGraceDays} onChange={num('penaltyGraceDays')} hint="No penalty until this many days after the due date." />
               <Input label="Cap (% of the instalment)" name="penaltyCapPercent" type="number" min={0} max={100} step="any" value={f.penaltyCapPercent} onChange={num('penaltyCapPercent')} hint="0 means no cap." />
             </div>
-            <p className="rounded-lg bg-surface-subtle px-3 py-2.5 text-xs text-ink-muted">Example: ₹1,00,000 still unpaid 40 days after its due date would carry a penalty of <strong className="text-ink">₹{sample.toLocaleString('en-IN')}</strong>.</p>
+            <p className="rounded-lg bg-surface-subtle px-3 py-2.5 text-xs text-ink-muted">Example: {formatFullCurrency(100000)} still unpaid 40 days after its due date would carry a penalty of <strong className="text-ink">{formatFullCurrency(sample)}</strong>.</p>
           </div>
         </Card>
 

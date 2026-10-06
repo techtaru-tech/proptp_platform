@@ -132,6 +132,16 @@ adminAuthRouter.post('/2fa/verify', async (req, res, next) => {
 });
 
 /** Confirms a stored token still works, and refreshes the cached admin profile. */
+/** How money is shown across the panel — every signed-in person needs it, so it is not tied to the Settings module. */
+adminAuthRouter.get('/display', requireAuth, async (_req, res, next) => {
+  try {
+    const row = await prisma.organizationSettings.upsert({ where: { id: 'singleton' }, update: {}, create: { id: 'singleton' } });
+    res.json({ pointsEnabled: row.pointsEnabled, pointsPerRupee: row.pointsPerRupee });
+  } catch (err) {
+    next(err);
+  }
+});
+
 adminAuthRouter.get('/me', requireAuth, async (req: AuthedRequest, res, next) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.auth!.sub } });

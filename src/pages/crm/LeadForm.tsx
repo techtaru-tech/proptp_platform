@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Input } from '../../components/ui/Input';
+import { MoneyInput } from '../../components/ui/MoneyInput';
 import { Select } from '../../components/ui/Select';
 import { listSourceOptions, listAssignableUsers, listProjectOptions } from '../../services/leadService';
 import { useAsync } from '../../hooks/useAsync';
@@ -279,7 +280,7 @@ export function LeadDetailsFields({ values, onChange, isNewLead }: Omit<FieldsPr
 export function LeadDealFields({ values, errors, onChange }: FieldsProps) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <Input
+      <MoneyInput
         label="Deal value (₹)"
         type="number"
         min={0}

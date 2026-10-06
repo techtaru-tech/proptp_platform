@@ -2174,13 +2174,16 @@ model ReferralToggleSettings {
 
 /// Singletons behind Settings > Organization / Notifications.
 model OrganizationSettings {
-  id           String   @id @default("singleton")
-  companyName  String   @default("Rosium Developers")
-  logoUrl      String   @default("")
-  contactEmail String   @default("")
-  contactPhone String   @default("")
-  address      String   @default("")
-  updatedAt    DateTime @updatedAt
+  id             String   @id @default("singleton")
+  companyName    String   @default("Rosium Developers")
+  logoUrl        String   @default("")
+  contactEmail   String   @default("")
+  contactPhone   String   @default("")
+  address        String   @default("")
+  /// Show money as points everywhere in the panel: 1 rupee is `pointsPerRupee` points.
+  pointsEnabled  Boolean  @default(false)
+  pointsPerRupee Float    @default(10)
+  updatedAt      DateTime @updatedAt
 }
 
 /// Exactly the four toggles Settings > Notifications offers. Kept to what the UI can

@@ -6,6 +6,7 @@ import { Card, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
+import { MoneyInput } from '../../components/ui/MoneyInput';
 import { Select } from '../../components/ui/Select';
 import { DatePicker } from '../../components/ui/DatePicker';
 import { Modal } from '../../components/ui/Modal';
@@ -169,7 +170,7 @@ function PlanDialog({ file, onClose, onSaved }: { file: FileT; onClose: () => vo
           <div key={i} className="grid grid-cols-[1.4fr_1fr_1fr_auto] items-end gap-2">
             <Input label={i === 0 ? 'Milestone' : undefined} aria-label={`Milestone ${i + 1}`} name={`m-name-${i}`} value={r.name} onChange={(e) => set(i, 'name', e.target.value)} />
             <DatePicker aria-label={`Due date ${i + 1}`} name={`m-due-${i}`} value={r.dueOn} onChange={(e) => set(i, 'dueOn', e.target.value)} />
-            <Input aria-label={`Amount ${i + 1}`} name={`m-amt-${i}`} type="number" min={1} value={r.amount} onChange={(e) => set(i, 'amount', e.target.value)} />
+            <MoneyInput aria-label={`Amount ${i + 1}`} name={`m-amt-${i}`} type="number" min={1} value={r.amount} onChange={(e) => set(i, 'amount', e.target.value)} />
             <button type="button" aria-label={`Remove milestone ${i + 1}`} className="mb-2 text-danger-600 focus-ring rounded" onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}><Trash2 size={14} /></button>
           </div>))}
         <Button variant="ghost" size="sm" leftIcon={<Plus size={13} />} onClick={() => setRows((rs) => [...rs, { name: '', amount: '', dueOn: today() }])}>Add milestone</Button>
@@ -185,7 +186,7 @@ function PayDialog({ m, onClose, onSaved }: { m: MilestoneRow; onClose: () => vo
   return (
     <Modal isOpen onClose={onClose} title={`Payment: ${m.name}`} footer={<Footer onClose={onClose} saving={saving} disabled={!(Number(f.amount) > 0)} onSave={() => go(() => recordPayment(m.id, { amount: Number(f.amount), paidOn: f.paidOn, reference: f.reference || undefined }))} />}>
       <div className="flex flex-col gap-4">
-        <Input label="Amount (₹)" name="payAmount" type="number" min={1} max={m.outstanding} value={f.amount} onChange={(e) => setF((x) => ({ ...x, amount: e.target.value }))} hint={`${formatCurrency(m.outstanding)} outstanding`} />
+        <MoneyInput label="Amount (₹)" name="payAmount" type="number" min={1} max={m.outstanding} value={f.amount} onChange={(e) => setF((x) => ({ ...x, amount: e.target.value }))} hint={`${formatCurrency(m.outstanding)} outstanding`} />
         <DatePicker label="Paid on" name="payDate" value={f.paidOn} onChange={(e) => setF((x) => ({ ...x, paidOn: e.target.value }))} />
         <Input label="Reference" name="payRef" value={f.reference} onChange={(e) => setF((x) => ({ ...x, reference: e.target.value }))} placeholder="UTR / cheque no." />
       </div>

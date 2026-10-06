@@ -6,6 +6,7 @@ import { Card, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
+import { MoneyInput } from '../../components/ui/MoneyInput';
 import { Select } from '../../components/ui/Select';
 import { DatePicker } from '../../components/ui/DatePicker';
 import { Modal } from '../../components/ui/Modal';
@@ -150,7 +151,7 @@ function WorkOrderModal({ vendorId, onClose, onSaved }: { vendorId: string; onCl
       <div className="flex flex-col gap-4">
         <Select label="Site" name="woProject" required value={f.projectId} onChange={(e) => setF((x) => ({ ...x, projectId: e.target.value }))} options={[{ value: '', label: 'Choose a project' }, ...(lookups?.projects ?? []).map((p) => ({ value: p.id, label: p.projectName }))]} />
         <Input label="Work" name="woDescription" required value={f.description} onChange={(e) => setF((x) => ({ ...x, description: e.target.value }))} />
-        <Input label="Amount (₹)" name="woAmount" type="number" min={1} required value={f.amount} onChange={(e) => setF((x) => ({ ...x, amount: e.target.value }))} hint="Bills against it cannot add up to more than this." />
+        <MoneyInput label="Amount (₹)" name="woAmount" type="number" min={1} required value={f.amount} onChange={(e) => setF((x) => ({ ...x, amount: e.target.value }))} hint="Bills against it cannot add up to more than this." />
       </div>
     </Modal>
   );

@@ -5,7 +5,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
-import { Input } from '../../components/ui/Input';
+import { MoneyInput } from '../../components/ui/MoneyInput';
 import { Modal } from '../../components/ui/Modal';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Pagination } from '../../components/ui/Pagination';
@@ -168,7 +168,7 @@ export function PayoutList() {
       >
         <div className="space-y-4">
           <Select label="Partner" required value={createUserId} onChange={(e) => setCreateUserId(e.target.value)} options={[{ value: '', label: 'Select partner' }, ...PARTNER_OPTIONS]} />
-          <Input label="Amount (₹)" type="number" min={0} value={createAmount} onChange={(e) => setCreateAmount(e.target.value)} />
+          <MoneyInput label="Amount (₹)" type="number" min={0} value={createAmount} onChange={(e) => setCreateAmount(e.target.value)} />
           <Select
             label="Initial status"
             value={createStatus}

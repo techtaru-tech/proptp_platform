@@ -1,3 +1,4 @@
+import { moneyFactor, moneyUnit } from '../../utils/format';
 import { useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Copy, ExternalLink, Eye, Globe, Lock, Map as MapIcon, Pencil, RotateCw, Share2, Timer, Upload, X } from 'lucide-react';
@@ -69,8 +70,10 @@ function matches(plot: PlotMapPlot, f: Filters): boolean {
   // The boxes take lakhs, which is how prices are quoted; the data is in rupees.
   const priceMin = num(f.priceMin);
   const priceMax = num(f.priceMax);
-  if (priceMin !== null && plot.price < priceMin * 100000) return false;
-  if (priceMax !== null && plot.price > priceMax * 100000) return false;
+  // The boxes hold lakhs of whatever is being shown: rupees, or points when points are on.
+  const shownPrice = plot.price * moneyFactor();
+  if (priceMin !== null && shownPrice < priceMin * 100000) return false;
+  if (priceMax !== null && shownPrice > priceMax * 100000) return false;
 
   if (f.facing !== 'all' && plot.facing !== f.facing) return false;
   if (f.road !== 'all' && plot.roadWidth !== f.road) return false;
@@ -343,7 +346,7 @@ export function PlotMap() {
       <Card padded={false} className="mb-5">
         <div className="flex flex-wrap items-end gap-3 p-4">
           <RangeBox label="Size (sq ft)" min={filters.sizeMin} max={filters.sizeMax} onMin={(v) => setFilters((f) => ({ ...f, sizeMin: v }))} onMax={(v) => setFilters((f) => ({ ...f, sizeMax: v }))} />
-          <RangeBox label="Price (₹ lakh)" min={filters.priceMin} max={filters.priceMax} onMin={(v) => setFilters((f) => ({ ...f, priceMin: v }))} onMax={(v) => setFilters((f) => ({ ...f, priceMax: v }))} />
+          <RangeBox label={moneyUnit() === '₹' ? 'Price (₹ lakh)' : 'Price (lakh points)'} min={filters.priceMin} max={filters.priceMax} onMin={(v) => setFilters((f) => ({ ...f, priceMin: v }))} onMax={(v) => setFilters((f) => ({ ...f, priceMax: v }))} />
           <Select
             label="Facing"
             name="plotFacing"

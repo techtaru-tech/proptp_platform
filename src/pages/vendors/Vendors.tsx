@@ -6,6 +6,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
+import { MoneyInput } from '../../components/ui/MoneyInput';
 import { Select } from '../../components/ui/Select';
 import { Modal } from '../../components/ui/Modal';
 import { SearchInput } from '../../components/ui/SearchInput';
@@ -89,7 +90,7 @@ function AddVendor({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
         <Input label="Phone" name="vendorPhone" value={f.phone} onChange={set('phone')} placeholder="10 digits" />
         <Input label="Email" name="vendorEmail" type="email" value={f.email} onChange={set('email')} />
         <Input label="GSTIN" name="gstin" value={f.gstin} onChange={set('gstin')} />
-        <Input label="Contract value (₹)" name="contractValue" type="number" min={0} value={f.contractValue} onChange={set('contractValue')} />
+        <MoneyInput label="Contract value (₹)" name="contractValue" type="number" min={0} value={f.contractValue} onChange={set('contractValue')} />
         <Input label="Address" name="vendorAddress" value={f.address} onChange={set('address')} />
       </div>
       <label className="mt-5 flex items-center gap-2 text-sm text-ink">

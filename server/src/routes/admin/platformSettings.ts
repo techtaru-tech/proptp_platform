@@ -33,6 +33,12 @@ adminSettingsRouter.patch('/organization', async (req: AuthedRequest, res, next)
     for (const key of ['companyName', 'logoUrl', 'contactEmail', 'contactPhone', 'address'] as const) {
       if (body[key] !== undefined) data[key] = String(body[key]);
     }
+    if (body.pointsEnabled !== undefined) data.pointsEnabled = !!body.pointsEnabled;
+    if (body.pointsPerRupee !== undefined) {
+      const k = Number(body.pointsPerRupee);
+      if (!Number.isFinite(k) || k <= 0 || k > 1_000_000) return res.status(400).json({ error: 'Points per rupee must be more than 0.' });
+      data.pointsPerRupee = k;
+    }
     const row = await prisma.organizationSettings.upsert({
       where: { id: 'singleton' },
       update: data,

@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { Input } from '../../components/ui/Input';
+import { MoneyInput } from '../../components/ui/MoneyInput';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
 import { ACCEPT_DOCUMENT, FileUploadField, FileUploadList } from '../../components/ui/FileUpload';
@@ -297,7 +298,7 @@ export function UnitPricingFields({ values, errors, onChange }: FieldsProps) {
         onChange={(e) => onChange({ bookingStatus: Number(e.target.value) as UnitBookingStatus })}
         options={bookingStatusOptions}
       />
-      <Input
+      <MoneyInput
         label="Per-area amount (₹)"
         required
         type="number"
@@ -307,7 +308,7 @@ export function UnitPricingFields({ values, errors, onChange }: FieldsProps) {
         onChange={(e) => applyRecompute({ perAreaAmount: Number(e.target.value) })}
         error={errors.perAreaAmount}
       />
-      <Input
+      <MoneyInput
         label="Per-area profit (₹)"
         required
         type="number"
@@ -317,7 +318,7 @@ export function UnitPricingFields({ values, errors, onChange }: FieldsProps) {
         onChange={(e) => applyRecompute({ perAreaProfit: Number(e.target.value) })}
         error={errors.perAreaProfit}
       />
-      <Input
+      <MoneyInput
         label="Total deposit amount (₹)"
         type="number"
         min={0}
@@ -325,7 +326,7 @@ export function UnitPricingFields({ values, errors, onChange }: FieldsProps) {
         onChange={(e) => onChange({ totalInvestmentAmount: Number(e.target.value) })}
         hint="Auto-computed from area × per-area amount; editable"
       />
-      <Input
+      <MoneyInput
         label="Total commission (₹)"
         type="number"
         min={0}

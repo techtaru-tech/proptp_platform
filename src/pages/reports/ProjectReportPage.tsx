@@ -1,3 +1,4 @@
+import { formatFullCurrency } from '../../utils/format';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { FileDown, FileSpreadsheet } from 'lucide-react';
@@ -74,7 +75,7 @@ export function ProjectReportPage() {
                       <tbody>{t.rows.map((r, ri) => (
                         <tr key={ri} className="border-t border-line">{r.map((c, ci) => (
                           <td key={ci} className={`px-4 py-2 ${ci === 0 ? 'pl-5 font-medium text-ink' : 'text-ink'} ${isNumeric(c) ? 'tabular-nums' : ''}`}>
-                            {t.money?.includes(ci) && isNumeric(c) ? `₹${(c as number).toLocaleString('en-IN')}` : String(c)}
+                            {t.money?.includes(ci) && isNumeric(c) ? formatFullCurrency(c as number) : String(c)}
                           </td>))}</tr>))}</tbody>
                     </table>
                   </div>)}

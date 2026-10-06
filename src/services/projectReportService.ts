@@ -1,3 +1,4 @@
+import { formatFullCurrency } from '../utils/format';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { api } from './apiClient';
@@ -50,7 +51,7 @@ export function downloadPdf(report: ProjectReport, projectName?: string): void {
     }
     autoTable(doc, {
       head: [t.columns],
-      body: t.rows.map((r) => r.map((c, i) => (t.money?.includes(i) && typeof c === 'number' ? `Rs. ${c.toLocaleString('en-IN')}` : String(c)))),
+      body: t.rows.map((r) => r.map((c, i) => (t.money?.includes(i) && typeof c === 'number' ? formatFullCurrency(c).replace('₹', 'Rs. ') : String(c)))),
       startY: y + 3,
       styles: { fontSize: 7.5, cellPadding: 2 },
       headStyles: { fillColor: [101, 34, 81], textColor: 255 },

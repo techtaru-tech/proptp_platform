@@ -5,6 +5,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
+import { MoneyInput } from '../../components/ui/MoneyInput';
 import { Select } from '../../components/ui/Select';
 import { DatePicker } from '../../components/ui/DatePicker';
 import { Modal } from '../../components/ui/Modal';
@@ -52,7 +53,7 @@ export function PortalBills() {
         <div className="flex flex-col gap-4">
           <Select label="Work order" name="workOrderId" value={f.workOrderId} onChange={set('workOrderId')} options={(me.data?.workOrders ?? []).map((w) => ({ value: w.id, label: `${w.number} — ${w.description} (left ₹${w.amount - w.billed})` }))} />
           <Input label="Bill number" name="billNumber" required value={f.billNumber} onChange={set('billNumber')} />
-          <Input label="Amount (₹)" name="billAmount" type="number" min={1} required value={f.amount} onChange={set('amount')} />
+          <MoneyInput label="Amount (₹)" name="billAmount" type="number" min={1} required value={f.amount} onChange={set('amount')} />
           <DatePicker label="Bill date" name="billDate" value={f.billDate} onChange={set('billDate')} />
         </div>
       </Modal>

@@ -9,16 +9,37 @@ export function leadFullName(person: { firstName: string; lastName: string }): s
  * and a bare `!== undefined` check at a call site lets a `null` slip through to `.toLocaleString()`
  * and throw. Defended here too so that mistake can't crash a page.
  */
+/**
+ * Money is stored and calculated in rupees. When Settings > Organization turns points on, the
+ * panel shows every amount as points instead (1 rupee = `pointsPerRupee` points), with "pts"
+ * where the rupee sign would be. Only what is shown changes, never what is stored.
+ */
+let display = { enabled: false, perRupee: 10 };
+export function setMoneyDisplay(s: { pointsEnabled: boolean; pointsPerRupee: number }) {
+  display = { enabled: !!s.pointsEnabled, perRupee: s.pointsPerRupee > 0 ? s.pointsPerRupee : 10 };
+}
+/** Points in one rupee as shown: 1 when points are off. */
+export const moneyFactor = () => (display.enabled ? display.perRupee : 1);
+/** The unit to put in a label: "₹" or "points". */
+export const moneyUnit = () => (display.enabled ? 'points' : '₹');
+
+function money(amount: number, short: boolean): string {
+  const v = amount * moneyFactor();
+  const sign = display.enabled ? '' : '₹';
+  const unit = display.enabled ? ' pts' : '';
+  if (short && Math.abs(v) >= 10000000) return `${sign}${(v / 10000000).toFixed(2)} Cr${unit}`;
+  if (short && Math.abs(v) >= 100000) return `${sign}${(v / 100000).toFixed(2)} L${unit}`;
+  return `${sign}${(display.enabled ? Math.round(v * 100) / 100 : v).toLocaleString('en-IN')}${unit}`;
+}
+
 export function formatCurrency(amount: number | null | undefined): string {
   if (amount == null) return '—';
-  if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(2)} Cr`;
-  if (amount >= 100000) return `₹${(amount / 100000).toFixed(2)} L`;
-  return `₹${amount.toLocaleString('en-IN')}`;
+  return money(amount, true);
 }
 
 export function formatFullCurrency(amount: number | null | undefined): string {
   if (amount == null) return '—';
-  return `₹${amount.toLocaleString('en-IN')}`;
+  return money(amount, false);
 }
 
 export function formatDate(iso: string): string {
