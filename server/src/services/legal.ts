@@ -221,7 +221,7 @@ export async function costSheetForBooking(bookingId: string, userId: string) {
   const text = renderTemplate(template.body, values);
   const url = await writePdf(template.title, text, `Generated from booking ${booking.reference} on ${values.date}. Wording is a template and must be approved by counsel before use.`);
   if (booking.legalFile) {
-    const doc = await prisma.legalDocument.create({ data: { fileId: booking.legalFile.id, kind: 'cost_sheet', title: template.title, url, generated: true, createdById: userId } });
+    const doc = await prisma.legalDocument.create({ data: { fileId: booking.legalFile.id, kind: 'cost_sheet', title: template.title, url, generated: true, status: 'verified', createdById: userId } });
     return { url: doc.url, title: doc.title, filed: true };
   }
   return { url, title: template.title, filed: false };
@@ -269,7 +269,7 @@ export async function generateDocument(kind: LegalDocKind, ctx: RenderContext, u
   const url = await writePdf(template.title, text, `Generated from booking ${values.booking_reference} on ${values.date}. Wording is a template and must be approved by counsel before use.`);
   const label = ctx.milestoneId ? ` — ${values.milestone_name}` : '';
   return prisma.legalDocument.create({
-    data: { fileId: ctx.fileId, kind, title: `${template.title}${label}`, url, generated: true, milestoneId: ctx.milestoneId ?? null, createdById: userId },
+    data: { fileId: ctx.fileId, kind, title: `${template.title}${label}`, url, generated: true, status: 'verified', milestoneId: ctx.milestoneId ?? null, createdById: userId },
   });
 }
 

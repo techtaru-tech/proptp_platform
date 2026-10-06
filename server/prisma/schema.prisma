@@ -2700,6 +2700,8 @@ enum LegalDocKind {
   demand_note
   correspondence
   cost_sheet
+  patta
+  no_dues
   other
 }
 
@@ -2745,23 +2747,32 @@ model LegalFile {
   stages     AgreementStep[]
   milestones PaymentMilestone[]
   registry   Registry?
+  loan       BankLoan?
   cases      LegalCase[]
 
   @@index([projectId])
 }
 
 model LegalDocument {
-  id          String       @id @default(cuid())
-  file        LegalFile    @relation(fields: [fileId], references: [id], onDelete: Cascade)
-  fileId      String
-  kind        LegalDocKind
-  title       String
-  url         String
+  id             String       @id @default(cuid())
+  file           LegalFile    @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  fileId         String
+  kind           LegalDocKind
+  title          String
+  url            String
   /// Produced from the booking data by the system, as opposed to uploaded.
-  generated   Boolean      @default(false)
-  milestoneId String?
-  createdById String?
-  createdAt   DateTime     @default(now())
+  generated      Boolean      @default(false)
+  milestoneId    String?
+  createdById    String?
+  createdAt      DateTime     @default(now())
+  /// Replacing a document adds a new version and keeps the old one, so the history of what was submitted stays.
+  version        Int          @default(1)
+  supersededAt   DateTime?
+  /// pending | verified | rejected. Generated documents are verified from the start.
+  status         String       @default("pending")
+  reviewedByName String?
+  reviewedAt     DateTime?
+  reviewNote     String?
 
   @@index([fileId, kind])
 }
@@ -2809,16 +2820,19 @@ model MilestonePayment {
 }
 
 model Registry {
-  id            String         @id @default(cuid())
-  file          LegalFile      @relation(fields: [fileId], references: [id], onDelete: Cascade)
-  fileId        String         @unique
-  status        RegistryStatus @default(pending)
-  appointmentOn DateTime?
-  registryDate  DateTime?
-  subRegistrar  String?
-  deedNumber    String?
-  deedUrl       String?
-  updatedAt     DateTime       @updatedAt
+  id             String         @id @default(cuid())
+  file           LegalFile      @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  fileId         String         @unique
+  status         RegistryStatus @default(pending)
+  appointmentOn  DateTime?
+  registryDate   DateTime?
+  subRegistrar   String?
+  deedNumber     String?
+  deedUrl        String?
+  /// When the buyer was handed the plot. Only after the unit is registered.
+  possessionOn   DateTime?
+  possessionNote String?
+  updatedAt      DateTime       @updatedAt
 }
 
 model ProjectApproval {
@@ -3059,6 +3073,8 @@ model SalesPolicy {
   refundApprover         String   @default("admin")
   /// Whether a booking still waiting to be verified shows as "Token" rather than "Booked".
   showTokenStage         Boolean  @default(true)
+  /// Document kinds every buyer's file must hold, verified, before it counts as complete.
+  requiredDocKinds       String[] @default(["kyc", "booking_form", "agreement"])
   updatedAt              DateTime @updatedAt
 }
 
@@ -3086,4 +3102,32 @@ model BookingCancellation {
   refundReference  String?
 
   @@index([status])
+}
+
+/// The bank loan a buyer takes against a plot. "Disbursed" is derived from the disbursements, never stored.
+model BankLoan {
+  id               String             @id @default(cuid())
+  file             LegalFile          @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  fileId           String             @unique
+  bankName         String
+  /// applied | sanctioned | rejected
+  status           String             @default("applied")
+  appliedOn        DateTime
+  sanctionedOn     DateTime?
+  sanctionedAmount Int?
+  note             String?
+  updatedAt        DateTime           @updatedAt
+  disbursements    LoanDisbursement[]
+}
+
+model LoanDisbursement {
+  id        String   @id @default(cuid())
+  loan      BankLoan @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  loanId    String
+  amount    Int
+  paidOn    DateTime
+  reference String?
+  createdAt DateTime @default(now())
+
+  @@index([loanId])
 }

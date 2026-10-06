@@ -69,17 +69,17 @@ export function isHoldActive(hold: { status: number; holdEnd: Date } | null | un
  * file's agreement steps and registry — so it cannot be set wrong by hand. "Token" is a booking
  * that has taken money but is not yet verified; the sales policy can fold that into "Booked".
  */
-export type PlotStage = 'available' | 'hold' | 'token' | 'booked' | 'agreement' | 'registered';
-export const PLOT_STAGES: PlotStage[] = ['available', 'hold', 'token', 'booked', 'agreement', 'registered'];
+export type PlotStage = 'available' | 'hold' | 'token' | 'booked' | 'agreement' | 'registered' | 'possession';
+export const PLOT_STAGES: PlotStage[] = ['available', 'hold', 'token', 'booked', 'agreement', 'registered', 'possession'];
 
 export function plotStage(
   unit: { bookingStatus: number },
   hasActiveHold: boolean,
-  booking: { status: string; legalFile?: { stages: unknown[]; registry: { status: string } | null } | null } | null | undefined,
+  booking: { status: string; legalFile?: { stages: unknown[]; registry: { status: string; possessionOn?: Date | null } | null } | null } | null | undefined,
   showTokenStage: boolean
 ): PlotStage {
   if (unit.bookingStatus === 0 || !booking) return hasActiveHold ? 'hold' : 'available';
-  if (booking.legalFile?.registry?.status === 'registered') return 'registered';
+  if (booking.legalFile?.registry?.status === 'registered') return booking.legalFile.registry.possessionOn ? 'possession' : 'registered';
   if ((booking.legalFile?.stages.length ?? 0) > 0) return 'agreement';
   if (booking.status === 'pending' && showTokenStage) return 'token';
   return 'booked';

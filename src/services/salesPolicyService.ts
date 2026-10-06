@@ -10,6 +10,7 @@ export interface SalesPolicy {
   refundDeductionPercent: number;
   refundApprover: 'admin' | 'leader' | 'accounts';
   showTokenStage: boolean;
+  requiredDocKinds: string[];
   updatedAt: string;
 }
 export const getSalesPolicy = () => api.get<SalesPolicy>('/sales-policy');

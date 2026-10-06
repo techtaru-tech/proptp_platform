@@ -91,7 +91,7 @@ export async function buildMapPlots(projectId: string, shapes: PlotShape[]): Pro
     unitIds.length
       ? prisma.booking.findMany({
           where: { propertyId: { in: unitIds }, isDeposit: 0, status: { not: 'cancelled' } },
-          include: { legalFile: { include: { stages: { select: { id: true } }, registry: { select: { status: true } } } } },
+          include: { legalFile: { include: { stages: { select: { id: true } }, registry: { select: { status: true, possessionOn: true } } } } },
           orderBy: { createdAt: 'asc' },
         })
       : Promise.resolve([]),

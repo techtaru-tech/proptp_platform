@@ -1,5 +1,6 @@
 import type { OpsRule } from '@prisma/client';
 import { prisma } from '../prisma';
+import { getPolicy } from './salesPolicy';
 import { activityProgress } from './construction';
 import { complianceStatus, currentStage, generateDocument, milestoneState, openLegalFileFor } from './legal';
 import { notify } from './notify';
@@ -289,6 +290,65 @@ const TRIGGERS: TriggerDef[] = [
         values: { buyer: r.file.buyerName, unit: r.file.booking.unit.propertyNumber, project: r.file.project.projectName, deed: r.deedNumber ?? '' },
         buyer: { name: r.file.buyerName, phone: r.file.phone }, refs: { fileId: r.fileId, unitId: r.file.unitId },
       }));
+    },
+  },
+  {
+    key: 'loan_stalled', label: 'A bank loan is waiting on the bank',
+    description: 'The loan is applied for and not yet sanctioned, or sanctioned and not yet fully paid out. Steps count from the application, or from the last sanction or payout.',
+    placeholders: ['buyer', 'unit', 'project', 'bank', 'stage', 'days'], params: [], actions: ['notify', 'create_task'], hasBuyer: true, hasOwner: false,
+    async scan() {
+      const loans = await prisma.bankLoan.findMany({ where: { status: { in: ['applied', 'sanctioned'] } }, include: { disbursements: true, file: { include: { project: { select: { projectName: true } }, booking: { include: { unit: { select: { propertyNumber: true } } } } } } } });
+      const out: Subject[] = [];
+      for (const l of loans) {
+        const paid = l.disbursements.reduce((n, d) => n + d.amount, 0);
+        if (l.status === 'sanctioned' && paid >= (l.sanctionedAmount ?? 0)) continue;
+        const last = l.disbursements.reduce((m, d) => (d.paidOn > m ? d.paidOn : m), l.sanctionedOn ?? l.appliedOn);
+        const since = l.status === 'applied' ? l.appliedOn : last;
+        const stage = l.status === 'applied' ? 'application' : 'disbursement';
+        out.push({
+          key: `loan:${l.id}:${stage}:${since.getTime()}`, label: `${l.file.buyerName} · ${l.bankName} ${stage}`, since,
+          values: { buyer: l.file.buyerName, unit: l.file.booking.unit.propertyNumber, project: l.file.project.projectName, bank: l.bankName, stage, days: String(Math.floor((Date.now() - since.getTime()) / DAY)) },
+          buyer: { name: l.file.buyerName, phone: l.file.phone }, refs: { fileId: l.fileId },
+        });
+      }
+      return out;
+    },
+  },
+  {
+    key: 'documents_outstanding', label: 'A buyer’s required documents are not all verified',
+    description: 'The file is open and a document on the required list (Settings > Sales policy) is missing, waiting for review, or was rejected. Steps count from when the file opened.',
+    placeholders: ['buyer', 'unit', 'project', 'documents', 'days'], params: [], actions: ['notify', 'create_task'], hasBuyer: true, hasOwner: false,
+    async scan() {
+      const policy = await getPolicy();
+      if (policy.requiredDocKinds.length === 0) return [];
+      const files = await prisma.legalFile.findMany({ where: { closedAt: null }, include: { documents: { select: { kind: true, status: true, supersededAt: true } }, project: { select: { projectName: true } }, booking: { include: { unit: { select: { propertyNumber: true } } } } } });
+      const out: Subject[] = [];
+      for (const f of files) {
+        const outstanding = policy.requiredDocKinds.filter((k) => !f.documents.some((d) => d.kind === k && d.status === 'verified' && !d.supersededAt));
+        if (outstanding.length === 0) continue;
+        out.push({
+          key: `docs:${f.id}`, label: `${f.buyerName} · ${outstanding.length} document${outstanding.length === 1 ? '' : 's'}`, since: f.openedAt,
+          values: { buyer: f.buyerName, unit: f.booking.unit.propertyNumber, project: f.project.projectName, documents: outstanding.map((k) => k.replace(/_/g, ' ')).join(', '), days: String(Math.floor((Date.now() - f.openedAt.getTime()) / DAY)) },
+          buyer: { name: f.buyerName, phone: f.phone }, refs: { fileId: f.id },
+        });
+      }
+      return out;
+    },
+  },
+  {
+    key: 'possession_pending', label: 'A registered plot has not been handed over',
+    description: 'The unit is registered and possession has not been recorded. Steps count from the registry date.',
+    placeholders: ['buyer', 'unit', 'project', 'days'], params: [], actions: ['notify', 'create_task'], hasBuyer: true, hasOwner: false,
+    async scan() {
+      const regs = await prisma.registry.findMany({ where: { status: 'registered', possessionOn: null }, include: { file: { include: { project: { select: { projectName: true } }, booking: { include: { unit: { select: { propertyNumber: true } } } } } } } });
+      return regs.map((r) => {
+        const since = r.registryDate ?? r.updatedAt;
+        return {
+          key: `possession:${r.fileId}`, label: `${r.file.buyerName} · ${r.file.booking.unit.propertyNumber}`, since,
+          values: { buyer: r.file.buyerName, unit: r.file.booking.unit.propertyNumber, project: r.file.project.projectName, days: String(Math.floor((Date.now() - since.getTime()) / DAY)) },
+          buyer: { name: r.file.buyerName, phone: r.file.phone }, refs: { fileId: r.fileId },
+        };
+      });
     },
   },
   {

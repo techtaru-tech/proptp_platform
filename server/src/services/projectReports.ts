@@ -151,7 +151,7 @@ async function inventory(p: ReportParams): Promise<Report> {
   const policy = await getPolicy();
   const liveBookings = await prisma.booking.findMany({
     where: { propertyId: { in: projects.flatMap((p) => p.units.map((u) => u.id)) }, isDeposit: 0, status: { not: 'cancelled' } },
-    include: { legalFile: { include: { stages: { select: { id: true } }, registry: { select: { status: true } } } } },
+    include: { legalFile: { include: { stages: { select: { id: true } }, registry: { select: { status: true, possessionOn: true } } } } },
     orderBy: { createdAt: 'asc' },
   });
   const bookingOf = new Map<string, (typeof liveBookings)[number]>();
@@ -175,7 +175,7 @@ async function inventory(p: ReportParams): Promise<Report> {
     key: 'inventory', title: 'Live inventory position', description: 'Read from the same plot status the plot map shows, including live holds.',
     summary: [{ label: 'Available', value: tot.c.available }, { label: 'Held', value: tot.c.onHold }, { label: 'Booked', value: tot.c.booked }, { label: 'Sold', value: tot.c.soldOut }, { label: 'Available value', value: inr(tot.v.available) }],
     tables: [
-      { title: 'By stage (hold → token → booked → agreement → registered)', columns: ['Project', 'Total plots', ...PLOT_STAGES.map(cap)], rows: stageRows },
+      { title: 'By stage (hold → token → booked → agreement → registered → possession)', columns: ['Project', 'Total plots', ...PLOT_STAGES.map(cap)], rows: stageRows },
       { title: 'By count', columns: ['Project', 'Total plots', 'Available', 'Held', 'Booked', 'Sold'], rows },
       { title: 'By value (₹)', columns: ['Project', 'Available', 'Held', 'Booked', 'Sold', 'Total'], rows: valueRows, money: [1, 2, 3, 4, 5] },
     ],

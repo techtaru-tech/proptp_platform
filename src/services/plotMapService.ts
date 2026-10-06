@@ -96,6 +96,7 @@ export const PLOT_STATUS_ORDER: PlotMapStatus[] = ['available', 'onHold', 'booke
 export const PLOT_STAGES: { key: PlotStage; label: string }[] = [
   { key: 'available', label: 'Available' }, { key: 'hold', label: 'Hold' }, { key: 'token', label: 'Token' },
   { key: 'booked', label: 'Booked' }, { key: 'agreement', label: 'Agreement' }, { key: 'registered', label: 'Registered' },
+  { key: 'possession', label: 'Possession' },
 ];
 
 export const PLOT_STATUS_COLOR: Record<PlotMapStatus, { fill: string; stroke: string; text: string; halo: string }> = {

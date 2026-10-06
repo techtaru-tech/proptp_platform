@@ -20,7 +20,7 @@ const asDate = (v: unknown) => {
 const text = (v: unknown) => (v === undefined || v === null || String(v).trim() === '' ? null : String(v).trim());
 
 const REGISTRY_ORDER: RegistryStatus[] = ['pending', 'documents_in_preparation', 'stamp_duty_paid', 'appointment_booked', 'registered'];
-const DOC_KINDS: LegalDocKind[] = ['kyc', 'booking_form', 'allotment_letter', 'agreement', 'receipt', 'demand_note', 'correspondence', 'other'];
+const DOC_KINDS: LegalDocKind[] = ['kyc', 'booking_form', 'allotment_letter', 'agreement', 'receipt', 'demand_note', 'patta', 'no_dues', 'correspondence', 'other'];
 
 // ---------------------------------------------------------------------------
 // Files
@@ -32,6 +32,27 @@ const fileInclude = {
   milestones: { include: { payments: true } },
   registry: true,
 } as const;
+
+/** Each required kind of document, and where it stands — judged on the current version only. */
+function checklistFor(required: string[], docs: { id: string; kind: string; status: string; supersededAt: Date | null }[]) {
+  const rank: Record<string, number> = { verified: 3, pending: 2, rejected: 1 };
+  return required.map((kind) => {
+    const best = docs.filter((d) => d.kind === kind && !d.supersededAt).sort((a, b) => (rank[b.status] ?? 0) - (rank[a.status] ?? 0))[0];
+    return { kind, state: best ? best.status : 'missing', docId: best?.id ?? null };
+  });
+}
+
+/** The loan as the screens need it: "disbursed" is worked out from what the bank has paid, not stored. */
+function loanShape(l: { id: string; bankName: string; status: string; appliedOn: Date; sanctionedOn: Date | null; sanctionedAmount: number | null; note: string | null; disbursements: { id: string; amount: number; paidOn: Date; reference: string | null }[] }) {
+  const disbursed = l.disbursements.reduce((n, d) => n + d.amount, 0);
+  const sanctioned = l.sanctionedAmount ?? 0;
+  const stage = l.status === 'sanctioned' ? (disbursed >= sanctioned && sanctioned > 0 ? 'disbursed' : disbursed > 0 ? 'partly_disbursed' : 'sanctioned') : l.status;
+  return {
+    id: l.id, bankName: l.bankName, status: l.status, stage, appliedOn: l.appliedOn.toISOString(), sanctionedOn: l.sanctionedOn?.toISOString() ?? null,
+    sanctionedAmount: l.sanctionedAmount, note: l.note, disbursed, remaining: Math.max(0, sanctioned - disbursed),
+    disbursements: l.disbursements.map((d) => ({ id: d.id, amount: d.amount, paidOn: d.paidOn.toISOString(), reference: d.reference })),
+  };
+}
 
 function summarise(f: any) {
   const stage = currentStage(f.stages);
@@ -81,6 +102,7 @@ adminLegalRouter.get('/files/:id', async (req, res, next) => {
         stages: { orderBy: { at: 'asc' } },
         milestones: { include: { payments: { orderBy: { paidOn: 'asc' } } }, orderBy: { sortOrder: 'asc' } },
         cases: true,
+        loan: { include: { disbursements: { orderBy: { paidOn: 'asc' } } } },
         booking: { select: { reference: true, amount: true, createdAt: true, unit: { select: { propertyNumber: true, propertyArea: true, propertyMeasurement: true } } } },
       },
     });
@@ -90,7 +112,7 @@ adminLegalRouter.get('/files/:id', async (req, res, next) => {
       ...summarise(f),
       reference: f.booking.reference, bookingAmount: f.booking.amount,
       unit: `${f.booking.unit.propertyNumber} · ${f.booking.unit.propertyArea} ${f.booking.unit.propertyMeasurement}`.trim(),
-      documents: f.documents, stages: f.stages, registry: f.registry, cases: f.cases,
+      documents: f.documents, checklist: checklistFor(policy.requiredDocKinds, f.documents), stages: f.stages, registry: f.registry, cases: f.cases, loan: f.loan ? loanShape(f.loan) : null,
       milestones: f.milestones.map((m) => {
         const st = milestoneState(m);
         const penalty = penaltyFor(policy, { outstanding: st.outstanding, instalment: m.amount, daysOverdue: st.daysOverdue });
@@ -139,6 +161,46 @@ adminLegalRouter.post('/files/:id/documents', async (req: AuthedRequest, res, ne
     if (!DOC_KINDS.includes(kind)) return res.status(400).json({ error: 'Choose what kind of document this is.' });
     if (!title || !url) return res.status(400).json({ error: 'A title and a file are required.' });
     res.status(201).json(await prisma.legalDocument.create({ data: { fileId, kind, title, url, createdById: req.auth!.sub } }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** A person checks an uploaded document and either accepts it or sends it back with a reason. */
+adminLegalRouter.post('/documents/:docId/review', async (req: AuthedRequest, res, next) => {
+  try {
+    const decision = String(req.body?.decision ?? '');
+    const note = String(req.body?.note ?? '').trim();
+    if (!['verify', 'reject'].includes(decision)) return res.status(400).json({ error: 'decision must be verify or reject.' });
+    if (decision === 'reject' && !note) return res.status(400).json({ error: 'Say what is wrong with the document.' });
+    const doc = await prisma.legalDocument.findUnique({ where: { id: String(req.params.docId) } });
+    if (!doc) return res.status(404).json({ error: 'Document not found.' });
+    if (doc.supersededAt) return res.status(409).json({ error: 'A newer version of this document exists; review that one.' });
+    const actor = await prisma.user.findUnique({ where: { id: req.auth!.sub }, select: { name: true } });
+    const updated = await prisma.legalDocument.update({ where: { id: doc.id }, data: { status: decision === 'verify' ? 'verified' : 'rejected', reviewedByName: actor?.name ?? 'Unknown', reviewedAt: new Date(), reviewNote: note || null } });
+    await writeAudit(req, { module: 'Legal', action: decision === 'verify' ? 'Verified document' : 'Rejected document', recordId: doc.fileId, recordLabel: doc.title, description: note });
+    res.json(updated);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** A better copy of a document: it becomes the next version and the old one stays in the history. */
+adminLegalRouter.post('/documents/:docId/replace', async (req: AuthedRequest, res, next) => {
+  try {
+    const url = String(req.body?.url ?? '').trim();
+    if (!url) return res.status(400).json({ error: 'Attach the new file.' });
+    const old = await prisma.legalDocument.findUnique({ where: { id: String(req.params.docId) } });
+    if (!old) return res.status(404).json({ error: 'Document not found.' });
+    if (old.generated) return res.status(400).json({ error: 'Generate this document again instead of replacing it.' });
+    if (old.supersededAt) return res.status(409).json({ error: 'This is already an older version.' });
+    const title = String(req.body?.title ?? '').trim() || old.title;
+    const created = await prisma.$transaction(async (tx) => {
+      await tx.legalDocument.update({ where: { id: old.id }, data: { supersededAt: new Date() } });
+      return tx.legalDocument.create({ data: { fileId: old.fileId, kind: old.kind, title, url, version: old.version + 1, createdById: req.auth!.sub } });
+    });
+    await writeAudit(req, { module: 'Legal', action: 'Replaced document', recordId: old.fileId, recordLabel: title, description: `Version ${created.version}.` });
+    res.status(201).json(created);
   } catch (err) {
     next(err);
   }
@@ -293,15 +355,102 @@ adminLegalRouter.patch('/files/:id/registry', async (req: AuthedRequest, res, ne
       subRegistrar: req.body?.subRegistrar !== undefined ? text(req.body.subRegistrar) : current.subRegistrar,
       deedNumber: req.body?.deedNumber !== undefined ? text(req.body.deedNumber) : current.deedNumber,
       deedUrl: req.body?.deedUrl !== undefined ? text(req.body.deedUrl) : current.deedUrl,
+      possessionOn: req.body?.possessionOn !== undefined ? asDate(req.body.possessionOn) : current.possessionOn,
+      possessionNote: req.body?.possessionNote !== undefined ? text(req.body.possessionNote) : current.possessionNote,
     };
-    if (merged.appointmentOn === undefined || merged.registryDate === undefined) return res.status(400).json({ error: 'A date is not valid.' });
+    if (merged.appointmentOn === undefined || merged.registryDate === undefined || merged.possessionOn === undefined) return res.status(400).json({ error: 'A date is not valid.' });
     if (status === 'appointment_booked' && !merged.appointmentOn) return res.status(400).json({ error: 'Enter the appointment date.' });
     if (status === 'registered' && (!merged.registryDate || !merged.deedNumber || !merged.subRegistrar)) {
       return res.status(400).json({ error: 'A registered unit needs the registry date, the sub-registrar office and the deed number.' });
     }
+    // Handing over the plot comes after registering it.
+    if (merged.possessionOn && status !== 'registered') return res.status(400).json({ error: 'Possession can be recorded only once the unit is registered.' });
+    if (merged.possessionOn && merged.registryDate && merged.possessionOn < merged.registryDate) return res.status(400).json({ error: 'Possession cannot be before the registry date.' });
     const updated = await prisma.registry.update({ where: { fileId }, data: { status, ...merged } });
     await writeAudit(req, { module: 'Legal', action: `Registry: ${status.replace(/_/g, ' ')}`, recordId: fileId, recordLabel: status, description: '' });
     res.json(updated);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Bank loan
+// ---------------------------------------------------------------------------
+
+const LOAN_STATUSES = ['applied', 'sanctioned', 'rejected'];
+const loanInclude = { disbursements: { orderBy: { paidOn: 'asc' as const } } };
+
+adminLegalRouter.put('/files/:id/loan', async (req: AuthedRequest, res, next) => {
+  try {
+    const fileId = String(req.params.id);
+    if (!(await prisma.legalFile.count({ where: { id: fileId } }))) return res.status(404).json({ error: 'Legal file not found.' });
+    const existing = await prisma.bankLoan.findUnique({ where: { fileId }, include: loanInclude });
+    const b = req.body ?? {};
+    const bankName = String(b.bankName ?? '').trim();
+    const status = String(b.status ?? existing?.status ?? 'applied');
+    const appliedOn = asDate(b.appliedOn ?? existing?.appliedOn);
+    const sanctionedOn = b.sanctionedOn !== undefined ? asDate(b.sanctionedOn) : existing?.sanctionedOn ?? null;
+    const sanctionedAmount = b.sanctionedAmount !== undefined && b.sanctionedAmount !== null && b.sanctionedAmount !== '' ? Number(b.sanctionedAmount) : existing?.sanctionedAmount ?? null;
+    if (!bankName) return res.status(400).json({ error: 'Enter the bank.' });
+    if (!LOAN_STATUSES.includes(status)) return res.status(400).json({ error: 'Loan status must be applied, sanctioned or rejected.' });
+    if (!appliedOn || sanctionedOn === undefined) return res.status(400).json({ error: 'A date is not valid.' });
+    if (status === 'sanctioned' && (!sanctionedOn || !sanctionedAmount || !Number.isInteger(sanctionedAmount) || sanctionedAmount <= 0)) {
+      return res.status(400).json({ error: 'A sanctioned loan needs the sanction date and a whole-rupee amount.' });
+    }
+    const paid = existing?.disbursements.reduce((n, d) => n + d.amount, 0) ?? 0;
+    if (status !== 'sanctioned' && paid > 0) return res.status(409).json({ error: 'The bank has already disbursed money, so the loan has to stay sanctioned.' });
+    if (status === 'sanctioned' && sanctionedAmount! < paid) return res.status(409).json({ error: 'The sanctioned amount cannot be less than what has been disbursed.' });
+    const data = { bankName, status, appliedOn, sanctionedOn: status === 'sanctioned' ? sanctionedOn : null, sanctionedAmount: status === 'sanctioned' ? sanctionedAmount : null, note: text(b.note) ?? (b.note === undefined ? existing?.note ?? null : null) };
+    const saved = await prisma.bankLoan.upsert({ where: { fileId }, update: data, create: { fileId, ...data }, include: loanInclude });
+    await writeAudit(req, { module: 'Legal', action: existing ? `Loan: ${status}` : 'Recorded bank loan', recordId: fileId, recordLabel: bankName, description: '' });
+    res.json(loanShape(saved));
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminLegalRouter.delete('/files/:id/loan', async (req: AuthedRequest, res, next) => {
+  try {
+    const fileId = String(req.params.id);
+    const loan = await prisma.bankLoan.findUnique({ where: { fileId }, include: { _count: { select: { disbursements: true } } } });
+    if (!loan) return res.status(404).json({ error: 'No loan on this file.' });
+    if (loan._count.disbursements > 0) return res.status(409).json({ error: 'Money has been disbursed against this loan, so it cannot be removed.' });
+    await prisma.bankLoan.delete({ where: { fileId } });
+    await writeAudit(req, { module: 'Legal', action: 'Removed bank loan', recordId: fileId, recordLabel: loan.bankName, description: '' });
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminLegalRouter.post('/files/:id/loan/disbursements', async (req: AuthedRequest, res, next) => {
+  try {
+    const fileId = String(req.params.id);
+    const loan = await prisma.bankLoan.findUnique({ where: { fileId }, include: loanInclude });
+    if (!loan) return res.status(404).json({ error: 'No loan on this file.' });
+    if (loan.status !== 'sanctioned') return res.status(409).json({ error: 'The bank pays out only a sanctioned loan.' });
+    const amount = Number(req.body?.amount);
+    const paidOn = asDate(req.body?.paidOn);
+    if (!Number.isInteger(amount) || amount <= 0) return res.status(400).json({ error: 'Enter the amount in whole rupees.' });
+    if (!paidOn) return res.status(400).json({ error: 'Enter the date it was paid.' });
+    const paid = loan.disbursements.reduce((n, d) => n + d.amount, 0);
+    if (paid + amount > (loan.sanctionedAmount ?? 0)) return res.status(400).json({ error: `Only ₹${((loan.sanctionedAmount ?? 0) - paid).toLocaleString('en-IN')} of the sanctioned amount is left to disburse.` });
+    await prisma.loanDisbursement.create({ data: { loanId: loan.id, amount, paidOn, reference: text(req.body?.reference) } });
+    await writeAudit(req, { module: 'Legal', action: 'Loan disbursement', recordId: fileId, recordLabel: loan.bankName, description: `₹${amount.toLocaleString('en-IN')}` });
+    res.status(201).json(loanShape(await prisma.bankLoan.findUniqueOrThrow({ where: { id: loan.id }, include: loanInclude })));
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminLegalRouter.delete('/loan/disbursements/:id', async (req: AuthedRequest, res, next) => {
+  try {
+    const d = await prisma.loanDisbursement.findUnique({ where: { id: String(req.params.id) }, include: { loan: true } });
+    if (!d) return res.status(404).json({ error: 'Disbursement not found.' });
+    await prisma.loanDisbursement.delete({ where: { id: d.id } });
+    await writeAudit(req, { module: 'Legal', action: 'Removed loan disbursement', recordId: d.loan.fileId, recordLabel: d.loan.bankName, description: `₹${d.amount.toLocaleString('en-IN')}` });
+    res.status(204).send();
   } catch (err) {
     next(err);
   }

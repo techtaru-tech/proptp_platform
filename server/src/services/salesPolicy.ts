@@ -6,6 +6,8 @@ import { prisma } from '../prisma';
  * here by everything that applies it — so no rule lives in code.
  */
 export const getPolicy = () => prisma.salesPolicy.upsert({ where: { id: 'singleton' }, update: {}, create: { id: 'singleton' } });
+/** The kinds of document a buyer's file can hold — what the required-documents setting is chosen from. */
+export const DOC_KIND_KEYS = ['kyc', 'booking_form', 'allotment_letter', 'agreement', 'receipt', 'demand_note', 'cost_sheet', 'patta', 'no_dues', 'correspondence', 'other'];
 export type Policy = Awaited<ReturnType<typeof getPolicy>>;
 
 export function validatePolicy(b: Record<string, unknown>): { data?: Partial<Policy>; error?: string } {
@@ -23,7 +25,14 @@ export function validatePolicy(b: Record<string, unknown>): { data?: Partial<Pol
     data[k] = String(b[k]);
     return null;
   };
+  const docKinds = (k: string, label: string) => {
+    if (b[k] === undefined) return null;
+    if (!Array.isArray(b[k]) || (b[k] as unknown[]).some((x) => !DOC_KIND_KEYS.includes(String(x)))) return `${label} must be a list of document kinds.`;
+    data[k] = Array.from(new Set((b[k] as unknown[]).map(String)));
+    return null;
+  };
   const err =
+    docKinds('requiredDocKinds', 'Required documents') ||
     oneOf('penaltyType', 'Penalty type', ['percent', 'fixed']) ||
     oneOf('penaltyPeriod', 'Penalty period', ['day', 'month']) ||
     oneOf('refundApprover', 'Refund approver', ['admin', 'leader', 'accounts']) ||

@@ -2003,7 +2003,7 @@ export interface PlotMapPlot {
   holdUntil: string | null;
 }
 
-export type PlotStage = 'available' | 'hold' | 'token' | 'booked' | 'agreement' | 'registered';
+export type PlotStage = 'available' | 'hold' | 'token' | 'booked' | 'agreement' | 'registered' | 'possession';
 
 export interface PlotMapCounts {
   stages: Record<PlotStage, number>;

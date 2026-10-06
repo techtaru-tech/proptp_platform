@@ -9,6 +9,7 @@ import { ErrorState } from '../../components/ui/ErrorState';
 import { CardSkeleton } from '../../components/ui/LoadingSkeleton';
 import { useAsync } from '../../hooks/useAsync';
 import { useToast } from '../../context/ToastContext';
+import { DOC_KINDS, label } from '../../services/legalService';
 import { getSalesPolicy, saveSalesPolicy, type SalesPolicy } from '../../services/salesPolicyService';
 
 /** The three rules the sales team's money depends on, edited here rather than fixed in code. */
@@ -60,6 +61,18 @@ export function SalesPolicySettings() {
         </Card>
 
         <div className="flex flex-col gap-5">
+          <Card>
+            <CardHeader title="Required documents" subtitle="What every buyer's legal file must hold, verified, before it counts as complete." />
+            <div className="grid grid-cols-2 gap-2">
+              {DOC_KINDS.map((k) => (
+                <label key={k} className="flex items-center gap-2 text-sm text-ink">
+                  <input type="checkbox" className="h-4 w-4 rounded border-line-strong focus-ring" checked={f.requiredDocKinds.includes(k)}
+                    onChange={(e) => set('requiredDocKinds', e.target.checked ? [...f.requiredDocKinds, k] : f.requiredDocKinds.filter((x) => x !== k))} />
+                  {label(k)}
+                </label>
+              ))}
+            </div>
+          </Card>
           <Card>
             <CardHeader title="Booking cancellation and refund" subtitle="What is kept when a booking is cancelled, and who decides." />
             <div className="flex flex-col gap-4">

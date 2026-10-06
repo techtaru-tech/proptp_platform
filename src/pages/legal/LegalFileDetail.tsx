@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Check, FileText, Plus, Trash2, Wand2 } from 'lucide-react';
+import { Check, Plus, Trash2 } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -15,14 +15,15 @@ import { useAsync } from '../../hooks/useAsync';
 import { useToast } from '../../context/ToastContext';
 import { fileUrl, uploadFiles } from '../../services/apiClient';
 import { formatCurrency, formatDate } from '../../utils/format';
+import { DocumentsCard } from './DocumentsCard';
+import { LoanCard } from './LoanCard';
 import {
-  REGISTRY_STEPS, STAGES, addLegalDoc, deleteLegalDoc, generateDoc, getLegalFile, label, raiseDemand, recordPayment, recordStage, setPlan, updateRegistry,
+  DOC_KINDS, REGISTRY_STEPS, STAGES, addLegalDoc, getLegalFile, label, raiseDemand, recordPayment, recordStage, setPlan, updateRegistry,
   type MilestoneRow,
 } from '../../services/legalService';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const TONE = { upcoming: 'neutral', due: 'warning', partial: 'info', paid: 'success', overdue: 'danger' } as const;
-const DOC_KINDS = ['kyc', 'booking_form', 'allotment_letter', 'agreement', 'receipt', 'demand_note', 'correspondence', 'other'];
 
 type Dialog = null | { t: 'stage' } | { t: 'plan' } | { t: 'pay'; m: MilestoneRow } | { t: 'registry' } | { t: 'upload' };
 
@@ -73,7 +74,7 @@ export function LegalFileDetail() {
           </div>
           <dl className="space-y-1.5 text-sm">
             {[['Appointment', f.registry?.appointmentOn ? formatDate(f.registry.appointmentOn) : null], ['Registry date', f.registry?.registryDate ? formatDate(f.registry.registryDate) : null],
-              ['Sub-registrar office', f.registry?.subRegistrar], ['Deed number', f.registry?.deedNumber]].map(([k, v]) => (
+              ['Sub-registrar office', f.registry?.subRegistrar], ['Deed number', f.registry?.deedNumber], ['Possession handed over', f.registry?.possessionOn ? formatDate(f.registry.possessionOn) : null]].map(([k, v]) => (
               <div key={k as string} className="flex justify-between gap-3"><dt className="text-ink-muted">{k}</dt><dd className="font-medium text-ink">{v || '—'}</dd></div>))}
             {f.registry?.deedUrl && <a className="text-sm font-medium text-brand-700" href={fileUrl(f.registry.deedUrl)} target="_blank" rel="noreferrer">Scanned deed</a>}
           </dl>
@@ -101,21 +102,9 @@ export function LegalFileDetail() {
           )}
         </Card>
 
-        {/* Documents */}
-        <Card className="lg:col-span-2">
-          <CardHeader title="Documents" subtitle="Generated documents are filled from the booking, never retyped."
-            action={<div className="flex flex-wrap gap-2">
-              {(['cost_sheet', 'allotment_letter', 'agreement', 'receipt'] as const).map((k) => (
-                <Button key={k} variant="outline" size="sm" leftIcon={<Wand2 size={13} />} onClick={() => run(() => generateDoc(f.id, { kind: k }), `${label(k)} generated`)}>{label(k)}</Button>))}
-              <Button variant="outline" size="sm" leftIcon={<Plus size={13} />} onClick={() => setDialog({ t: 'upload' })}>Upload</Button></div>} />
-          {f.documents.length === 0 ? <p className="text-sm text-ink-muted">No documents yet.</p> : (
-            <ul className="divide-y divide-line">{f.documents.map((d) => (
-              <li key={d.id} className="flex items-center justify-between gap-3 py-2">
-                <a href={fileUrl(d.url)} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm font-medium text-brand-700"><FileText size={14} />{d.title}</a>
-                <span className="flex items-center gap-2"><Badge tone="neutral">{label(d.kind)}</Badge>{d.generated && <Badge tone="info">Generated</Badge>}<span className="text-xs text-ink-faint">{formatDate(d.createdAt)}</span>
-                  <button aria-label={`Delete ${d.title}`} className="rounded text-danger-600 focus-ring" onClick={() => run(() => deleteLegalDoc(d.id), 'Document removed')}><Trash2 size={13} /></button></span>
-              </li>))}</ul>)}
-        </Card>
+        <LoanCard fileId={f.id} loan={f.loan} onChanged={() => setReload((k) => k + 1)} />
+
+        <DocumentsCard file={f} onChanged={() => setReload((k) => k + 1)} onUpload={() => setDialog({ t: 'upload' })} />
       </div>
 
       {dialog?.t === 'stage' && f.nextStage && <StageDialog file={f} onClose={() => setDialog(null)} onSaved={refresh} />}
@@ -206,7 +195,7 @@ function PayDialog({ m, onClose, onSaved }: { m: MilestoneRow; onClose: () => vo
 
 function RegistryDialog({ file, onClose, onSaved }: { file: FileT; onClose: () => void; onSaved: () => void }) {
   const r = file.registry;
-  const [f, setF] = useState({ status: file.registryStatus as string, appointmentOn: r?.appointmentOn?.slice(0, 10) ?? '', registryDate: r?.registryDate?.slice(0, 10) ?? '', subRegistrar: r?.subRegistrar ?? '', deedNumber: r?.deedNumber ?? '', deedUrl: r?.deedUrl ?? '' });
+  const [f, setF] = useState({ status: file.registryStatus as string, appointmentOn: r?.appointmentOn?.slice(0, 10) ?? '', registryDate: r?.registryDate?.slice(0, 10) ?? '', subRegistrar: r?.subRegistrar ?? '', deedNumber: r?.deedNumber ?? '', deedUrl: r?.deedUrl ?? '', possessionOn: r?.possessionOn?.slice(0, 10) ?? '', possessionNote: r?.possessionNote ?? '' });
   const [deed, setDeed] = useState<File | null>(null);
   const { saving, go } = useSave(onSaved, 'Registry updated');
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
@@ -214,7 +203,7 @@ function RegistryDialog({ file, onClose, onSaved }: { file: FileT; onClose: () =
   return (
     <Modal isOpen onClose={onClose} title="Registry status" size="lg" footer={<Footer onClose={onClose} saving={saving} onSave={() => go(async () => {
       const deedUrl = deed ? (await uploadFiles([deed]))[0] : f.deedUrl;
-      return updateRegistry(file.id, { ...f, deedUrl: deedUrl || null });
+      return updateRegistry(file.id, { ...f, deedUrl: deedUrl || null, possessionOn: f.possessionOn || null });
     })} />}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Select label="Status" name="regStatus" value={f.status} onChange={set('status')} options={REGISTRY_STEPS.map((s, i) => ({ value: s, label: label(s) + (i < startAt ? ' (earlier)' : '') }))} hint="Progress only moves forward." />
@@ -222,6 +211,10 @@ function RegistryDialog({ file, onClose, onSaved }: { file: FileT; onClose: () =
         <DatePicker label="Registry date" name="regDate" value={f.registryDate} onChange={set('registryDate')} />
         <Input label="Sub-registrar office" name="regOffice" value={f.subRegistrar} onChange={set('subRegistrar')} />
         <Input label="Deed number" name="regDeed" value={f.deedNumber} onChange={set('deedNumber')} />
+        {f.status === 'registered' && <>
+          <DatePicker label="Possession handed over on" name="regPossession" value={f.possessionOn} onChange={set('possessionOn')} />
+          <Input label="Possession note" name="regPossessionNote" value={f.possessionNote} onChange={set('possessionNote')} />
+        </>}
         <div><label htmlFor="deedFile" className="text-sm font-medium text-ink">Scanned deed</label><input id="deedFile" name="deedFile" type="file" accept="image/*,application/pdf" className="mt-1.5 block w-full text-sm" onChange={(e) => setDeed(e.target.files?.[0] ?? null)} /></div>
       </div>
       <p className="mt-3 text-xs text-ink-faint">“Registered” needs the registry date, the sub-registrar office and the deed number.</p>

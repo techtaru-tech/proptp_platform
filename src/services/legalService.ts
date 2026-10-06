@@ -6,6 +6,8 @@ export type AgreementStage = 'draft' | 'sent' | 'under_review' | 'signed' | 'exe
 export const STAGES: AgreementStage[] = ['draft', 'sent', 'under_review', 'signed', 'executed', 'stamped'];
 export type RegistryStatus = 'pending' | 'documents_in_preparation' | 'stamp_duty_paid' | 'appointment_booked' | 'registered';
 export const REGISTRY_STEPS: RegistryStatus[] = ['pending', 'documents_in_preparation', 'stamp_duty_paid', 'appointment_booked', 'registered'];
+/** The kinds of document a buyer's file can hold. */
+export const DOC_KINDS = ['kyc', 'booking_form', 'allotment_letter', 'agreement', 'cost_sheet', 'receipt', 'demand_note', 'patta', 'no_dues', 'correspondence', 'other'];
 export const label = (s: string) => s.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
 
 export interface LegalFileRow {
@@ -17,12 +19,22 @@ export interface MilestoneRow {
   status: 'upcoming' | 'due' | 'partial' | 'paid' | 'overdue'; daysOverdue: number; penalty: number; totalDue: number;
   payments: { id: string; amount: number; paidOn: string; reference: string | null }[];
 }
-export interface LegalDoc { id: string; kind: string; title: string; url: string; generated: boolean; milestoneId: string | null; createdAt: string }
+export interface LegalDoc {
+  id: string; kind: string; title: string; url: string; generated: boolean; milestoneId: string | null; createdAt: string;
+  version: number; supersededAt: string | null; status: 'pending' | 'verified' | 'rejected'; reviewedByName: string | null; reviewedAt: string | null; reviewNote: string | null;
+}
+export interface ChecklistItem { kind: string; state: 'missing' | 'pending' | 'verified' | 'rejected'; docId: string | null }
+export type LoanStage = 'applied' | 'sanctioned' | 'partly_disbursed' | 'disbursed' | 'rejected';
+export interface Loan {
+  id: string; bankName: string; status: 'applied' | 'sanctioned' | 'rejected'; stage: LoanStage; appliedOn: string; sanctionedOn: string | null;
+  sanctionedAmount: number | null; note: string | null; disbursed: number; remaining: number;
+  disbursements: { id: string; amount: number; paidOn: string; reference: string | null }[];
+}
 export interface LegalFileDetail extends LegalFileRow {
-  reference: string; bookingAmount: number; unit: string; documents: LegalDoc[]; nextStage: AgreementStage | null;
+  reference: string; bookingAmount: number; unit: string; documents: LegalDoc[]; checklist: ChecklistItem[]; loan: Loan | null; nextStage: AgreementStage | null;
   stages: { id: string; stage: AgreementStage; at: string; responsible: string; note: string | null }[];
   milestones: MilestoneRow[];
-  registry: { status: RegistryStatus; appointmentOn: string | null; registryDate: string | null; subRegistrar: string | null; deedNumber: string | null; deedUrl: string | null } | null;
+  registry: { status: RegistryStatus; appointmentOn: string | null; registryDate: string | null; subRegistrar: string | null; deedNumber: string | null; deedUrl: string | null; possessionOn: string | null; possessionNote: string | null } | null;
   cases: { id: string; title: string; stage: string; nextHearing: string | null; closed: boolean }[];
 }
 export type ComplianceStatus = 'valid' | 'expires_90' | 'expires_60' | 'expires_30' | 'lapsed' | 'no_expiry';
@@ -43,6 +55,12 @@ export const recordPayment = (milestoneId: string, input: { amount: number; paid
 export const raiseDemand = (milestoneId: string) => api.post<LegalDoc>(`/legal/milestones/${milestoneId}/demand`, {});
 export const generateDoc = (id: string, input: { kind: string; milestoneId?: string; paymentId?: string }) => api.post<LegalDoc>(`/legal/files/${id}/generate`, input);
 export const addLegalDoc = (id: string, input: { kind: string; title: string; url: string }) => api.post(`/legal/files/${id}/documents`, input);
+export const reviewLegalDoc = (docId: string, input: { decision: 'verify' | 'reject'; note?: string }) => api.post(`/legal/documents/${docId}/review`, input);
+export const replaceLegalDoc = (docId: string, input: { url: string; title?: string }) => api.post(`/legal/documents/${docId}/replace`, input);
+export const saveLoan = (fileId: string, input: Record<string, unknown>) => api.put<Loan>(`/legal/files/${fileId}/loan`, input);
+export const removeLoan = (fileId: string) => api.delete(`/legal/files/${fileId}/loan`);
+export const addDisbursement = (fileId: string, input: { amount: number; paidOn: string; reference?: string }) => api.post<Loan>(`/legal/files/${fileId}/loan/disbursements`, input);
+export const removeDisbursement = (id: string) => api.delete(`/legal/loan/disbursements/${id}`);
 export const deleteLegalDoc = (docId: string) => api.delete(`/legal/documents/${docId}`);
 export const updateRegistry = (id: string, input: Record<string, unknown>) => api.patch(`/legal/files/${id}/registry`, input);
 export const getCompliance = () => api.get<{ counts: Record<string, number>; items: ComplianceItem[] }>('/legal/compliance');
