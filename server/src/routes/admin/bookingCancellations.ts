@@ -114,8 +114,8 @@ adminBookingCancellationsRouter.post('/:id/decide', async (req: AuthedRequest, r
     if (!(await mayDecide(req.auth!.sub, policy))) {
       return res.status(403).json({ error: `Under the current policy, ${policy.refundApprover === 'admin' ? 'only a full-access administrator' : policy.refundApprover === 'leader' ? 'a Leader' : 'someone with Payments access'} can decide this.` });
     }
-    // Whoever asked cannot also answer: the point of an approval is a second pair of eyes.
-    if (c.requestedById === req.auth!.sub) return res.status(403).json({ error: 'You raised this request, so someone else has to decide it.' });
+    // Whoever asked cannot also answer, except a full-access administrator, who holds both powers.
+    if (c.requestedById === req.auth!.sub && !(await resolveAccess(req.auth!.sub)).isFullAccess) return res.status(403).json({ error: 'You raised this request, so someone else has to decide it.' });
 
     const actor = await prisma.user.findUnique({ where: { id: req.auth!.sub }, select: { name: true } });
     const unit = c.booking.unit;

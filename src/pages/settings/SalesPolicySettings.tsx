@@ -79,7 +79,7 @@ export function SalesPolicySettings() {
               <Input label="Amount kept (% of what the buyer paid)" name="refundDeductionPercent" type="number" min={0} max={100} step="any" value={f.refundDeductionPercent} onChange={num('refundDeductionPercent')} hint="The rest is refunded." />
               <Select label="Who approves a refund" name="refundApprover" value={f.refundApprover} onChange={(e) => set('refundApprover', e.target.value as SalesPolicy['refundApprover'])}
                 options={[{ value: 'admin', label: 'A full-access administrator' }, { value: 'leader', label: 'A Leader' }, { value: 'accounts', label: 'Anyone with Payments access (accounts)' }]}
-                hint="Whoever raised the request can never approve it themselves." />
+                hint="Whoever raised the request cannot approve it themselves, unless they have full access." />
             </div>
           </Card>
           <Card>
