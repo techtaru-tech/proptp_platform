@@ -1,5 +1,6 @@
 import type {
   LeaveBalanceRow, LeaveRequest, LeaveType, PayrollRun, PayrollRunDetail, SalaryStructureRow,
+  Holiday,
 } from '../types';
 import { api, toQueryString } from './apiClient';
 
@@ -106,4 +107,38 @@ export async function setPayrollRunStatus(id: string, status: 'finalised' | 'pai
 
 export async function deletePayrollRun(id: string): Promise<void> {
   await api.delete(`/payroll/runs/${id}`);
+}
+
+// ---------------------------------------------------------------------------
+// Holidays
+// ---------------------------------------------------------------------------
+
+export interface HolidayInput {
+  name: string;
+  kind: string;
+  startDate: string;
+  endDate: string;
+  description?: string;
+}
+
+export interface HolidayList {
+  holidays: Holiday[];
+  /** Days off across every holiday in the list — what the year's header counts. */
+  totalDays: number;
+}
+
+export async function listHolidays(year: number): Promise<HolidayList> {
+  return api.get<HolidayList>(`/holidays?year=${year}`);
+}
+
+export async function createHoliday(input: HolidayInput): Promise<Holiday> {
+  return api.post('/holidays', input);
+}
+
+export async function updateHoliday(id: string, input: HolidayInput): Promise<Holiday> {
+  return api.patch(`/holidays/${id}`, input);
+}
+
+export async function deleteHoliday(id: string): Promise<void> {
+  await api.delete(`/holidays/${id}`);
 }

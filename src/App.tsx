@@ -114,6 +114,7 @@ import { AttendanceHistory } from './pages/attendance/AttendanceHistory';
 import { AttendanceDetail } from './pages/attendance/AttendanceDetail';
 import { AttendanceCorrections } from './pages/attendance/AttendanceCorrections';
 import { AttendanceReports } from './pages/attendance/AttendanceReports';
+import { Holidays } from './pages/hr/Holidays';
 
 import { PayoutList } from './pages/payouts/PayoutList';
 import { PayoutDetail } from './pages/payouts/PayoutDetail';
@@ -298,6 +299,7 @@ function App() {
                 <Route path="/attendance/history" element={<AttendanceHistory />} />
                 <Route path="/attendance/corrections" element={<AttendanceCorrections />} />
                 <Route path="/attendance/reports" element={<AttendanceReports />} />
+                <Route path="/attendance/holidays" element={<Holidays />} />
                 <Route path="/attendance/:id" element={<AttendanceDetail />} />
 
                 <Route path="/payouts" element={<PayoutList />} />

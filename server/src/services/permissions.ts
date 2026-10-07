@@ -94,6 +94,8 @@ const PATH_MODULE_ENTRIES = [
   { prefix: '/attendance', module: 'attendance' },
   // Leave lives with attendance: it is the other half of "was this person at work".
   { prefix: '/leave', module: 'attendance' },
+  // Holidays too — the days nobody was expected in.
+  { prefix: '/holidays', module: 'attendance' },
   // Payroll is money paid to staff, which is the same permission as money paid to partners.
   { prefix: '/payroll', module: 'payouts' },
   { prefix: '/payouts', module: 'payouts' },

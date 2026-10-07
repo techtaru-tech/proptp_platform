@@ -3203,3 +3203,33 @@ model SmsLog {
   @@index([createdAt])
   @@index([leadId])
 }
+
+/**
+ * A company holiday, stored as one row per occasion rather than per day — Diwali is one
+ * holiday that happens to run three days, and splitting it into three rows would mean three
+ * things to name, three to edit and three to get out of step with each other.
+ * Nothing here is per-person or per-location. A regional holiday that only the Surat office
+ * takes would need a scope column; right now every holiday is everybody's.
+ */
+model Holiday {
+  id   String @id @default(cuid())
+  name String
+
+  /// national | festival | religious | company | optional — what kind of occasion it is, for
+  /// the badge on the list and the filter above it. Free text rather than an enum: the office
+  /// will invent a category faster than a migration can follow it.
+  kind String @default("festival")
+
+  /// Inclusive on both ends. A single-day holiday has the same date twice, which keeps every
+  /// query a range query instead of two shapes to handle.
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+
+  /// Why the office is shut, when the name alone does not say it.
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([startDate])
+}

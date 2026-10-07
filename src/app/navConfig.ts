@@ -244,6 +244,7 @@ export const NAV_ITEMS: NavItem[] = [
       { label: 'Corrections', to: '/attendance/corrections' },
       { label: 'Leave Requests', to: '/attendance/leave' },
       { label: 'Leave Types', to: '/attendance/leave-types' },
+      { label: 'Holidays', to: '/attendance/holidays' },
       { label: 'Reports', to: '/attendance/reports' },
     ],
   },

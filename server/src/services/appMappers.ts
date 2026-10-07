@@ -3,12 +3,17 @@ import type {
   BankAccount,
   Booking,
   EarningEntry,
+  LeaveRequest,
+  LeaveType,
   Notification,
   NotificationRecipient,
+  PayrollRun,
+  Payslip,
   PlotFacing,
   Project,
   ProjectFile,
   PropertyUnit,
+  SalaryStructure,
   User,
   WorkLocation,
 } from '@prisma/client';
@@ -22,6 +27,7 @@ import {
   type DownlineMember,
   type EarningsSummary,
 } from './derive';
+import type { LeaveBalanceRow } from './leave';
 
 /**
  * Serializers for the Flutter app surface (/api/v1/app/*), matching
@@ -314,5 +320,156 @@ export function appNotification(row: NotificationRecipient & { notification: Not
     body: row.notification.body,
     created_at: iso(row.notification.createdAt),
     read: row.read,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Leave (not in the API doc — built for the panel first)
+// ---------------------------------------------------------------------------
+
+/** A date column, as a plain day. No timezone to get wrong: leave is booked in days. */
+const day = (d: Date) => d.toISOString().slice(0, 10);
+
+type LeaveRequestWithType = LeaveRequest & {
+  type: Pick<LeaveType, 'name' | 'code' | 'isPaid'>;
+};
+
+export function appLeaveRequest(request: LeaveRequestWithType) {
+  return {
+    id: request.id,
+    leave_type_id: request.leaveTypeId,
+    type_name: request.type.name,
+    type_code: request.type.code,
+    is_paid: request.type.isPaid,
+    start_date: day(request.startDate),
+    end_date: day(request.endDate),
+    days: request.days,
+    half_day: request.halfDay,
+    reason: request.reason,
+    status: request.status,
+    decision_note: request.decisionNote,
+    decided_at: iso(request.decidedAt),
+    applied_at: iso(request.createdAt),
+    /// Only a request nobody has decided yet can still be withdrawn. Derived rather than
+    /// stored, so it cannot go stale the moment a manager acts.
+    can_cancel: request.status === 'pending',
+  };
+}
+
+export function appLeaveType(type: LeaveType) {
+  return {
+    id: type.id,
+    name: type.name,
+    code: type.code,
+    is_paid: type.isPaid,
+    annual_quota: type.annualQuota,
+  };
+}
+
+export function appLeaveBalance(balance: LeaveBalanceRow) {
+  return {
+    leave_type_id: balance.leaveTypeId,
+    name: balance.name,
+    code: balance.code,
+    is_paid: balance.isPaid,
+    allocated: balance.allocated,
+    used: balance.used,
+    pending: balance.pending,
+    remaining: balance.remaining,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Salary & payslips (not in the API doc — payroll was built for the panel first)
+//
+// One rule runs through all of this: a DRAFT payroll run is invisible here. The schema calls
+// a draft "figures calculated and editable; nothing is owed yet", and a number somebody reads
+// on their phone and then watches change is worse than no number at all. Only `finalised` and
+// `paid` runs reach the app.
+// ---------------------------------------------------------------------------
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+export function monthName(month: number): string {
+  return MONTH_NAMES[month - 1] ?? String(month);
+}
+
+/** What this person is paid today. Null when payroll has not set them up yet. */
+export function appSalaryStructure(structure: SalaryStructure | null) {
+  if (!structure) return null;
+  const gross = structure.basic + structure.hra + structure.otherAllowance;
+  const deductions = structure.pfDeduction + structure.professionalTax + structure.otherDeduction;
+  return {
+    basic: structure.basic,
+    hra: structure.hra,
+    other_allowance: structure.otherAllowance,
+    gross_monthly: gross,
+    pf_deduction: structure.pfDeduction,
+    professional_tax: structure.professionalTax,
+    other_deduction: structure.otherDeduction,
+    total_deductions: deductions,
+    net_monthly: gross - deductions,
+    effective_from: iso(structure.effectiveFrom),
+  };
+}
+
+type PayslipWithRun = Payslip & {
+  run: Pick<PayrollRun, 'id' | 'month' | 'year' | 'status' | 'paidAt' | 'finalisedAt'>;
+};
+
+/** One row of the My Salary list, and of the Payslips list — month, net, and whether it is paid. */
+export function appPayslipSummary(payslip: PayslipWithRun) {
+  return {
+    id: payslip.id,
+    month: payslip.run.month,
+    month_name: monthName(payslip.run.month),
+    year: payslip.run.year,
+    gross_earnings: payslip.grossEarnings,
+    total_deductions: payslip.totalDeductions,
+    net_pay: payslip.netPay,
+    /// `finalised` means the figure is locked but the money has not gone out yet.
+    status: payslip.run.status,
+    paid_on: iso(payslip.run.paidAt),
+    finalised_on: iso(payslip.run.finalisedAt),
+  };
+}
+
+/**
+ * The slip itself.
+ *
+ * Earnings and deductions come through as labelled lines rather than loose fields, so the app
+ * renders a slip by looping instead of by hard-coding six component names — and a seventh
+ * component added later shows up without an app release.
+ */
+export function appPayslipDetail(payslip: PayslipWithRun) {
+  const earnings = [
+    { label: 'Basic', amount: payslip.basic },
+    { label: 'HRA', amount: payslip.hra },
+    { label: 'Other Allowance', amount: payslip.otherAllowance },
+  ].filter((line) => line.amount !== 0);
+
+  const deductions = [
+    { label: 'Provident Fund', amount: payslip.pfDeduction },
+    { label: 'Professional Tax', amount: payslip.professionalTax },
+    { label: 'Other Deduction', amount: payslip.otherDeduction },
+    { label: 'Loss of Pay', amount: payslip.lopDeduction },
+  ].filter((line) => line.amount !== 0);
+
+  return {
+    ...appPayslipSummary(payslip),
+    period: `${monthName(payslip.run.month)} ${payslip.run.year}`,
+    attendance: {
+      working_days: payslip.workingDays,
+      present_days: payslip.presentDays,
+      paid_leave_days: payslip.paidLeaveDays,
+      /// Days absent with no approved paid leave behind them — what `lop_deduction` costs.
+      lop_days: payslip.lopDays,
+    },
+    earnings,
+    deductions,
+    generated_on: iso(payslip.createdAt),
   };
 }

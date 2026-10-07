@@ -2060,3 +2060,22 @@ export interface PublicPlotMap {
   plots: PublicPlotMapPlot[];
   summary: { available: number; total: number };
 }
+
+/**
+ * A company holiday. One row per occasion with an inclusive date range, so Diwali is a single
+ * three-day holiday rather than three rows. `upcoming` is decided by the server against IST,
+ * because the browser's own clock is not the office's.
+ */
+export interface Holiday {
+  id: string;
+  name: string;
+  /** national | festival | religious | company | optional — free text, not an enum. */
+  kind: string;
+  /** `YYYY-MM-DD`, both ends inclusive. */
+  startDate: string;
+  endDate: string;
+  /** Calendar days covered, both ends counted. */
+  days: number;
+  description: string | null;
+  upcoming: boolean;
+}
