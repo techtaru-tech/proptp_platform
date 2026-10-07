@@ -5,6 +5,7 @@ import { prisma } from '../../prisma';
 import { requireAuth, type AuthedRequest } from '../../services/auth';
 import { publicUrl, upload, UPLOAD_DIR } from '../../services/upload';
 import { activityProgress } from '../../services/construction';
+import { makeMaterialEntryHandler, materialPhotoFields } from '../materialEntry';
 
 /**
  * Site staff's side of construction — /api/v1/app/construction.
@@ -171,6 +172,58 @@ appConstructionRouter.post('/issues', upload.array('photos', 6), async (req: Aut
     res.status(201).json({ id: created.id });
   } catch (err) {
     removeFiles(files);
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Material received at site
+//
+// The same entry the staff panel and the vendor portal make, from the same handler, so the rules
+// (a photo each of the material, the challan and the vehicle, stamped with time and place) are one
+// implementation. An entry starts as pending; somebody checks it in the panel under Vendors &
+// Material, and the person who entered it sees the verdict here.
+// ---------------------------------------------------------------------------
+
+/** Whoever receives material at a site. Channel partners are not site staff, and vendors have their own portal. */
+function siteStaffOnly(req: AuthedRequest, res: Response, next: NextFunction) {
+  if (req.auth!.role === 'channel_partner' || req.auth!.role === 'vendor') {
+    return fail(res, 403, 'not_site_staff', 'Material is recorded by site staff.');
+  }
+  next();
+}
+
+appConstructionRouter.get('/materials/lookups', siteStaffOnly, async (_req, res, next) => {
+  try {
+    const [projects, materials, vendors] = await Promise.all([
+      prisma.project.findMany({ select: { id: true, projectName: true }, orderBy: { projectName: 'asc' } }),
+      prisma.materialItem.findMany({ select: { name: true, unit: true }, orderBy: { name: 'asc' } }),
+      prisma.vendor.findMany({ where: { active: true }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+    ]);
+    res.json({ projects: projects.map((p) => ({ id: p.id, name: p.projectName })), materials, vendors });
+  } catch (err) {
+    next(err);
+  }
+});
+
+appConstructionRouter.post('/materials', siteStaffOnly, materialPhotoFields, makeMaterialEntryHandler({ vendorFromLogin: false }));
+
+appConstructionRouter.get('/materials', siteStaffOnly, async (req: AuthedRequest, res, next) => {
+  try {
+    const rows = await prisma.materialEntry.findMany({
+      where: { createdById: req.auth!.sub },
+      include: { material: true, vendor: { select: { name: true } }, project: { select: { projectName: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+    res.json({
+      entries: rows.map((e) => ({
+        id: e.id, project: e.project.projectName, material: e.material.name, unit: e.material.unit, quantity: e.quantity, vendor: e.vendor?.name ?? null,
+        challan_no: e.challanNo, vehicle_no: e.vehicleNo, received_by: e.receivedBy, received_on: e.receivedOn.toISOString(),
+        status: e.status, rejection_reason: e.rejectionReason, entered_at: e.createdAt.toISOString(),
+      })),
+    });
+  } catch (err) {
     next(err);
   }
 });
