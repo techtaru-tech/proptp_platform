@@ -23,6 +23,7 @@ import {
   Camera,
   Briefcase,
   Handshake,
+  Bot,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -35,7 +36,7 @@ export interface NavChild {
 
 /** Matches the module keys the server enforces — see server/src/services/permissions.ts. */
 export type ModuleKey =
-  | 'dashboard' | 'crm' | 'tasks' | 'projects' | 'construction' | 'vendors' | 'legal' | 'ops_rules' | 'cameras' | 'vendor_portal' | 'partner_portal' | 'properties' | 'bookings' | 'payments' | 'investments'
+  | 'dashboard' | 'crm' | 'tasks' | 'projects' | 'construction' | 'vendors' | 'legal' | 'ops_rules' | 'cameras' | 'vendor_portal' | 'partner_portal' | 'assistant' | 'properties' | 'bookings' | 'payments' | 'investments'
   | 'partners' | 'teams' | 'attendance' | 'payouts' | 'incentives' | 'support' | 'notifications'
   | 'reports' | 'settings';
 
@@ -134,6 +135,7 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   { label: 'Operations Rules', to: '/ops-rules', icon: Workflow, module: 'ops_rules' },
+  { label: 'Assistant', to: '/assistant', icon: Bot, module: 'assistant' },
   {
     label: 'My Work',
     to: '/vendor-portal',

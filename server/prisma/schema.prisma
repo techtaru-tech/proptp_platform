@@ -3233,3 +3233,32 @@ model Holiday {
 
   @@index([startDate])
 }
+
+/// A chat with the panel's assistant. Private to the person who started it.
+model AssistantConversation {
+  id        String             @id @default(cuid())
+  userId    String
+  title     String             @default("New chat")
+  /// A write the assistant wants to make and is waiting for a person to approve:
+  /// { writes: [{ id, name, input, summary }], reads: [tool_result blocks already produced] }.
+  pending   Json?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  messages  AssistantMessage[]
+
+  @@index([userId, updatedAt])
+}
+
+/// One turn of the conversation, kept exactly as the model sent or received it (text, tool calls,
+/// tool results), so a chat can be replayed to the model unchanged.
+model AssistantMessage {
+  id             String                @id @default(cuid())
+  conversation   AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  /// user | assistant
+  role           String
+  content        Json
+  createdAt      DateTime              @default(now())
+
+  @@index([conversationId, createdAt])
+}

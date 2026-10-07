@@ -96,6 +96,7 @@ import { VendorDetail } from './pages/vendors/VendorDetail';
 import { Materials } from './pages/vendors/Materials';
 import { VendorBills } from './pages/vendors/VendorBills';
 import { VendorOnly } from './pages/vendorPortal/VendorOnly';
+import { Assistant } from './pages/assistant/Assistant';
 import { ChannelPartners } from './pages/partners/ChannelPartners';
 import { ChannelPartnerDetail } from './pages/partners/ChannelPartnerDetail';
 import { PartnerOnly, PartnerHome, PartnerBookings, PartnerBrokerage, PartnerDisputes } from './pages/partnerPortal/PartnerPortal';
@@ -215,6 +216,7 @@ function App() {
                   <Route path="material" element={<PortalMaterial />} />
                   <Route path="bills" element={<PortalBills />} />
                 </Route>
+                <Route path="/assistant" element={<Assistant />} />
                 <Route path="/channel-partners" element={<ChannelPartners />} />
                 <Route path="/channel-partners/:id" element={<ChannelPartnerDetail />} />
                 <Route path="/partner-portal" element={<PartnerOnly><PartnerHome /></PartnerOnly>} />
