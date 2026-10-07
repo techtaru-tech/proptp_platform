@@ -143,15 +143,58 @@ appConstructionRouter.get('/updates', async (req: AuthedRequest, res, next) => {
   }
 });
 
-/** Issues assigned to me, and raising a new one from site. */
+/** Issues assigned to me or raised by me, the detail of one, and raising a new one from site. */
+const mineOrRaisedByMe = (me: string) => ({ OR: [{ ownerId: me }, { raisedById: me }] });
+
+const issueRow = (i: any, me: string) => ({
+  id: i.id,
+  project: i.project.projectName,
+  title: i.title,
+  due_date: i.dueDate?.toISOString() ?? null,
+  status: i.status,
+  assigned_to_me: i.ownerId === me,
+  raised_by_me: i.raisedById === me,
+  photos_count: i.photos.length,
+  created_at: i.createdAt.toISOString(),
+});
+
 appConstructionRouter.get('/issues', async (req: AuthedRequest, res, next) => {
   try {
+    const me = req.auth!.sub;
     const rows = await prisma.siteIssue.findMany({
-      where: { ownerId: req.auth!.sub, status: { not: 'closed' } },
+      where: { ...mineOrRaisedByMe(me), status: { not: 'closed' } },
       include: { project: { select: { projectName: true } } },
-      orderBy: { dueDate: 'asc' },
+      orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
     });
-    res.json({ issues: rows.map((i) => ({ id: i.id, project: i.project.projectName, title: i.title, due_date: i.dueDate?.toISOString() ?? null, status: i.status })) });
+    res.json({ issues: rows.map((i) => issueRow(i, me)) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+appConstructionRouter.get('/issues/:id', async (req: AuthedRequest, res, next) => {
+  try {
+    const me = req.auth!.sub;
+    const i = await prisma.siteIssue.findFirst({
+      where: { id: String(req.params.id), ...mineOrRaisedByMe(me) },
+      include: {
+        project: { select: { projectName: true } },
+        activity: { select: { name: true } },
+        owner: { select: { name: true } },
+        raisedBy: { select: { name: true } },
+      },
+    });
+    if (!i) return fail(res, 404, 'issue_not_found', 'That issue is not yours.');
+    res.json({
+      ...issueRow(i, me),
+      description: i.description,
+      photos: i.photos,
+      activity: i.activity?.name ?? null,
+      raised_by: i.raisedBy.name,
+      owner: i.owner?.name ?? null,
+      closed_at: i.closedAt?.toISOString() ?? null,
+      close_note: i.closeNote,
+    });
   } catch (err) {
     next(err);
   }
