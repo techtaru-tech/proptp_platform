@@ -93,7 +93,8 @@ export const TOOLS: Def[] = [
     input_schema: obj({ lead_id: { type: 'string' } }, ['lead_id']),
     run: async (a, i) => {
       const l = await call(a, 'GET', `/leads/${encodeURIComponent(String(i.lead_id))}`);
-      return out({ ...leadRow(l), email: l.email, city: l.city, budget: l.budgetRange, purpose: l.purpose, property_type: l.propertyType, notes: l.notes, deal_value: l.dealValue, original_source: l.originalSource });
+      const stages: any[] = l.pipelineId ? await call(a, 'GET', `/pipelines/${encodeURIComponent(l.pipelineId)}/stages`).catch(() => []) : [];
+      return out({ ...leadRow(l), pipeline_stages: stages.map((x) => x.name), email: l.email, city: l.city, budget: l.budgetRange, purpose: l.purpose, property_type: l.propertyType, notes: l.notes, deal_value: l.dealValue, original_source: l.originalSource });
     },
   },
   {
@@ -189,6 +190,26 @@ export const TOOLS: Def[] = [
       return `Add a follow-up “${i.title}” on “${l ? leadName(l) : i.lead_id}”, due ${new Date(i.due_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })}.`;
     },
     run: async (a, i) => out(await call(a, 'POST', '/followups', { leadId: i.lead_id, title: i.title, dueAt: i.due_at, assignedUserId: i.assigned_user_id }).then((f) => ({ ok: true, id: f.id }))),
+  },
+  {
+    name: 'move_lead_stage', write: true, label: 'Proposed a stage change',
+    description: 'Move a lead to another stage of its pipeline, by the stage name (for example "Site Visit Done", "Negotiation", "Booking", "Lost / Closed"). Moving to a won or lost stage also sets the lead\'s status. Names are matched against the lead\'s own pipeline; if none matches you get the valid names back. A person approves it first.',
+    input_schema: obj({ lead_id: { type: 'string' }, stage: { type: 'string', description: 'The stage name.' } }, ['lead_id', 'stage']),
+    describe: async (a, i) => {
+      const l = await call(a, 'GET', `/leads/${encodeURIComponent(i.lead_id)}`).catch(() => null);
+      return `Move “${l ? leadName(l) : i.lead_id}” from ${l?.stage?.name ?? 'no stage'} to ${i.stage}.`;
+    },
+    run: async (a, i) => {
+      const l = await call(a, 'GET', `/leads/${encodeURIComponent(String(i.lead_id))}`);
+      if (!l.pipelineId) throw new ToolError('This lead is not on a pipeline, so it has no stages to move through.');
+      const stages: any[] = await call(a, 'GET', `/pipelines/${encodeURIComponent(l.pipelineId)}/stages`);
+      const want = String(i.stage).trim().toLowerCase();
+      const partial = stages.filter((s) => s.name.toLowerCase().includes(want));
+      const hit = stages.find((s) => s.name.toLowerCase() === want) ?? (partial.length === 1 ? partial[0] : null);
+      if (!hit) throw new ToolError(`No stage called “${i.stage}” on this lead's pipeline. The stages are: ${stages.map((s) => s.name).join(', ')}.`);
+      await call(a, 'POST', `/leads/${encodeURIComponent(String(i.lead_id))}/stage`, { pipelineId: l.pipelineId, stageId: hit.id });
+      return out({ ok: true, now_in: hit.name });
+    },
   },
   {
     name: 'add_lead_note', write: true, label: 'Proposed a note',

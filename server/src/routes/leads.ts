@@ -556,6 +556,8 @@ leadsRouter.param('id', async (req, res, next, id) => {
 });
 
 leadsRouter.get('/:id', async (req, res) => {
+  // A lead outside the caller's own team answers as not found, as it does in the list.
+  if (!(await findLeadInScope(await scopeOf(req), req.params.id))) return res.status(404).json({ error: 'Lead not found' });
   const lead = await prisma.lead.findUnique({
     where: { id: req.params.id },
     include: {
@@ -629,6 +631,7 @@ leadsRouter.delete('/:id', async (req, res) => {
 
 leadsRouter.post('/:id/status', async (req, res) => {
   const { status, lostReason } = req.body as { status: string; lostReason?: string };
+  if (!(await findLeadInScope(await scopeOf(req), req.params.id))) return res.status(404).json({ error: 'Lead not found' });
   const lead = await prisma.lead.findUnique({ where: { id: req.params.id } });
   if (!lead) return res.status(404).json({ error: 'Lead not found' });
 
@@ -686,6 +689,7 @@ leadsRouter.post('/:id/star', async (req, res) => {
 
 leadsRouter.post('/:id/stage', async (req, res) => {
   const { pipelineId, stageId } = req.body as { pipelineId: string; stageId: string };
+  if (!(await findLeadInScope(await scopeOf(req), req.params.id))) return res.status(404).json({ error: 'Lead not found' });
   const [lead, toStage] = await Promise.all([
     prisma.lead.findUnique({ where: { id: req.params.id }, include: { stage: true } }),
     prisma.pipelineStage.findUnique({ where: { id: stageId } }),
@@ -752,6 +756,7 @@ leadsRouter.get('/:id/notes', async (req, res) => {
 
 leadsRouter.post('/:id/notes', async (req, res) => {
   const { body } = req.body as { body: string };
+  if (!(await findLeadInScope(await scopeOf(req), req.params.id))) return res.status(404).json({ error: 'Lead not found' });
   const actor = await actorNameOf(req);
   const note = await prisma.leadNote.create({
     data: { leadId: req.params.id, userId: (req as AuthedRequest).auth?.sub ?? 'unknown', userName: actor, body },
