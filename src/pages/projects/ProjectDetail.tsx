@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Building2, Edit2, ImageIcon, ClipboardList, History, LayoutGrid, MapPin, Plus, Search } from 'lucide-react';
+import { Building2, Edit2, HardHat, ImageIcon, ClipboardList, History, LayoutGrid, MapPin, Plus, Search } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -28,6 +28,7 @@ import {
   type ProjectFormValues,
 } from './ProjectForm';
 import { useAsync } from '../../hooks/useAsync';
+import { ConstructionTab } from './ConstructionTab';
 import { useToast } from '../../context/ToastContext';
 import { getProject, getProjectDetail, listProjectUnits, updateProject } from '../../services/projectService';
 import { amenityNamesForIds, userDisplayName } from '../../data/referenceData';
@@ -198,6 +199,7 @@ export function ProjectDetail() {
             items={[
               { key: 'overview', label: 'Overview' },
               { key: 'inventory', label: 'Inventory', icon: <LayoutGrid size={14} /> },
+              { key: 'construction', label: 'Construction', icon: <HardHat size={14} /> },
               { key: 'media', label: 'Media', icon: <ImageIcon size={14} /> },
               { key: 'bookings', label: 'Bookings', icon: <ClipboardList size={14} />, badge: bookings.length || undefined },
               { key: 'activity', label: 'Activity / Audit', icon: <History size={14} /> },
@@ -207,6 +209,7 @@ export function ProjectDetail() {
               <div className="pb-5">
                 {active === 'overview' && <OverviewTab project={project} />}
                 {active === 'inventory' && <InventoryTab projectId={project.id} onSelectUnit={setSelectedUnit} />}
+                {active === 'construction' && <ConstructionTab projectId={project.id} />}
                 {active === 'media' && <MediaTab project={project} onPreview={setMediaPreview} />}
                 {active === 'bookings' && <BookingsTab bookings={bookings} />}
                 {active === 'activity' && (
