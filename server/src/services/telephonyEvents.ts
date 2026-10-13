@@ -2,17 +2,18 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '../prisma';
 
 /**
- * The provider's side of the conversation, recorded.
+ * The provider's side of the conversation, recorded: what DeepCall pushed to us after a call,
+ * and what it answered when we asked it to place one.
  *
- * Both telephony webhooks answer a live call under a time limit and neither can afford to
- * fail because bookkeeping failed, so every function here swallows its own errors. The point
- * is diagnosis during a real call: which request arrived, under what parameter names, and
- * what we said back — questions the pm2 log can answer only for whoever can reach the box.
+ * Neither can afford to fail because bookkeeping failed, so every function here swallows its
+ * own errors. The point is diagnosis during a real call: which request arrived, under what
+ * parameter names, and what came back — questions the pm2 log can answer only for whoever can
+ * reach the box.
  */
 
 const RETENTION_DAYS = 14;
 
-export type TelephonyEventKind = 'routing' | 'call_log';
+export type TelephonyEventKind = 'call_log' | 'click_to_call';
 export type TelephonyEventOutcome = 'ok' | 'rejected' | 'failed';
 
 /** Last few characters only — enough to spot a stale webhook URL, useless as a credential. */
@@ -64,6 +65,6 @@ export async function logTelephonyEvent(input: {
       where: { receivedAt: { lt: new Date(Date.now() - RETENTION_DAYS * 86_400_000) } },
     });
   } catch (err) {
-    console.error('[airphone] could not record the webhook event:', err);
+    console.error('[telephony] could not record the event:', err);
   }
 }

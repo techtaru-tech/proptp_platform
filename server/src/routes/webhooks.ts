@@ -9,9 +9,9 @@ import { recordInbound, recordStatus } from '../services/whatsapp';
 import { ingestWebhookLead } from '../services/webhookIngest';
 import { outsideBusinessHoursFlag } from '../services/businessHours';
 import { fireTrigger } from '../services/automationEngine';
-import { getSettings } from '../services/airphone';
+import { getSettings } from '../services/deepcall';
 import { getEmailSettings } from '../services/email';
-import { recordCallLog, resolveAgentForCall } from '../services/callRouting';
+import { recordCallLog } from '../services/callLogs';
 import { describeRequest, logTelephonyEvent } from '../services/telephonyEvents';
 
 export const webhookRouter = Router();
@@ -313,139 +313,41 @@ webhookRouter.post('/email/:token/inbound', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// Airphone telephony — the two endpoints the provider calls into.
+// DeepCall telephony — the call report DeepCall pushes after every call.
 //
-// Registered before the generic `/:source/:token` receiver so they cannot be shadowed. The
-// token in the path is the credential, the same arrangement the lead-source webhooks use;
-// the full URLs are shown (and rotatable) on Settings -> Telephony.
+// Who answers a call is decided inside DeepCall, by the call flow on the business number, so
+// this is the only thing DeepCall asks of us. Registered before the generic `/:source/:token`
+// receiver so it cannot be shadowed. The token in the path is the credential, the same
+// arrangement the lead-source webhooks use; the full URL is shown (and rotatable) on
+// Settings -> Telephony.
 // ---------------------------------------------------------------------------
 
 /**
- * The provider appends its query string to whatever URL you give it *without* a `?`, so the
- * path segment arrives as the token with `caller=...&unique_id=...` glued to the end. Rather
- * than lose a live call to that, the glued remainder is recognised and parsed.
- *
- * Matching is still exact: the stored token has to be a prefix of the segment, so nothing is
- * accepted that would not have been accepted before -- only more of what is already ours.
+ * DeepCall's webhook template can send a GET or a POST, and a form or JSON body, so every shape
+ * is read: the query string first, then whatever the body carries on top of it. What actually
+ * arrived is kept on the TelephonyEvent either way.
  */
-function parseGlued(remainder: string): Record<string, string> {
-  const glued: Record<string, string> = {};
-  new URLSearchParams(remainder.replace(/^[?&]/, '')).forEach((value, key) => {
-    glued[key] = value;
-  });
-  return glued;
-}
-
-async function telephonyGuard(rawToken: string): Promise<{ ok: boolean; enabled: boolean; glued: Record<string, string> }> {
+async function handleCallReport(req: Request, res: Response) {
+  const request = describeRequest(req as any);
   const settings = await getSettings();
-  if (!settings.enabled) return { ok: false, enabled: false, glued: {} };
-  if (rawToken === settings.webhookToken) return { ok: true, enabled: true, glued: {} };
-
-  if (rawToken.startsWith(settings.webhookToken)) {
-    return { ok: true, enabled: true, glued: parseGlued(rawToken.slice(settings.webhookToken.length)) };
-  }
-
-  return { ok: false, enabled: true, glued: {} };
-}
-
-/**
- * The provider's parameter names are only as reliable as the documentation, and a live call
- * is a bad time to discover a rename. The first present alias wins; whatever actually arrived
- * is on the TelephonyEvent record either way.
- */
-function pick(source: Record<string, unknown>, ...names: string[]): string | undefined {
-  for (const name of names) {
-    const value = source[name] ?? source[name.toLowerCase()] ?? source[name.toUpperCase()];
-    if (value !== undefined && value !== null && String(value).trim() !== '') return String(value).trim();
-  }
-  return undefined;
-}
-
-/**
- * "Who should take this call?" — asked while the customer is still on hold, so it answers
- * with the agent number and a requestId and does nothing slow.
- *
- * Accepts POST as well as GET: the query string is where this is documented, but a provider
- * that posts the same fields should not be met with a 404 while a customer waits.
- */
-async function handleAgentNumberWebhook(req: Request, res: Response, next: NextFunction) {
-  const request = describeRequest(req as any);
-  try {
-    const guard = await telephonyGuard(String(req.params.token));
-    if (!guard.ok) {
-      const reason = guard.enabled
-        ? 'The token in the webhook URL does not match the one in Settings -> Telephony.'
-        : 'Telephony is turned off in Settings -> Telephony.';
-      await logTelephonyEvent({ kind: 'routing', outcome: 'rejected', request, errorMessage: reason, response: { httpStatus: 403 } });
-      return res.sendStatus(403);
-    }
-
-    const input = {
-      ...guard.glued,
-      ...(req.query as Record<string, unknown>),
-      ...((req.body ?? {}) as Record<string, unknown>),
-    };
-    const answer = await resolveAgentForCall({
-      caller: pick(input, 'caller', 'caller_id', 'callerid', 'from', 'cli', 'mobile') ?? '',
-      uniqueId: pick(input, 'unique_id', 'uniqueid', 'call_id', 'callid'),
-      virtualNumber: pick(input, 'vnm', 'ivr_number', 'virtual_number', 'did', 'to'),
-    });
-
-    // No agent and no fallback: answering with an empty number is how the provider is told
-    // there is nobody to route to.
-    const body = answer ? { number: answer.number, requestId: answer.requestId } : { number: '', requestId: '' };
-    await logTelephonyEvent({
-      kind: 'routing',
-      outcome: 'ok',
-      request,
-      response: body,
-      errorMessage: answer ? undefined : 'No agent and no fallback number — answered with an empty number.',
-      callLogId: answer?.callLogId ?? null,
-    });
-    res.json(body);
-  } catch (err) {
-    await logTelephonyEvent({
-      kind: 'routing',
-      outcome: 'failed',
-      request,
-      errorMessage: err instanceof Error ? err.message : String(err),
-    });
-    next(err);
-  }
-}
-
-webhookRouter.get('/airphone/:token', handleAgentNumberWebhook);
-webhookRouter.post('/airphone/:token', handleAgentNumberWebhook);
-
-/**
- * The call log the provider pushes after hangup. The path is matched loosely for the same
- * reason the token is: the provider may glue its parameters straight onto the URL.
- */
-webhookRouter.post('/airphone/:token/:tail', async (req, res, next) => {
-  const tail = String(req.params.tail ?? '');
-  if (!tail.startsWith('call-log')) return next();
-
-  const request = describeRequest(req as any);
-  const guard = await telephonyGuard(String(req.params.token));
-  if (!guard.ok) {
+  if (!settings.enabled || String(req.params.token) !== settings.webhookToken) {
     await logTelephonyEvent({
       kind: 'call_log',
       outcome: 'rejected',
       request,
       response: { httpStatus: 403 },
-      errorMessage: guard.enabled
+      errorMessage: settings.enabled
         ? 'The token in the webhook URL does not match the one in Settings -> Telephony.'
         : 'Telephony is turned off in Settings -> Telephony.',
     });
     return res.sendStatus(403);
   }
-  // Acknowledged before the work, and never with an error: a provider that sees a failure
-  // here retries or disables the callback, and the payload is kept either way.
+  // Acknowledged before the work, and never with an error: a provider that sees a failure here
+  // retries or disables the callback, and the payload is kept either way.
   res.json({ status: 'ok' });
   try {
     const result = await recordCallLog({
-      ...guard.glued,
-      ...parseGlued(tail.slice('call-log'.length)),
+      ...(req.query as Record<string, unknown>),
       ...((req.body ?? {}) as Record<string, unknown>),
     });
     await logTelephonyEvent({
@@ -456,7 +358,7 @@ webhookRouter.post('/airphone/:token/:tail', async (req, res, next) => {
       callLogId: result.id,
     });
   } catch (err) {
-    console.error('[airphone] call-log failed:', err, req.body);
+    console.error('[telephony] call report failed:', err, req.body);
     await logTelephonyEvent({
       kind: 'call_log',
       outcome: 'failed',
@@ -464,7 +366,10 @@ webhookRouter.post('/airphone/:token/:tail', async (req, res, next) => {
       errorMessage: err instanceof Error ? err.message : String(err),
     });
   }
-});
+}
+
+webhookRouter.get('/deepcall/:token', handleCallReport);
+webhookRouter.post('/deepcall/:token', handleCallReport);
 
 // ---------------------------------------------------------------------------
 // Generic inbound receiver — every source except Meta.

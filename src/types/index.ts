@@ -1529,46 +1529,30 @@ export interface CallLog {
   rawPayload?: Record<string, unknown>;
 }
 
-export interface ExtensionStatusRow {
-  userId: string;
-  userName: string;
-  extension: string;
-  state: string;
-  onCall: boolean;
-}
-
 export interface TelephonySettings {
   provider: string;
   enabled: boolean;
   baseUrl: string;
+  /** DeepCall's `user_id`. */
+  accountId: string;
   /** The token itself is never sent to the browser. */
   hasApiToken: boolean;
   virtualNumber: string;
-  fallbackNumber: string;
-  stickyRouting: boolean;
-  /** `c2c` rings the agent's phone then the customer; `dial-call` drives the provider's app. */
-  outboundMode: 'c2c' | 'dial-call';
-  /** Testing only — when set, every incoming call is answered with this number. */
-  testRouteNumber: string;
-  agentNumberWebhookUrl: string;
   callLogWebhookUrl: string;
 }
 
 export interface TelephonySettingsPatch {
   enabled?: boolean;
   baseUrl?: string;
+  accountId?: string;
   apiToken?: string;
   virtualNumber?: string;
-  fallbackNumber?: string;
-  stickyRouting?: boolean;
-  outboundMode?: 'c2c' | 'dial-call';
-  testRouteNumber?: string;
 }
 
 /** One request the provider made to us, kept verbatim. Read during a live test call. */
 export interface TelephonyEvent {
   id: string;
-  kind: 'routing' | 'call_log';
+  kind: 'call_log' | 'click_to_call';
   outcome: 'ok' | 'rejected' | 'failed';
   request?: {
     method?: string;

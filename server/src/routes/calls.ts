@@ -7,9 +7,7 @@ import { encrypt } from '../services/crypto';
 import { writeAudit } from '../services/audit';
 import type { AuthedRequest } from '../services/auth';
 import { inLeadScope, leadScopeWhere, scopeOf, type Scope } from '../services/hierarchy';
-import {
-  clickToCall, dialCall, getExtensionStatus, getSettings, normalizeNumber, testConnection, TelephonyError,
-} from '../services/airphone';
+import { clickToCall, getSettings, normalizeNumber, testConnection, TelephonyError } from '../services/deepcall';
 
 export const callsRouter = Router();
 
@@ -132,8 +130,8 @@ callsRouter.get('/:id', async (req, res, next) => {
 // ---------------------------------------------------------------------------
 
 /**
- * Click-to-call. The provider rings the agent first, then the customer; we record the call
- * immediately so it appears in the history even if the provider's log never arrives.
+ * Click-to-call. DeepCall rings the agent first, then the customer; we record the call
+ * immediately so it appears in the history even if the provider's report never arrives.
  */
 callsRouter.post('/click-to-call', async (req: AuthedRequest, res, next) => {
   try {
@@ -142,65 +140,31 @@ callsRouter.post('/click-to-call', async (req: AuthedRequest, res, next) => {
       ? await prisma.lead.findFirst({ where: inLeadScope({ id: leadId }, await scopeOf(req)), select: { id: true, phone: true } })
       : null;
     if (leadId && !lead) return res.status(404).json({ error: 'Lead not found' });
-    const caller = normalizeNumber(req.body?.caller ?? lead?.phone);
-    if (caller.length < 10) return res.status(400).json({ error: 'A valid 10-digit customer number is required.' });
+    const customer = normalizeNumber(req.body?.caller ?? lead?.phone);
+    if (customer.length < 10) return res.status(400).json({ error: 'A valid 10-digit customer number is required.' });
 
     const actor = req.auth ? await prisma.user.findUnique({ where: { id: req.auth.sub }, select: { id: true, name: true, phone: true, callExtension: true } }) : null;
     const settings = await getSettings();
 
-    // Whoever pressed the button is the agent. The extension first, because that is how the
-    // provider knows this person; their mobile is the fallback. The inbound test-routing
-    // number deliberately has no say here — it used to, and the result was every click ringing
-    // one test handset instead of the person who clicked.
+    // Whoever pressed the button is the agent. The number mapped to them in DeepCall first, because
+    // that is how DeepCall knows this person; their mobile is the fallback.
     const agent = normalizeNumber(req.body?.agent || actor?.callExtension || actor?.phone);
     if (!agent) {
       return res.status(400).json({
-        error: `${actor?.name ?? 'This account'} has no calling extension or phone number saved, so there is nowhere to ring. Add one in Settings → Telephony.`,
+        error: `${actor?.name ?? 'This account'} has no calling number saved, so there is nowhere to ring. Add one in Settings → Telephony.`,
       });
     }
 
-    // The account decides which outbound endpoint is available; `mode` in the body is only for
-    // overriding the configured default on a single call.
-    const mode = String(req.body?.mode || settings.outboundMode || 'c2c');
-
-    if (mode === 'dial-call') {
-      const result = await dialCall({ agent, caller });
-      if (!result.ok) return res.status(400).json({ error: result.message });
-
-      // dial-call queues the call for the agent's Airphone *app*; nothing rings until that app
-      // picks it up. A row is written anyway so the attempt is visible in the history rather
-      // than vanishing, and the call-log webhook completes it if the call happens.
-      const queued = await prisma.callLog.create({
-        data: {
-          requestId: `dial-${Date.now()}`,
-          direction: 'outgoing',
-          status: 'routing',
-          callerNumber: caller,
-          agentNumber: agent,
-          virtualNumber: settings.virtualNumber,
-          leadId: lead?.id ?? null,
-          agentUserId: actor?.id ?? null,
-        },
-        include: callInclude,
-      });
-
-      return res.json({
-        status: 'success',
-        message: `${result.message} This rings the Airphone app — it has to be open and signed in as ${actor?.name ?? 'this agent'}.`,
-        call: serialize(queued),
-      });
-    }
-
-    const result = await clickToCall({ agent, caller });
-    if (result.status !== 'success') return res.status(400).json({ error: result.message });
+    const result = await clickToCall({ agent, customer });
+    if (!result.ok) return res.status(400).json({ error: result.message });
 
     const created = await prisma.callLog.create({
       data: {
-        requestId: result.uniqueId ?? `c2c-${Date.now()}`,
-        uniqueId: result.uniqueId ?? null,
+        requestId: result.callId ? `dc-${result.callId}` : `c2c-${Date.now()}`,
+        uniqueId: result.callId ?? null,
         direction: 'outgoing',
         status: 'routing',
-        callerNumber: caller,
+        callerNumber: customer,
         agentNumber: agent,
         virtualNumber: settings.virtualNumber,
         leadId: lead?.id ?? null,
@@ -216,44 +180,11 @@ callsRouter.post('/click-to-call', async (req: AuthedRequest, res, next) => {
 });
 
 // ---------------------------------------------------------------------------
-// Live extension status
-// ---------------------------------------------------------------------------
-
-/** Reads live state for every staff member who has an extension mapped. */
-callsRouter.get('/extensions/status', async (_req, res, next) => {
-  try {
-    const users = await prisma.user.findMany({
-      where: { status: 'active', callExtension: { not: null } },
-      select: { id: true, name: true, callExtension: true },
-      orderBy: { name: 'asc' },
-    });
-    if (users.length === 0) return res.json({ extensions: [] });
-
-    const statuses = await getExtensionStatus(users.map((u) => u.callExtension!));
-    const byResource = new Map(statuses.map((s) => [String(s.resource), s]));
-    res.json({
-      extensions: users.map((u) => {
-        const live = byResource.get(String(u.callExtension));
-        return {
-          userId: u.id,
-          userName: u.name,
-          extension: u.callExtension,
-          state: live?.state ?? 'unknown',
-          onCall: live?.on_call ?? false,
-        };
-      }),
-    });
-  } catch (err) {
-    handleTelephonyError(err, res, next);
-  }
-});
-
-// ---------------------------------------------------------------------------
 // Agent extension mapping
 //
-// The provider identifies whoever took a call by extension (`received_id` = 9121), never by
-// mobile number, so without this mapping every row in the call history has an empty Agent
-// column. Kept here rather than on the user screens because it is telephony configuration,
+// DeepCall names whoever took a call by the number they answered on. That is normally their
+// mobile and matches the user's phone by itself; this mapping is for the person whose DeepCall
+// number is something else, who would otherwise have an empty Agent column. Kept here rather than on the user screens because it is telephony configuration,
 // and because setting one also repairs the calls already logged against that extension.
 // ---------------------------------------------------------------------------
 
@@ -350,15 +281,11 @@ function publicSettings(settings: Awaited<ReturnType<typeof getSettings>>) {
     provider: settings.provider,
     enabled: settings.enabled,
     baseUrl: settings.baseUrl,
+    accountId: settings.accountId ?? '',
     // Never returned. The UI shows whether one is stored and lets it be replaced.
     hasApiToken: !!settings.apiToken,
     virtualNumber: settings.virtualNumber ?? '',
-    fallbackNumber: settings.fallbackNumber ?? '',
-    stickyRouting: settings.stickyRouting,
-    outboundMode: settings.outboundMode,
-    testRouteNumber: settings.testRouteNumber ?? '',
-    agentNumberWebhookUrl: `${PUBLIC_BASE_URL}/api/webhook/airphone/${settings.webhookToken}`,
-    callLogWebhookUrl: `${PUBLIC_BASE_URL}/api/webhook/airphone/${settings.webhookToken}/call-log`,
+    callLogWebhookUrl: `${PUBLIC_BASE_URL}/api/webhook/deepcall/${settings.webhookToken}`,
   };
 }
 
@@ -414,13 +341,8 @@ callsRouter.patch('/settings/telephony', async (req: AuthedRequest, res, next) =
     const data: Prisma.TelephonySettingsUncheckedUpdateInput = {};
     if (body.enabled !== undefined) data.enabled = !!body.enabled;
     if (body.baseUrl !== undefined) data.baseUrl = String(body.baseUrl).trim().replace(/\/+$/, '');
+    if (body.accountId !== undefined) data.accountId = String(body.accountId).trim() || null;
     if (body.virtualNumber !== undefined) data.virtualNumber = normalizeNumber(body.virtualNumber) || null;
-    if (body.fallbackNumber !== undefined) data.fallbackNumber = normalizeNumber(body.fallbackNumber) || null;
-    if (body.stickyRouting !== undefined) data.stickyRouting = !!body.stickyRouting;
-    if (body.outboundMode !== undefined) {
-      data.outboundMode = String(body.outboundMode) === 'dial-call' ? 'dial-call' : 'c2c';
-    }
-    if (body.testRouteNumber !== undefined) data.testRouteNumber = normalizeNumber(body.testRouteNumber) || null;
     // A blank token means "leave the stored one alone" — the UI never sees it to send it back.
     if (body.apiToken) data.apiToken = encrypt(String(body.apiToken).trim());
 
@@ -437,7 +359,7 @@ callsRouter.patch('/settings/telephony', async (req: AuthedRequest, res, next) =
   }
 });
 
-/** Rotating invalidates the URLs already given to the provider — deliberately explicit. */
+/** Rotating invalidates the URL already given to the provider — deliberately explicit. */
 callsRouter.post('/settings/telephony/rotate-webhook', async (req: AuthedRequest, res, next) => {
   try {
     await getSettings();

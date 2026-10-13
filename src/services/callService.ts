@@ -1,5 +1,5 @@
 import type {
-  AgentExtensionRow, CallDirection, CallLog, CallStatus, ExtensionStatusRow,
+  AgentExtensionRow, CallDirection, CallLog, CallStatus,
   TelephonyConnectionTest, TelephonyEvent, TelephonySettings, TelephonySettingsPatch,
   UnmappedExtension,
 } from '../types';
@@ -7,7 +7,7 @@ import { api, toQueryString } from './apiClient';
 import type { ListParams, ListResult } from './mockClient';
 
 // ---------------------------------------------------------------------------
-// Telephony (server/src/routes/calls.ts + services/airphone.ts).
+// Telephony (server/src/routes/calls.ts + services/deepcall.ts).
 // ---------------------------------------------------------------------------
 
 export const CALL_DIRECTION_OPTIONS: { value: CallDirection | 'all'; label: string }[] = [
@@ -63,17 +63,10 @@ export interface ClickToCallInput {
   leadId?: string;
   caller?: string;
   agent?: string;
-  /** `c2c` rings the agent then the customer; `dial-call` is the mobile-app endpoint. */
-  mode?: 'c2c' | 'dial-call';
 }
 
 export async function placeCall(input: ClickToCallInput): Promise<{ status: string; message: string; call?: CallLog }> {
   return api.post('/calls/click-to-call', input);
-}
-
-export async function listExtensionStatus(): Promise<ExtensionStatusRow[]> {
-  const { extensions } = await api.get<{ extensions: ExtensionStatusRow[] }>('/calls/extensions/status');
-  return extensions;
 }
 
 export async function getTelephonySettings(): Promise<TelephonySettings> {
@@ -88,7 +81,7 @@ export async function rotateTelephonyWebhook(): Promise<TelephonySettings> {
   return api.post<TelephonySettings>('/calls/settings/telephony/rotate-webhook');
 }
 
-/** Read-only — reaches the provider without placing a call, so it is safe on a live account. */
+/** Places no call: checks what is saved and that DeepCall answers. */
 export async function testTelephonyConnection(): Promise<TelephonyConnectionTest> {
   return api.post<TelephonyConnectionTest>('/calls/settings/telephony/test');
 }

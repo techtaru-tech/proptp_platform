@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Info, PhoneIncoming, PhoneOutgoing, RefreshCw, Radio } from 'lucide-react';
+import { Info, PhoneIncoming, PhoneOutgoing, RefreshCw } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -12,7 +12,7 @@ import { Pagination } from '../../components/ui/Pagination';
 import { DataTable, type DataTableColumn } from '../../components/tables/DataTable';
 import { useAsync } from '../../hooks/useAsync';
 import {
-  getCall, getTelephonySettings, listCalls, listExtensionStatus,
+  getCall, getTelephonySettings, listCalls,
   CALL_DIRECTION_OPTIONS, CALL_STATUS_OPTIONS, CALL_STATUS_TONE, formatCallDuration,
   type CallListParams,
 } from '../../services/callService';
@@ -25,16 +25,11 @@ export function CallHistory() {
   const [search, setSearch] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [showExtensions, setShowExtensions] = useState(false);
 
   const params: CallListParams = { ...filters, search: search.trim() || undefined };
   const { data, isLoading } = useAsync(() => listCalls(params), [JSON.stringify(params), reloadKey]);
   const { data: settings } = useAsync(() => getTelephonySettings(), []);
   const { data: selected } = useAsync(() => (selectedId ? getCall(selectedId) : Promise.resolve(undefined)), [selectedId]);
-  const { data: extensions, isLoading: extensionsLoading, error: extensionsError } = useAsync(
-    () => (showExtensions ? listExtensionStatus() : Promise.resolve([])),
-    [showExtensions, reloadKey]
-  );
 
   const patch = (next: Partial<CallListParams>) => setFilters((prev) => ({ ...prev, ...next, page: 1 }));
 
@@ -83,13 +78,10 @@ export function CallHistory() {
     <div>
       <PageHeader
         title="Calls"
-        description="Every call that went through the virtual number — routed to an agent by the CRM, then logged by the provider after hangup."
+        description="Every call through the business number and every click-to-call, logged from DeepCall's report after hangup."
         breadcrumb={[{ label: 'CRM', to: '/crm' }, { label: 'Calls' }]}
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" leftIcon={<Radio size={14} />} onClick={() => setShowExtensions((v) => !v)}>
-              {showExtensions ? 'Hide' : 'Live'} Extensions
-            </Button>
             <Button variant="outline" leftIcon={<RefreshCw size={14} />} onClick={() => setReloadKey((k) => k + 1)}>
               Refresh
             </Button>
@@ -97,58 +89,14 @@ export function CallHistory() {
         }
       />
 
-      {settings?.testRouteNumber && (
-        <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-warning-100 bg-warning-50 px-4 py-3 text-sm text-warning-700">
-          <Info size={16} className="mt-0.5 shrink-0" />
-          <p>
-            <strong>Test routing is on.</strong> Every incoming call is going to{' '}
-            <strong>{settings.testRouteNumber}</strong> regardless of who owns the lead, so no agent
-            is credited with these calls. Clear it in{' '}
-            <a className="underline" href="/settings/telephony">Settings → Telephony</a> when the test is done.
-          </p>
-        </div>
-      )}
-
       {settings && !settings.enabled && (
         <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-warning-100 bg-warning-50 px-4 py-3 text-sm text-warning-700">
           <Info size={16} className="mt-0.5 shrink-0" />
           <p>
-            <strong>Telephony is turned off.</strong> Calls will not be routed or logged until it is enabled and the two
-            webhook URLs are registered with the provider — see <a className="underline" href="/settings/telephony">Settings → Telephony</a>.
+            <strong>Telephony is turned off.</strong> Calls cannot be placed or logged until it is enabled and the
+            webhook URL is registered in DeepCall — see <a className="underline" href="/settings/telephony">Settings → Telephony</a>.
           </p>
         </div>
-      )}
-
-      {showExtensions && (
-        <Card className="mb-5">
-          <p className="mb-3 text-sm font-medium text-ink">Live extension status</p>
-          {extensionsError ? (
-            <p className="text-sm text-danger-600">{extensionsError.message}</p>
-          ) : extensionsLoading ? (
-            <p className="text-sm text-ink-faint">Checking with the provider...</p>
-          ) : (extensions ?? []).length === 0 ? (
-            <p className="text-sm text-ink-faint">
-              No extensions mapped. Set a user's extension on their profile to see them here.
-            </p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {(extensions ?? []).map((e) => (
-                <span key={e.userId} className="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-1.5 text-sm">
-                  <span
-                    className={
-                      e.onCall ? 'h-2 w-2 rounded-full bg-warning-500'
-                      : e.state === 'online' ? 'h-2 w-2 rounded-full bg-success-500'
-                      : 'h-2 w-2 rounded-full bg-ink-faint'
-                    }
-                  />
-                  <span className="text-ink">{e.userName}</span>
-                  <span className="text-ink-faint">{e.extension}</span>
-                  <span className="text-xs text-ink-muted">{e.onCall ? 'on call' : e.state}</span>
-                </span>
-              ))}
-            </div>
-          )}
-        </Card>
       )}
 
       <Card padded={false}>

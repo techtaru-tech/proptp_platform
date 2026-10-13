@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, Activity, Copy, Headphones, Info, KeyRound, PlugZap, RefreshCw } from 'lucide-react';
+import { Activity, Copy, Headphones, Info, KeyRound, PlugZap, RefreshCw } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Toggle } from '../../components/ui/Toggle';
-import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { ConfirmationDialog } from '../../components/ui/ConfirmationDialog';
 import { CardSkeleton } from '../../components/ui/LoadingSkeleton';
@@ -19,6 +18,23 @@ import { formatDateTime } from '../../utils/format';
 import type {
   AgentExtensionRow, TelephonyConnectionTest, TelephonyEvent, TelephonySettings, UnmappedExtension,
 } from '../../types';
+
+/** What DeepCall's webhook template should send. The names are what the server reads. */
+const TEMPLATE_FIELDS: [string, string][] = [
+  ['callId', '{{%%callId%%}}'],
+  ['businessNumber', '{{%%businessNum%%}}'],
+  ['callType', '{{%%cType%%}}'],
+  ['callStatus', '{{%%callStatus%%}}'],
+  ['customerNumber', '{{%%cNumber10%%}}'],
+  ['agentName', '{{%%masterAgent%%}}'],
+  ['agentNumber', '{{%%masterAgentNumber%%}}'],
+  ['talkDuration', '{{%%talkDuration%%}}'],
+  ['callTime', '{{%%callTime%%}}'],
+  ['hangupTime', '{{%%lastHangupTime%%}}'],
+  ['keyInput', '{{%%keyInput%%}}'],
+  ['recordings', '{{%%recordings%%}}'],
+  ['disposition', '{{%%callDisposition%%}}'],
+];
 
 export function TelephonySettingsPage() {
   const [reloadKey, setReloadKey] = useState(0);
@@ -54,11 +70,8 @@ function Editor({ settings, onSaved }: { settings: TelephonySettings; onSaved: (
       await updateTelephonySettings({
         enabled: values.enabled,
         baseUrl: values.baseUrl,
+        accountId: values.accountId,
         virtualNumber: values.virtualNumber,
-        fallbackNumber: values.fallbackNumber,
-        stickyRouting: values.stickyRouting,
-        outboundMode: values.outboundMode,
-        testRouteNumber: values.testRouteNumber,
         // Blank means "keep the stored one" — the browser never receives it to send back.
         ...(apiToken.trim() ? { apiToken: apiToken.trim() } : {}),
       });
@@ -87,8 +100,8 @@ function Editor({ settings, onSaved }: { settings: TelephonySettings; onSaved: (
   const handleRotate = async () => {
     await rotateTelephonyWebhook();
     toast({
-      title: 'Webhook URLs rotated',
-      description: 'Give the new URLs to the provider — the previous ones no longer work.',
+      title: 'Webhook URL rotated',
+      description: 'Give the new URL to DeepCall — the previous one no longer works.',
       variant: 'success',
     });
     setRotateOpen(false);
@@ -99,15 +112,16 @@ function Editor({ settings, onSaved }: { settings: TelephonySettings; onSaved: (
     <div>
       <PageHeader
         title="Telephony"
-        description="Airphone call routing, call logging and click-to-call."
+        description="DeepCall click-to-call and call logging."
         breadcrumb={[{ label: 'Settings', to: '/settings/organization' }, { label: 'Telephony' }]}
       />
 
       <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-info-100 bg-info-50 px-4 py-3 text-sm text-info-700">
         <Info size={16} className="mt-0.5 shrink-0" />
         <p>
-          Two of these URLs belong to <strong>us</strong> — give them to Airphone. The API token is used the other way
-          round, for the calls we make to them. Nothing is routed or logged until <strong>Enabled</strong> is on.
+          The account ID and API token are used for the calls we make to DeepCall (click-to-call). The webhook URL below
+          belongs to <strong>us</strong> — DeepCall pushes every call's report to it. Who answers an incoming call is set in
+          DeepCall, in the call flow on the business number. Nothing is placed or logged until <strong>Enabled</strong> is on.
         </p>
       </div>
 
@@ -123,82 +137,51 @@ function Editor({ settings, onSaved }: { settings: TelephonySettings; onSaved: (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input label="API base URL" value={values.baseUrl} onChange={(e) => patch({ baseUrl: e.target.value })} />
             <Input
+              label="Account ID (user_id)"
+              value={values.accountId}
+              onChange={(e) => patch({ accountId: e.target.value })}
+              hint="Shown with the token on DeepCall's Click To Call page."
+            />
+            <Input
               label="API token"
               type="password"
-            secret
+              secret
               value={apiToken}
               onChange={(e) => setApiToken(e.target.value)}
               leftIcon={<KeyRound size={14} />}
-              placeholder={values.hasApiToken ? '•••••••• stored — type to replace' : 'Paste the portal auth key'}
+              placeholder={values.hasApiToken ? '•••••••• stored — type to replace' : 'Paste the DeepCall API token'}
               hint="Stored encrypted and never sent back to this screen."
             />
             <Input
-              label="Virtual number (VNM)"
+              label="Business number"
               value={values.virtualNumber}
               onChange={(e) => patch({ virtualNumber: e.target.value })}
-              hint="The number customers dial, and the one outbound calls originate from."
-            />
-            <Input
-              label="Fallback number"
-              value={values.fallbackNumber}
-              onChange={(e) => patch({ fallbackNumber: e.target.value })}
-              hint="Used when no agent can be resolved. Blank means the call is not routed."
+              hint="The number customers dial. For reference; DeepCall's call flow decides who answers."
             />
           </div>
-          <Select
-            label="Outbound call method"
-            value={values.outboundMode}
-            onChange={(e) => patch({ outboundMode: e.target.value as TelephonySettings['outboundMode'] })}
-            options={[
-              { value: 'c2c', label: 'Click-to-call — the provider rings the agent, then the customer' },
-              { value: 'dial-call', label: "Mobile app — the call is placed from the agent's Airphone app" },
-            ]}
-            hint="Which one an account may use is the provider's decision. Click-to-call answering &quot;C2C is disabled&quot; means the other one is the way in."
-          />
-          <Input
-            label="Test: force every incoming call to this number"
-            value={values.testRouteNumber}
-            onChange={(e) => patch({ testRouteNumber: e.target.value })}
-            hint="For a live test call. Incoming calls are answered with this number and click-to-call rings it as the agent leg, so both directions reach one real handset. No agent is credited with the call. Clear it before going live."
-          />
-          <Toggle
-            label="Route to the lead's owner first"
-            description="A caller we already know reaches the person assigned to them. Otherwise the call goes to whoever has taken the fewest."
-            checked={values.stickyRouting}
-            onChange={(stickyRouting) => patch({ stickyRouting })}
-          />
         </div>
       </Card>
 
-      {values.testRouteNumber ? (
-        <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-warning-100 bg-warning-50 px-4 py-3 text-sm text-warning-700">
-          <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-          <p>
-            <strong>Test routing is on.</strong> Every incoming call is being sent to{' '}
-            <strong>{values.testRouteNumber}</strong> — lead ownership and round-robin are both
-            ignored. Clear the field and save to go back to normal routing.
-          </p>
-        </div>
-      ) : null}
-
       <Card className="mb-5">
-        <CardHeader title="Webhook URLs" subtitle="Register these two with Airphone" />
+        <CardHeader title="Call report webhook" subtitle="Register this with DeepCall" />
         <div className="space-y-4">
           <WebhookRow
-            label="Get Agent Number (GET)"
-            hint="Called while the customer is still on hold. Answers with the agent number and a requestId."
-            url={values.agentNumberWebhookUrl}
-            onCopy={copy}
-          />
-          <WebhookRow
-            label="Call Log (POST)"
-            hint="Called after hangup with the full call record, including the recording URL."
+            label="Call report (POST)"
+            hint="DeepCall calls this after every call with the call record: customer, agent, duration, status and the recording."
             url={values.callLogWebhookUrl}
             onCopy={copy}
           />
+          <div className="rounded-lg border border-line bg-surface-subtle p-3 text-xs text-ink-muted">
+            <p className="mb-1 font-medium text-ink">Set it up in DeepCall (Manage → Webhook Template, then Push-Report Webhook)</p>
+            <ol className="mb-2 list-decimal space-y-0.5 pl-4">
+              <li>Create a <strong>Post</strong> template and add these fields to its <strong>Body</strong>.</li>
+              <li>Under <strong>Push-Report Webhook</strong>, add the URL above, set the data source to <strong>Report</strong> and link that template.</li>
+            </ol>
+            <pre className="overflow-auto rounded bg-white p-2 text-[11px] leading-relaxed">{TEMPLATE_FIELDS.map(([k, v]) => `${k}  →  ${v}`).join('\n')}</pre>
+          </div>
           <div className="flex justify-end border-t border-line pt-4">
             <Button variant="outline" size="sm" leftIcon={<RefreshCw size={14} />} onClick={() => setRotateOpen(true)}>
-              Rotate URLs
+              Rotate URL
             </Button>
           </div>
         </div>
@@ -207,7 +190,7 @@ function Editor({ settings, onSaved }: { settings: TelephonySettings; onSaved: (
       <Card className="mb-5">
         <CardHeader
           title="Connection test"
-          subtitle="Reaches the provider without placing a call — safe to run on a live account"
+          subtitle="Checks what is saved and that DeepCall answers — no call is placed. The token itself is proven by the first click-to-call"
         />
         <Button variant="outline" leftIcon={<PlugZap size={14} />} isLoading={testing} onClick={handleTest}>
           Test Connection
@@ -223,14 +206,6 @@ function Editor({ settings, onSaved }: { settings: TelephonySettings; onSaved: (
                 </span>
               </div>
             ))}
-            {testResult.providerResponse !== undefined && (
-              <div>
-                <p className="mb-1 mt-3 text-xs font-medium text-ink-muted">The provider's raw reply</p>
-                <pre className="max-h-48 overflow-auto rounded-lg border border-line bg-surface-subtle p-3 text-xs text-ink-muted">
-                  {JSON.stringify(testResult.providerResponse, null, 2)}
-                </pre>
-              </div>
-            )}
           </div>
         )}
       </Card>
@@ -249,8 +224,8 @@ function Editor({ settings, onSaved }: { settings: TelephonySettings; onSaved: (
         isOpen={rotateOpen}
         onClose={() => setRotateOpen(false)}
         onConfirm={handleRotate}
-        title="Rotate the webhook URLs?"
-        description="Both URLs change immediately. Until the new ones are registered with Airphone, incoming calls will not be routed and call logs will be rejected."
+        title="Rotate the webhook URL?"
+        description="The URL changes immediately. Until the new one is registered in DeepCall, call reports will be rejected."
         confirmLabel="Rotate"
         variant="danger"
       />
@@ -313,7 +288,7 @@ function AgentExtensions() {
     <Card className="mb-5">
       <CardHeader
         title="Agent extensions"
-        subtitle="Airphone names the person who took a call by extension, so the Agent column stays empty until these are filled in"
+        subtitle="DeepCall names the person who took a call by the number they answered on. It matches a staff member's mobile by itself; fill this in only where their DeepCall number is different"
         action={
           <Button variant="outline" size="sm" leftIcon={<RefreshCw size={14} />} onClick={load}>
             Refresh
@@ -402,7 +377,7 @@ function WebhookActivity() {
     <Card className="mb-5">
       <CardHeader
         title="Provider activity"
-        subtitle="Every request Airphone made to us, kept for 14 days"
+        subtitle="DeepCall's call reports to us, and DeepCall's replies to our click-to-call requests, kept for 14 days"
         action={
           <Button
             variant="outline"
@@ -417,7 +392,7 @@ function WebhookActivity() {
       {events.length === 0 ? (
         <p className="text-sm text-ink-faint">
           {loadedOnce
-            ? 'Nothing has arrived yet. Register the two URLs above with Airphone, then dial the virtual number — a request should appear here within seconds.'
+            ? 'Nothing yet. Register the webhook URL above in DeepCall, then make a call — its report should appear here within seconds.'
             : 'Loading...'}
         </p>
       ) : (
@@ -431,7 +406,7 @@ function WebhookActivity() {
                 <span className="flex flex-wrap items-center gap-2 text-sm">
                   <Badge tone={tone(event.outcome)}>{event.outcome}</Badge>
                   <span className="font-medium text-ink">
-                    {event.kind === 'routing' ? 'Who takes this call?' : 'Call log'}
+                    {event.kind === 'click_to_call' ? 'Click-to-call' : 'Call report'}
                   </span>
                   <span className="text-ink-faint">{event.request?.method}</span>
                   {event.errorMessage && <span className="text-danger-600">{event.errorMessage}</span>}
@@ -447,7 +422,7 @@ function WebhookActivity() {
                     </pre>
                   </div>
                   <div>
-                    <p className="mb-1 text-xs font-medium text-ink-muted">We answered</p>
+                    <p className="mb-1 text-xs font-medium text-ink-muted">We answered / they answered</p>
                     <pre className="max-h-64 overflow-auto rounded-lg bg-surface-subtle p-2 text-xs text-ink-muted">
                       {JSON.stringify(event.response ?? { note: 'No response recorded.' }, null, 2)}
                     </pre>

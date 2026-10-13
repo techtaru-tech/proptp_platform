@@ -526,41 +526,28 @@ model EmailSequenceSend {
 }
 
 // ---------------------------------------------------------------------------
-// Telephony (Airphone) — call routing, call logs, click-to-call
+// Telephony (DeepCall) — call logs pushed by the provider, and click-to-call
 // ---------------------------------------------------------------------------
 
 /// Single row, id "default". Credentials are stored encrypted (services/crypto.ts) and are
 /// never returned to the frontend — only whether one is set.
 model TelephonySettings {
   id       String  @id @default("default")
-  provider String  @default("airphone")
+  provider String  @default("deepcall")
   enabled  Boolean @default(false)
 
-  baseUrl       String  @default("https://airphone.in/api")
-  /// The portal auth key. Used as the `token` form field for click-to-call and as the
-  /// Bearer token for the mobile dial-call endpoint.
-  apiToken      String?
-  /// The virtual number (VNM) customers dial. Also the default for outbound calls.
+  baseUrl String @default("https://v4-api.deepcall.com/api")
+  /// DeepCall's `user_id` — the account the API token belongs to. Sent with every API call.
+  accountId String?
+  /// The portal API token, stored encrypted. Sent as the `token` query parameter.
+  apiToken  String?
+  /// The business number customers dial, shown for reference and used to label calls that
+  /// arrive without one.
   virtualNumber String?
 
-  /// Secret embedded in the webhook URLs handed to the provider — the URL is the credential,
+  /// Secret embedded in the webhook URL handed to the provider — the URL is the credential,
   /// the same arrangement the lead-source webhooks use. Rotatable.
   webhookToken String @unique
-
-  /// Where a call goes when no agent can be resolved. Empty means "reject the routing request".
-  fallbackNumber String?
-  /// Prefer the agent already assigned to the caller's lead before falling back to round-robin.
-  stickyRouting  Boolean @default(true)
-
-  /// How an outbound call is placed: `c2c` is the click-to-call bridge (the provider rings the
-  /// agent, then the customer); `dial-call` is the endpoint for agents working inside the
-  /// provider's mobile app. Which one an account may use is the provider's decision, not ours.
-  outboundMode String @default("c2c")
-
-  /// Testing only. When set, every incoming call is answered with this number and no agent is
-  /// resolved at all — the way a live call is pointed at one real handset while the staff list
-  /// is still seed data. Both settings screens shout about it while it is on.
-  testRouteNumber String?
 
   updatedAt DateTime @updatedAt
 }
@@ -571,7 +558,7 @@ model TelephonySettings {
 model TelephonyEvent {
   id String @id @default(cuid())
 
-  /// routing | call_log
+  /// call_log | click_to_call
   kind    String
   /// ok | rejected | failed
   outcome String
@@ -1043,8 +1030,8 @@ model User {
   panelRole   PanelRole? @relation(fields: [panelRoleId], references: [id])
   panelRoleId String?
 
-  /// Telephony extension (Airphone `received_id`), when it differs from `phone`. Used to
-  /// resolve who took a call and to read live extension status.
+  /// The number this person answers calls on in the telephony provider, when it differs from `phone`. Used to
+  /// resolve who took a call.
   callExtension String? @unique
 
   /// Firebase device token, sent by the app when it verifies an OTP. One per account: signing
