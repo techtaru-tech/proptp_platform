@@ -30,7 +30,12 @@ adminConstructionRouter.get('/projects', async (_req, res, next) => {
       orderBy: { projectName: 'asc' },
     });
     const [activities, pendingByProject, openIssues] = await Promise.all([
-      prisma.constructionActivity.findMany({ include: { updates: { select: { status: true, percentComplete: true, capturedAt: true } } } }),
+      prisma.constructionActivity.findMany({
+        include: {
+          updates: { select: { status: true, percentComplete: true, capturedAt: true } },
+          blockers: { where: { status: { in: ['pending', 'approved'] } }, select: { status: true } },
+        },
+      }),
       prisma.progressUpdate.groupBy({ by: ['activityId'], where: { status: 'pending' }, _count: { _all: true } }),
       prisma.siteIssue.groupBy({ by: ['projectId'], where: { status: { not: 'closed' } }, _count: { _all: true } }),
     ]);
@@ -46,7 +51,14 @@ adminConstructionRouter.get('/projects', async (_req, res, next) => {
     res.json(
       projects.map((p) => {
         const mine = activities.filter((a) => a.projectId === p.id).map((a) => ({ weight: a.weight, progress: activityProgress(a, now) }));
-        return { ...p, ...rollup(mine), pendingReviews: pending.get(p.id) ?? 0, openIssues: issues.get(p.id) ?? 0 };
+        return {
+          ...p,
+          ...rollup(mine),
+          pendingReviews: pending.get(p.id) ?? 0,
+          openIssues: issues.get(p.id) ?? 0,
+          blockedActivities: mine.filter((m) => m.progress.status === 'blocked').length,
+          pendingBlockers: mine.reduce((n, m) => n + m.progress.pendingBlockers, 0),
+        };
       })
     );
   } catch (err) {
@@ -242,6 +254,116 @@ adminConstructionRouter.post('/updates/:id/review', async (req: AuthedRequest, r
       userIds: [existing.authorId],
       type: 'system',
       data: { kind: 'progress_update', updateId: existing.id },
+    }).catch(() => undefined);
+    res.json({ id: updated.id, status: updated.status });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Blockers
+// ---------------------------------------------------------------------------
+
+const blockerInclude = {
+  raisedBy: { select: { id: true, name: true } },
+  reviewer: { select: { name: true } },
+  activity: { select: { id: true, name: true, block: true, phase: true, projectId: true, plannedEnd: true, project: { select: { projectName: true } } } },
+} as const;
+
+const blockerShape = (b: any) => ({
+  id: b.id,
+  activityId: b.activityId,
+  activityName: b.activity.name,
+  block: b.activity.block,
+  phase: b.activity.phase,
+  projectId: b.activity.projectId,
+  projectName: b.activity.project.projectName,
+  raisedByName: b.raisedBy.name,
+  description: b.description,
+  photos: (b.photos ?? []) as { url: string; takenAt: string; latitude: number; longitude: number }[],
+  status: b.status,
+  rejectionReason: b.rejectionReason,
+  reviewedByName: b.reviewer?.name ?? null,
+  reviewedAt: b.reviewedAt?.toISOString() ?? null,
+  resolvedAt: b.resolvedAt?.toISOString() ?? null,
+  resolvedNote: b.resolvedNote,
+  createdAt: b.createdAt.toISOString(),
+});
+
+adminConstructionRouter.get('/blockers', async (req, res, next) => {
+  try {
+    const status = String(req.query.status ?? 'pending');
+    const projectId = String(req.query.projectId ?? '');
+    const rows = await prisma.activityBlocker.findMany({
+      where: {
+        ...(['pending', 'approved', 'rejected', 'resolved'].includes(status) ? { status: status as any } : {}),
+        ...(projectId ? { activity: { projectId } } : {}),
+      },
+      include: blockerInclude,
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+    res.json(rows.map(blockerShape));
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminConstructionRouter.post('/blockers/:id/review', async (req: AuthedRequest, res, next) => {
+  try {
+    const decision = String(req.body?.decision ?? '');
+    const reason = String(req.body?.reason ?? '').trim();
+    if (!['approve', 'reject'].includes(decision)) return res.status(400).json({ error: 'decision must be approve or reject.' });
+    if (decision === 'reject' && !reason) return res.status(400).json({ error: 'Give a reason when rejecting a blocker.' });
+
+    const existing = await prisma.activityBlocker.findUnique({ where: { id: String(req.params.id) }, include: { activity: true } });
+    if (!existing) return res.status(404).json({ error: 'Blocker not found.' });
+    if (existing.status !== 'pending') return res.status(409).json({ error: `This blocker was already ${existing.status}.` });
+
+    const updated = await prisma.activityBlocker.update({
+      where: { id: existing.id },
+      data: {
+        status: decision === 'approve' ? 'approved' : 'rejected',
+        rejectionReason: decision === 'reject' ? reason : null,
+        reviewerId: req.auth!.sub,
+        reviewedAt: new Date(),
+      },
+    });
+    await writeAudit(req, {
+      module: 'Construction',
+      action: decision === 'approve' ? 'Approved blocker' : 'Rejected blocker',
+      recordId: updated.id,
+      recordLabel: existing.activity.name,
+      description: decision === 'reject' ? reason : existing.description.slice(0, 200),
+    });
+    await notify({
+      title: decision === 'approve' ? 'Blocker approved' : 'Blocker rejected',
+      body: decision === 'approve' ? `${existing.activity.name} is now marked blocked.` : `${existing.activity.name}: ${reason}`,
+      userIds: [existing.raisedById],
+      type: 'system',
+      data: { kind: 'activity_blocker', blockerId: existing.id },
+    }).catch(() => undefined);
+    res.json({ id: updated.id, status: updated.status });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminConstructionRouter.post('/blockers/:id/resolve', async (req: AuthedRequest, res, next) => {
+  try {
+    const existing = await prisma.activityBlocker.findUnique({ where: { id: String(req.params.id) }, include: { activity: true } });
+    if (!existing) return res.status(404).json({ error: 'Blocker not found.' });
+    if (!['pending', 'approved'].includes(existing.status)) return res.status(409).json({ error: `This blocker is already ${existing.status}.` });
+    const note = req.body?.note ? String(req.body.note).slice(0, 1000) : null;
+    const updated = await prisma.activityBlocker.update({ where: { id: existing.id }, data: { status: 'resolved', resolvedAt: new Date(), resolvedNote: note } });
+    await writeAudit(req, { module: 'Construction', action: 'Resolved blocker', recordId: updated.id, recordLabel: existing.activity.name, description: note ?? '' });
+    await notify({
+      title: 'Blocker resolved',
+      body: `${existing.activity.name} is no longer blocked.`,
+      userIds: [existing.raisedById],
+      type: 'system',
+      data: { kind: 'activity_blocker', blockerId: existing.id },
     }).catch(() => undefined);
     res.json({ id: updated.id, status: updated.status });
   } catch (err) {

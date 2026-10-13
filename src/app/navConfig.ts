@@ -98,6 +98,7 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { label: 'Progress', to: '/construction' },
       { label: 'Review Updates', to: '/construction/reviews' },
+      { label: 'Blockers', to: '/construction/blockers' },
       { label: 'Site Issues', to: '/construction/issues' },
     ],
   },

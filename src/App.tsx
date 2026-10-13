@@ -80,6 +80,7 @@ import { SiteVisits } from './pages/crm/SiteVisits';
 import { Telecallers } from './pages/crm/Telecallers';
 import { ConstructionHome } from './pages/construction/ConstructionHome';
 import { ConstructionProject } from './pages/construction/ConstructionProject';
+import { ReviewBlockers } from './pages/construction/ReviewBlockers';
 import { ReviewUpdates } from './pages/construction/ReviewUpdates';
 import { OpsRules } from './pages/automation/OpsRules';
 import { SalesPolicySettings } from './pages/settings/SalesPolicySettings';
@@ -228,6 +229,7 @@ function App() {
                 <Route path="/vendor-portal/bills" element={<VendorOnly><PortalBills /></VendorOnly>} />
                 <Route path="/construction" element={<ConstructionHome />} />
                 <Route path="/construction/reviews" element={<ReviewUpdates />} />
+                <Route path="/construction/blockers" element={<ReviewBlockers />} />
                 <Route path="/construction/issues" element={<SiteIssues />} />
                 <Route path="/construction/:id" element={<ConstructionProject />} />
                 <Route path="/crm/site-visits" element={<SiteVisits />} />

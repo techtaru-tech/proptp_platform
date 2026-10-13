@@ -1,10 +1,12 @@
 import { cn } from '../../utils/cn';
+import type { ActivityStatus } from '../../services/constructionService';
+import { STATUS_META } from './ActivityStatus';
 
 /**
  * Actual progress as the filled bar, planned progress as the tick on it. Reading "are we where
  * we should be" is one glance: fill short of the tick means behind.
  */
-export function PlanVsActual({ planned, actual, className }: { planned: number; actual: number; className?: string }) {
+export function PlanVsActual({ planned, actual, className, status }: { planned: number; actual: number; className?: string; status?: ActivityStatus }) {
   const behind = actual < planned;
   return (
     <div
@@ -12,7 +14,7 @@ export function PlanVsActual({ planned, actual, className }: { planned: number; 
       role="img"
       aria-label={`${actual}% complete, ${planned}% planned`}
     >
-      <div className={cn('h-full rounded-full', behind ? 'bg-warning-500' : 'bg-success-500')} style={{ width: `${actual}%` }} />
+      <div className={cn('h-full rounded-full', status ? STATUS_META[status].bar : behind ? 'bg-warning-500' : 'bg-success-500')} style={{ width: `${actual}%` }} />
       <div className="absolute top-[-3px] h-[16px] w-[2px] rounded bg-ink" style={{ left: `calc(${planned}% - 1px)` }} />
     </div>
   );

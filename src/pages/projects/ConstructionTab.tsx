@@ -10,6 +10,8 @@ import { formatDate, formatDateTime } from '../../utils/format';
 import { fileUrl } from '../../services/apiClient';
 import { getConstructionProject, listProgressUpdates, listSiteIssues } from '../../services/constructionService';
 import { BehindBadge, PlanVsActual } from '../construction/PlanVsActual';
+import { ActivityStatusBadge, STATUS_META, StatusLegend } from '../construction/ActivityStatus';
+import { cn } from '../../utils/cn';
 
 /**
  * Where a project's construction stands, read-only, on the project page itself: the plan against
@@ -80,11 +82,13 @@ export function ConstructionTab({ projectId }: { projectId: string }) {
 
       <section>
         <h3 className="mb-2 text-sm font-semibold text-ink">Activities</h3>
+        <StatusLegend className="mb-2" />
         <ul className="divide-y divide-line rounded-xl border border-line">
           {bundle.activities.map((a) => (
-            <li key={a.id} className="grid grid-cols-1 gap-2 px-4 py-3 md:grid-cols-[1.5fr_1fr_1.2fr] md:items-center md:gap-4">
+            <li key={a.id} className={cn('grid grid-cols-1 gap-2 border-l-4 px-4 py-3 md:grid-cols-[1.5fr_1fr_1.2fr] md:items-center md:gap-4', STATUS_META[a.status].edge)}>
               <div>
                 <p className="font-medium text-ink">{a.name}</p>
+                <div className="my-0.5"><ActivityStatusBadge status={a.status} pendingBlockers={a.pendingBlockers} /></div>
                 <p className="text-xs text-ink-muted">
                   {formatDate(a.plannedStart)} → {formatDate(a.plannedEnd)}
                   {[a.block, a.phase].filter(Boolean).length ? ` · ${[a.block, a.phase].filter(Boolean).join(' · ')}` : ''}
@@ -96,7 +100,7 @@ export function ConstructionTab({ projectId }: { projectId: string }) {
                   <span className="tabular-nums text-ink">{a.actual}% <span className="text-ink-faint">/ plan {a.planned}%</span></span>
                   <BehindBadge days={a.daysBehind} />
                 </div>
-                <PlanVsActual planned={a.planned} actual={a.actual} />
+                <PlanVsActual planned={a.planned} actual={a.actual} status={a.status} />
               </div>
             </li>
           ))}

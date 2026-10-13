@@ -1132,6 +1132,8 @@ model User {
   activitiesAssigned ConstructionActivity[] @relation("ActivityAssignee")
   progressAuthored   ProgressUpdate[]       @relation("ProgressAuthor")
   progressReviewed   ProgressUpdate[]       @relation("ProgressReviewer")
+  blockersRaised     ActivityBlocker[]      @relation("BlockerRaiser")
+  blockersReviewed   ActivityBlocker[]      @relation("BlockerReviewer")
   issuesOwned        SiteIssue[]            @relation("IssueOwner")
   issuesRaised       SiteIssue[]            @relation("IssueRaiser")
   visitsHosted       SiteVisit[]            @relation("VisitHost")
@@ -2414,14 +2416,54 @@ model ConstructionActivity {
   assignee     User?    @relation("ActivityAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   assigneeId   String?
 
-  updates ProgressUpdate[]
-  issues  SiteIssue[]
+  updates  ProgressUpdate[]
+  issues   SiteIssue[]
+  blockers ActivityBlocker[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([projectId])
   @@index([assigneeId])
+}
+
+enum BlockerStatus {
+  /// Raised from site, waiting for the project manager.
+  pending
+  /// Accepted: the activity shows as blocked until it is resolved.
+  approved
+  rejected
+  /// The cause is gone and work can go on.
+  resolved
+}
+
+/// Something stopping an activity from finishing on plan — a machine, labour or material that did
+/// not arrive. Raised from the app with a description and photos; the activity only shows as
+/// blocked once somebody has approved it.
+model ActivityBlocker {
+  id          String               @id @default(cuid())
+  activity    ConstructionActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  activityId  String
+  raisedBy    User                 @relation("BlockerRaiser", fields: [raisedById], references: [id])
+  raisedById  String
+  description String
+  /// [{ url, takenAt, latitude, longitude }] — each photo stamped by the app's camera.
+  photos      Json                 @default("[]")
+  /// Generated on the device, so a retried upload is the same blocker.
+  clientId    String?              @unique
+
+  status          BlockerStatus @default(pending)
+  rejectionReason String?
+  reviewer        User?         @relation("BlockerReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  reviewerId      String?
+  reviewedAt      DateTime?
+  resolvedAt      DateTime?
+  resolvedNote    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([activityId, status])
+  @@index([raisedById])
 }
 
 model ProgressUpdate {

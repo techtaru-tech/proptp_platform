@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { AlertTriangle, ClipboardCheck, HardHat } from 'lucide-react';
+import { AlertTriangle, ClipboardCheck, Flag, HardHat } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -42,6 +42,9 @@ export function ConstructionHome() {
               <div className="mt-4 flex gap-4 text-xs text-ink-muted">
                 <span className={p.pendingReviews ? 'flex items-center gap-1 font-medium text-brand-700' : 'flex items-center gap-1'}>
                   <ClipboardCheck size={13} /> {p.pendingReviews} to review
+                </span>
+                <span className={p.blockedActivities || p.pendingBlockers ? 'flex items-center gap-1 font-medium text-danger-700' : 'flex items-center gap-1'}>
+                  <Flag size={13} /> {p.blockedActivities} blocked{p.pendingBlockers ? ` · ${p.pendingBlockers} to approve` : ''}
                 </span>
                 <span className={p.openIssues ? 'flex items-center gap-1 font-medium text-danger-700' : 'flex items-center gap-1'}>
                   <AlertTriangle size={13} /> {p.openIssues} open issue{p.openIssues === 1 ? '' : 's'}

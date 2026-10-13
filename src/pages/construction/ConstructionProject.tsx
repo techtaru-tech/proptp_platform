@@ -20,6 +20,8 @@ import {
   type ConstructionActivity, type Rollup,
 } from '../../services/constructionService';
 import { BehindBadge, PlanVsActual } from './PlanVsActual';
+import { ActivityStatusBadge, STATUS_META, StatusLegend } from './ActivityStatus';
+import { cn } from '../../utils/cn';
 
 type Group = 'block' | 'phase';
 
@@ -87,6 +89,7 @@ export function ConstructionProject() {
         <Card><EmptyState title="No activities yet" description="Add the phases and activities with their planned dates. Site staff report against them from the app." /></Card>
       ) : (
         <>
+          <StatusLegend className="mb-3" />
           <div className="mb-3 flex items-center gap-2 text-sm">
             <span className="text-ink-muted">Group by</span>
             {(['block', 'phase'] as Group[]).map((g) => (
@@ -113,9 +116,10 @@ export function ConstructionProject() {
                   </div>
                   <ul className="divide-y divide-line">
                     {items.map((a) => (
-                      <li key={a.id} className="grid grid-cols-1 gap-2 px-5 py-3 md:grid-cols-[1.5fr_1fr_1.2fr_auto] md:items-center md:gap-4">
+                      <li key={a.id} className={cn('grid grid-cols-1 gap-2 border-l-4 px-5 py-3 md:grid-cols-[1.5fr_1fr_1.2fr_auto] md:items-center md:gap-4', STATUS_META[a.status].edge)}>
                         <div>
                           <p className="font-medium text-ink">{a.name}</p>
+                          <div className="my-0.5"><ActivityStatusBadge status={a.status} pendingBlockers={a.pendingBlockers} /></div>
                           <p className="text-xs text-ink-muted">
                             {formatDate(a.plannedStart)} → {formatDate(a.plannedEnd)}
                             {a.phase && group === 'block' ? ` · ${a.phase}` : ''}
@@ -128,7 +132,12 @@ export function ConstructionProject() {
                             <span className="tabular-nums text-ink">{a.actual}% <span className="text-ink-faint">/ plan {a.planned}%</span></span>
                             <BehindBadge days={a.daysBehind} />
                           </div>
-                          <PlanVsActual planned={a.planned} actual={a.actual} />
+                          <PlanVsActual planned={a.planned} actual={a.actual} status={a.status} />
+                          {a.pendingBlockers > 0 && (
+                            <Link to={`/construction/blockers?projectId=${id}`} className="mt-1 block text-xs font-medium text-warning-700">
+                              Review the blocker raised on this activity
+                            </Link>
+                          )}
                           {a.pendingUpdates > 0 && (
                             <Link to={`/construction/reviews?projectId=${id}`} className="mt-1 inline-block text-xs font-medium text-brand-700">
                               {a.pendingUpdates} update{a.pendingUpdates === 1 ? '' : 's'} waiting for review

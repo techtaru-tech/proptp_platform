@@ -25,7 +25,11 @@ export async function listMyActivities(req: AuthedRequest, res: Response, next: 
   try {
     const rows = await prisma.constructionActivity.findMany({
       where: { assigneeId: req.auth!.sub },
-      include: { project: { select: { projectName: true } }, updates: { select: { status: true, percentComplete: true, capturedAt: true } } },
+      include: {
+        project: { select: { projectName: true } },
+        updates: { select: { status: true, percentComplete: true, capturedAt: true } },
+        blockers: { where: { status: { in: ['pending', 'approved'] } }, select: { status: true } },
+      },
       orderBy: { plannedEnd: 'asc' },
     });
     res.json({
@@ -42,6 +46,8 @@ export async function listMyActivities(req: AuthedRequest, res: Response, next: 
           planned_percent: p.planned,
           actual_percent: p.actual,
           days_behind: p.daysBehind,
+          status: p.status,
+          pending_blockers: p.pendingBlockers,
         };
       }),
     });
@@ -215,6 +221,111 @@ appConstructionRouter.post('/issues', upload.array('photos', 6), async (req: Aut
     res.status(201).json({ id: created.id });
   } catch (err) {
     removeFiles(files);
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Blockers
+//
+// Something stopping an assigned activity from finishing on plan: a machine, labour or material
+// that did not arrive. The person on site describes it and can attach photos; the project manager
+// approves or rejects it in the panel, and only an approved blocker turns the activity to
+// "blocked" there. Once the cause is gone it is marked resolved.
+// ---------------------------------------------------------------------------
+
+type BlockerPhoto = { url: string; takenAt: string; latitude: number; longitude: number };
+
+const blockerRow = (b: any) => ({
+  id: b.id,
+  activity_id: b.activityId,
+  activity: b.activity.name,
+  project: b.activity.project.projectName,
+  description: b.description,
+  photos: ((b.photos ?? []) as BlockerPhoto[]).map((p) => ({ url: p.url, taken_at: p.takenAt, latitude: p.latitude, longitude: p.longitude })),
+  status: b.status,
+  rejection_reason: b.rejectionReason,
+  resolved_note: b.resolvedNote,
+  raised_at: b.createdAt.toISOString(),
+  reviewed_at: b.reviewedAt?.toISOString() ?? null,
+  resolved_at: b.resolvedAt?.toISOString() ?? null,
+});
+const blockerInclude = { activity: { select: { name: true, project: { select: { projectName: true } } } } } as const;
+
+appConstructionRouter.post('/blockers', upload.array('photos', 6), async (req: AuthedRequest, res, next) => {
+  const files = (req.files ?? []) as Express.Multer.File[];
+  try {
+    const b = req.body ?? {};
+    const clientId = b.client_id ? String(b.client_id) : null;
+    if (clientId) {
+      const dup = await prisma.activityBlocker.findUnique({ where: { clientId } });
+      if (dup) {
+        removeFiles(files);
+        return res.status(200).json({ id: dup.id, status: dup.status, duplicate: true });
+      }
+    }
+
+    const activity = await prisma.constructionActivity.findUnique({ where: { id: String(b.activity_id ?? '') } });
+    if (!activity || activity.assigneeId !== req.auth!.sub) {
+      removeFiles(files);
+      return fail(res, 404, 'activity_not_found', 'That activity is not assigned to you.');
+    }
+    const description = String(b.description ?? '').trim();
+    if (!description) { removeFiles(files); return fail(res, 400, 'missing_description', 'Say what is stopping the work.'); }
+
+    // Photos are optional here, but any that come must carry the app camera's time and place.
+    let meta: { taken_at?: string; latitude?: number; longitude?: number }[] = [];
+    try { meta = JSON.parse(String(b.photo_meta ?? '[]')); } catch { meta = []; }
+    if (meta.length !== files.length) { removeFiles(files); return fail(res, 400, 'photo_meta_missing', 'Every photo needs its time and location stamp.'); }
+    const photos: BlockerPhoto[] = [];
+    for (const [i, f] of files.entries()) {
+      const takenAt = new Date(String(meta[i]?.taken_at));
+      const latitude = Number(meta[i]?.latitude);
+      const longitude = Number(meta[i]?.longitude);
+      if (Number.isNaN(takenAt.getTime()) || !Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+        removeFiles(files);
+        return fail(res, 400, 'photo_meta_invalid', 'Every photo needs a valid date, time and location.');
+      }
+      photos.push({ url: publicUrl(f), takenAt: takenAt.toISOString(), latitude, longitude });
+    }
+
+    const created = await prisma.activityBlocker.create({
+      data: { activityId: activity.id, raisedById: req.auth!.sub, description: description.slice(0, 2000), photos: photos as any, clientId },
+    });
+    res.status(201).json({ id: created.id, status: created.status, duplicate: false });
+  } catch (err) {
+    removeFiles(files);
+    next(err);
+  }
+});
+
+appConstructionRouter.get('/blockers', async (req: AuthedRequest, res, next) => {
+  try {
+    const rows = await prisma.activityBlocker.findMany({
+      where: { raisedById: req.auth!.sub },
+      include: blockerInclude,
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    res.json({ blockers: rows.map(blockerRow) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** The person who raised it says the cause is gone. A pending one is withdrawn the same way. */
+appConstructionRouter.post('/blockers/:id/resolve', async (req: AuthedRequest, res, next) => {
+  try {
+    const existing = await prisma.activityBlocker.findFirst({ where: { id: String(req.params.id), raisedById: req.auth!.sub } });
+    if (!existing) return fail(res, 404, 'blocker_not_found', 'That blocker is not yours.');
+    if (!['pending', 'approved'].includes(existing.status)) return fail(res, 409, 'not_open', `This blocker is already ${existing.status}.`);
+    const updated = await prisma.activityBlocker.update({
+      where: { id: existing.id },
+      data: { status: 'resolved', resolvedAt: new Date(), resolvedNote: req.body?.note ? String(req.body.note).slice(0, 1000) : null },
+      include: blockerInclude,
+    });
+    res.json(blockerRow(updated));
+  } catch (err) {
     next(err);
   }
 });

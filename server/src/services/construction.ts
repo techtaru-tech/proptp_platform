@@ -39,7 +39,17 @@ export function daysBehind(
   return Math.ceil((gap / 100) * duration);
 }
 
+/**
+ * What colour an activity is on the screens. Derived, never stored: nothing signed off yet is
+ * pending, anything between is in progress, 100% is completed, and an activity with an approved
+ * blocker is blocked whatever its percentage — a blocker is the thing that needs attention.
+ */
+export type ActivityStatus = 'pending' | 'in_progress' | 'completed' | 'blocked';
+
 export interface ActivityProgress {
+  status: ActivityStatus;
+  /** A blocker raised from site and not yet decided, shown as a flag without changing the colour. */
+  pendingBlockers: number;
   planned: number;
   actual: number;
   daysBehind: number;
@@ -49,12 +59,19 @@ export interface ActivityProgress {
 }
 
 export function activityProgress(
-  a: ConstructionActivity & { updates: Pick<ProgressUpdate, 'status' | 'percentComplete' | 'capturedAt'>[] },
+  a: ConstructionActivity & {
+    updates: Pick<ProgressUpdate, 'status' | 'percentComplete' | 'capturedAt'>[];
+    blockers?: { status: string }[];
+  },
   at = new Date()
 ): ActivityProgress {
   const approved = a.updates.filter((u) => u.status === 'approved').sort((x, y) => y.capturedAt.getTime() - x.capturedAt.getTime());
   const actual = approved[0]?.percentComplete ?? 0;
+  const blockers = a.blockers ?? [];
+  const blocked = blockers.some((b) => b.status === 'approved');
   return {
+    status: blocked ? 'blocked' : actual >= 100 ? 'completed' : actual > 0 ? 'in_progress' : 'pending',
+    pendingBlockers: blockers.filter((b) => b.status === 'pending').length,
     planned: plannedPercent(a, at),
     actual,
     daysBehind: daysBehind(a, actual, at),
@@ -90,12 +107,13 @@ export async function projectProgress(projectId: string) {
     where: { projectId },
     include: {
       updates: { select: { status: true, percentComplete: true, capturedAt: true } },
+      blockers: { where: { status: { in: ['pending', 'approved'] } }, select: { status: true } },
       assignee: { select: { id: true, name: true } },
     },
     orderBy: [{ block: 'asc' }, { phase: 'asc' }, { sortOrder: 'asc' }, { plannedStart: 'asc' }],
   });
   const now = new Date();
-  const rows = activities.map(({ updates, ...a }) => ({ ...a, progress: activityProgress({ ...a, updates }, now) }));
+  const rows = activities.map(({ updates, blockers, ...a }) => ({ ...a, progress: activityProgress({ ...a, updates, blockers }, now) }));
 
   const groupBy = (key: 'block' | 'phase') => {
     const groups = new Map<string, typeof rows>();

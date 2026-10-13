@@ -9,7 +9,12 @@ export interface Rollup {
   activities: number;
 }
 
+/** Derived by the server: pending (nothing signed off), in progress, completed, or blocked (an approved blocker). */
+export type ActivityStatus = 'pending' | 'in_progress' | 'completed' | 'blocked';
+
 export interface ConstructionProjectSummary extends Rollup {
+  blockedActivities: number;
+  pendingBlockers: number;
   id: string;
   projectName: string;
   projectLocation: string;
@@ -33,6 +38,9 @@ export interface ConstructionActivity {
   daysBehind: number;
   lastApprovedAt: string | null;
   pendingUpdates: number;
+  status: ActivityStatus;
+  /** Blockers raised from site and not yet decided. */
+  pendingBlockers: number;
 }
 
 export interface ConstructionProjectBundle {
@@ -131,3 +139,31 @@ export interface BuyerConstructionStatus {
 export const getBuyerStatus = (bookingId: string) => api.get<BuyerConstructionStatus>(`/construction/bookings/${bookingId}`);
 export const sendBuyerStatus = (bookingId: string, message: string) =>
   api.post<{ whatsappUrl: string }>(`/construction/bookings/${bookingId}/send`, { message });
+
+export type BlockerStatus = 'pending' | 'approved' | 'rejected' | 'resolved';
+
+export interface BlockerRow {
+  id: string;
+  activityId: string;
+  activityName: string;
+  block: string;
+  phase: string;
+  projectId: string;
+  projectName: string;
+  raisedByName: string;
+  description: string;
+  photos: { url: string; takenAt: string; latitude: number; longitude: number }[];
+  status: BlockerStatus;
+  rejectionReason: string | null;
+  reviewedByName: string | null;
+  reviewedAt: string | null;
+  resolvedAt: string | null;
+  resolvedNote: string | null;
+  createdAt: string;
+}
+
+export const listBlockers = (status: string, projectId?: string) =>
+  api.get<BlockerRow[]>(`/construction/blockers?status=${status}${projectId ? `&projectId=${projectId}` : ''}`);
+export const reviewBlocker = (id: string, decision: 'approve' | 'reject', reason?: string) =>
+  api.post(`/construction/blockers/${id}/review`, { decision, reason });
+export const resolveBlocker = (id: string, note?: string) => api.post(`/construction/blockers/${id}/resolve`, { note });
