@@ -71,6 +71,7 @@ function Editor({ settings, onSaved }: { settings: TelephonySettings; onSaved: (
         enabled: values.enabled,
         baseUrl: values.baseUrl,
         accountId: values.accountId,
+        clickToCallFlowId: values.clickToCallFlowId,
         virtualNumber: values.virtualNumber,
         // Blank means "keep the stored one" — the browser never receives it to send back.
         ...(apiToken.trim() ? { apiToken: apiToken.trim() } : {}),
@@ -141,6 +142,12 @@ function Editor({ settings, onSaved }: { settings: TelephonySettings; onSaved: (
               value={values.accountId}
               onChange={(e) => patch({ accountId: e.target.value })}
               hint="Shown with the token on DeepCall's Click To Call page."
+            />
+            <Input
+              label="Click-to-call flow ID"
+              value={values.clickToCallFlowId}
+              onChange={(e) => patch({ clickToCallFlowId: e.target.value })}
+              hint="The DeepCall call flow with a Click To Call module (Manage → Call Flow). Click-to-call does not work without one."
             />
             <Input
               label="API token"

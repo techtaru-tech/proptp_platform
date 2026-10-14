@@ -282,6 +282,7 @@ function publicSettings(settings: Awaited<ReturnType<typeof getSettings>>) {
     enabled: settings.enabled,
     baseUrl: settings.baseUrl,
     accountId: settings.accountId ?? '',
+    clickToCallFlowId: settings.clickToCallFlowId ?? '',
     // Never returned. The UI shows whether one is stored and lets it be replaced.
     hasApiToken: !!settings.apiToken,
     virtualNumber: settings.virtualNumber ?? '',
@@ -342,6 +343,7 @@ callsRouter.patch('/settings/telephony', async (req: AuthedRequest, res, next) =
     if (body.enabled !== undefined) data.enabled = !!body.enabled;
     if (body.baseUrl !== undefined) data.baseUrl = String(body.baseUrl).trim().replace(/\/+$/, '');
     if (body.accountId !== undefined) data.accountId = String(body.accountId).trim() || null;
+    if (body.clickToCallFlowId !== undefined) data.clickToCallFlowId = String(body.clickToCallFlowId).replace(/\D/g, '') || null;
     if (body.virtualNumber !== undefined) data.virtualNumber = normalizeNumber(body.virtualNumber) || null;
     // A blank token means "leave the stored one alone" — the UI never sees it to send it back.
     if (body.apiToken) data.apiToken = encrypt(String(body.apiToken).trim());

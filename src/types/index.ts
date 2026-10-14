@@ -1535,6 +1535,8 @@ export interface TelephonySettings {
   baseUrl: string;
   /** DeepCall's `user_id`. */
   accountId: string;
+  /** The DeepCall call flow (with a Click To Call module) click-to-call runs through. */
+  clickToCallFlowId: string;
   /** The token itself is never sent to the browser. */
   hasApiToken: boolean;
   virtualNumber: string;
@@ -1545,6 +1547,7 @@ export interface TelephonySettingsPatch {
   enabled?: boolean;
   baseUrl?: string;
   accountId?: string;
+  clickToCallFlowId?: string;
   apiToken?: string;
   virtualNumber?: string;
 }

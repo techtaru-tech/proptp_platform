@@ -544,6 +544,9 @@ model TelephonySettings {
   /// The business number customers dial, shown for reference and used to label calls that
   /// arrive without one.
   virtualNumber String?
+  /// The DeepCall call flow (one with a Click To Call module) that click-to-call runs through.
+  /// DeepCall refuses to place the call without one.
+  clickToCallFlowId String?
 
   /// Secret embedded in the webhook URL handed to the provider — the URL is the credential,
   /// the same arrangement the lead-source webhooks use. Rotatable.

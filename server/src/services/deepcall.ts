@@ -96,6 +96,7 @@ export async function testConnection(): Promise<ConnectionTestResult> {
   const checks: ConnectionTestResult['checks'] = [
     { label: 'Telephony enabled', ok: settings.enabled, detail: settings.enabled ? 'On' : 'Off — click-to-call is blocked and the call-log webhook rejects every request.' },
     { label: 'Account ID (user_id) saved', ok: !!settings.accountId, detail: settings.accountId ?? 'Missing — every DeepCall API call needs it.' },
+    { label: 'Click-to-call flow ID saved', ok: !!settings.clickToCallFlowId, detail: settings.clickToCallFlowId ?? 'Missing — DeepCall needs a call flow with a Click To Call module to place a call.' },
     { label: 'API token stored', ok: !!token, detail: token ? `Stored, ${token.length} characters` : 'Missing — click-to-call cannot authenticate.' },
   ];
 
@@ -144,6 +145,9 @@ export async function clickToCall(input: { agent: string; customer: string }): P
     // sent. A bare 10-digit number is not matched, and the call fails at the agent's leg. The
     // customer's number is different: DeepCall adds the 91 itself.
     agent_number: toDeepCallAgentNumber(input.agent),
+    // DeepCall runs a click-to-call through a call flow that has a Click To Call module, and
+    // answers "Found invalid CTC ivr" or fails the agent leg without one.
+    ...(settings.clickToCallFlowId ? { callFlow_id: settings.clickToCallFlowId } : {}),
   };
   const url = `${settings.baseUrl}/v3/clickToCall/para`;
   // The reply is kept whatever it says: the shape of a DeepCall answer is learned from real
