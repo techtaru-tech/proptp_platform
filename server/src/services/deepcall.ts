@@ -66,6 +66,12 @@ export function durationToSeconds(input: unknown): number {
   return h * 3600 + m * 60 + sec;
 }
 
+/** 10 digits to 91 + 10 digits, which is how DeepCall dials and stores every agent's number. */
+export function toDeepCallAgentNumber(input: unknown): string {
+  const local = normalizeNumber(input);
+  return local.length === 10 ? `91${local}` : local;
+}
+
 // ---------------------------------------------------------------------------
 // Connection probe — used by the Test Connection button before a live call.
 // ---------------------------------------------------------------------------
@@ -135,7 +141,10 @@ export async function clickToCall(input: { agent: string; customer: string }): P
     callFirst: 'agent',
     customer: normalizeNumber(input.customer),
     agentType: 'agent_number',
-    agent_number: normalizeNumber(input.agent),
+    // DeepCall dials an agent's number as sent, and stores agents with the country code
+    // (919549193870). A bare 10-digit number fails at the agent's leg ("Agent Failed"); with the 91
+    // it is dialled. The customer's number is different: DeepCall adds the 91 itself.
+    agent_number: toDeepCallAgentNumber(input.agent),
     // DeepCall runs a click-to-call through a call flow that has a Click To Call module, and
     // answers "Found invalid CTC ivr" or fails the agent leg without one.
     ...(settings.clickToCallFlowId ? { callFlow_id: settings.clickToCallFlowId } : {}),
