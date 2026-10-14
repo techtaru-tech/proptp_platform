@@ -8,7 +8,7 @@ import { getSmsSettings, renderSms, sendSms, slotCount } from '../services/sms';
 /** Settings > SMS (DLT) — /api/sms. */
 export const smsRouter = Router();
 
-const PROVIDERS = ['msg91'];
+const PROVIDERS = ['msg91', 'parken'];
 const publicSettings = (s: Awaited<ReturnType<typeof getSmsSettings>>) => ({ provider: s.provider, enabled: s.enabled, hasAuthKey: !!s.authKey, senderId: s.senderId, dltEntityId: s.dltEntityId, providers: PROVIDERS });
 
 smsRouter.get('/settings', async (_req, res, next) => {

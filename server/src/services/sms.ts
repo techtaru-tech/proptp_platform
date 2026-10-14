@@ -27,6 +27,7 @@ export function smsNumber(input: unknown): string | null {
 }
 
 async function deliver(settings: Awaited<ReturnType<typeof getSmsSettings>>, to: string, text: string, dltTemplateId: string): Promise<string> {
+  if (settings.provider === 'parken') return deliverParken(settings, to, text, dltTemplateId);
   if (settings.provider !== 'msg91') throw new Error(`The “${settings.provider}” provider is not supported.`);
   const { data } = await axios.get('https://api.msg91.com/api/sendhttp.php', {
     params: { authkey: decrypt(settings.authKey!), mobiles: to, message: text, sender: settings.senderId, route: 4, country: 91, DLT_TE_ID: dltTemplateId, PE_ID: settings.dltEntityId || undefined },
@@ -36,6 +37,17 @@ async function deliver(settings: Awaited<ReturnType<typeof getSmsSettings>>, to:
   // MSG91 answers with a request id when it accepts the message, and with a JSON error when it does not.
   if (typeof data === 'object' && data && (data as { type?: string }).type === 'error') throw new Error(String((data as { message?: string }).message ?? out));
   return out;
+}
+
+/** Par-Ken answers with a numeric message id when it accepts the message, and a short error code (101, …) when not. */
+async function deliverParken(settings: Awaited<ReturnType<typeof getSmsSettings>>, to: string, text: string, dltTemplateId: string): Promise<string> {
+  const { data } = await axios.get('https://sms.par-ken.com/api/smsapi', {
+    params: { key: decrypt(settings.authKey!), route: 1, type: 1, sender: settings.senderId, number: to.slice(-10), sms: text, templateid: dltTemplateId },
+    timeout: 15_000,
+  });
+  const out = String(typeof data === 'string' ? data : JSON.stringify(data)).trim();
+  if (!/^\d{6,}$/.test(out)) throw new Error(`Par-Ken rejected the message (answer: ${out.slice(0, 120)}).`);
+  return `message id ${out}`;
 }
 
 /** Sends one approved template to one number, and records what happened either way. */

@@ -51,7 +51,7 @@ export function SmsSettingsPage() {
         <Card>
           <CardHeader title="Provider" subtitle="From your SMS provider and your DLT registration." action={<Button variant="primary" size="sm" onClick={save} isLoading={saving}>Save</Button>} />
           <div className="flex flex-col gap-4">
-            <Select label="Provider" name="smsProvider" value={f.provider} onChange={(e) => setF((x) => ({ ...x, provider: e.target.value }))} options={settings.data.providers.map((p) => ({ value: p, label: p.toUpperCase() }))} />
+            <Select label="Provider" name="smsProvider" value={f.provider} onChange={(e) => setF((x) => ({ ...x, provider: e.target.value }))} options={settings.data.providers.map((p) => ({ value: p, label: p === 'parken' ? 'Par-Ken' : p.toUpperCase() }))} />
             <Input label="API key" name="smsKey" type="password" value={f.authKey} onChange={(e) => setF((x) => ({ ...x, authKey: e.target.value }))} placeholder={settings.data.hasAuthKey ? 'Saved. Type to replace it.' : ''} hint="Stored encrypted; never shown again." />
             <Input label="Sender id" name="smsSender" maxLength={6} value={f.senderId} onChange={(e) => setF((x) => ({ ...x, senderId: e.target.value.toUpperCase() }))} hint="The six-letter header registered on DLT." />
             <Input label="DLT entity id" name="smsEntity" value={f.dltEntityId} onChange={(e) => setF((x) => ({ ...x, dltEntityId: e.target.value }))} />
