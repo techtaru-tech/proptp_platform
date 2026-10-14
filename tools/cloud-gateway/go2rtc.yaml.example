@@ -1,0 +1,11 @@
+# Runs on the CRM server. Each stream pulls a site camera over the internet through the router's
+# port-forward (site public IP : forwarded port). The names on the left are what the CRM live address uses:
+#   https://console.rosium.in/<STREAM_TOKEN>/stream.html?src=delhi1&mode=mse
+api:
+  listen: "127.0.0.1:1984"   # only nginx on this box can reach it
+rtsp:
+  listen: ""
+webrtc:
+  listen: ""
+streams:
+  delhi1: rtsp://admin:NEWPASSWORD@SITE_PUBLIC_IP:8554/profile1

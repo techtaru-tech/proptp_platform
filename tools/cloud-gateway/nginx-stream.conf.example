@@ -1,0 +1,11 @@
+# Goes inside the console.rosium.in server block (443). Only the secret path reaches go2rtc.
+# MSE playback uses a websocket, hence the Upgrade headers.
+location /STREAM_TOKEN/ {
+    proxy_pass http://127.0.0.1:1984/;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_buffering off;
+    proxy_read_timeout 3600s;
+}
