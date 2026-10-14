@@ -330,7 +330,13 @@ webhookRouter.post('/email/:token/inbound', async (req, res) => {
 async function handleCallReport(req: Request, res: Response) {
   const request = describeRequest(req as any);
   const settings = await getSettings();
-  if (!settings.enabled || String(req.params.token) !== settings.webhookToken) {
+  // Some providers append their parameters to a URL without a `?`, so the path segment arrives as
+  // the token with `callId=...&...` glued to the end. Exactness is kept: the stored token has to
+  // be a prefix of the segment, so nothing is accepted that was not ours.
+  const segment = String(req.params.token);
+  const glued = segment.startsWith(settings.webhookToken) && segment.length > settings.webhookToken.length;
+  const tokenOk = segment === settings.webhookToken || glued;
+  if (!settings.enabled || !tokenOk) {
     await logTelephonyEvent({
       kind: 'call_log',
       outcome: 'rejected',
@@ -346,7 +352,9 @@ async function handleCallReport(req: Request, res: Response) {
   // retries or disables the callback, and the payload is kept either way.
   res.json({ status: 'ok' });
   try {
+    const gluedParams = glued ? Object.fromEntries(new URLSearchParams(segment.slice(settings.webhookToken.length).replace(/^[?&]/, ''))) : {};
     const result = await recordCallLog({
+      ...gluedParams,
       ...(req.query as Record<string, unknown>),
       ...((req.body ?? {}) as Record<string, unknown>),
     });
