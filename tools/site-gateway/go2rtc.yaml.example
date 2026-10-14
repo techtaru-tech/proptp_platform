@@ -1,0 +1,11 @@
+# generate-config.py writes the real go2rtc.yaml from this shape. The names on the left (gate, blocka...)
+# are what the CRM's live address refers to: .../stream.html?src=gate&mode=mse
+api:
+  listen: ":1984"
+rtsp:
+  listen: ""        # not needed, and nothing else should be able to pull the cameras
+streams:
+  gate: rtsp://admin:PASSWORD@192.168.1.64:554/stream1
+  blocka: rtsp://admin:PASSWORD@192.168.1.65:554/stream1
+  blockb: rtsp://admin:PASSWORD@192.168.1.66:554/stream1
+  road: rtsp://admin:PASSWORD@192.168.1.67:554/stream1

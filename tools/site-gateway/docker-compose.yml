@@ -1,0 +1,31 @@
+# One of these runs at every site, on a small computer on the same network as the cameras.
+# It turns the cameras' RTSP streams (which a browser cannot play) into a web page the CRM can show,
+# and publishes it through a Cloudflare tunnel, so the cameras themselves are never opened to the internet.
+#
+#   cameras --RTSP--> go2rtc --> proxy (secret path only) --> Cloudflare tunnel --> the CRM
+services:
+  go2rtc:
+    image: alexxit/go2rtc:1.9.14
+    restart: unless-stopped
+    volumes:
+      - ./go2rtc.yaml:/config/go2rtc.yaml:ro
+    # No ports are published: only the proxy below can reach it.
+
+  proxy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      STREAM_TOKEN: ${STREAM_TOKEN:?run generate-config.py first}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - go2rtc
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?put the tunnel token in .env}
+    depends_on:
+      - proxy

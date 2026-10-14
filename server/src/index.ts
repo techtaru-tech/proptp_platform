@@ -54,7 +54,6 @@ import { adminChannelPartnersRouter, partnerPortalRouter } from './routes/admin/
 import { adminLegalRouter } from './routes/admin/legal';
 import { adminOpsRulesRouter } from './routes/admin/opsRules';
 import { adminCamerasRouter } from './routes/admin/cameras';
-import { cameraIngestRouter } from './routes/cameraIngest';
 import { startOpsRulePoller } from './services/opsRules';
 import { adminProjectsRouter, adminUnitsRouter } from './routes/admin/projects';
 import { adminPlotHoldsRouter } from './routes/admin/plotHolds';
@@ -131,7 +130,6 @@ app.use('/api/webhook', webhookRouter);
 app.use('/api/unsubscribe', unsubscribeRouter);
 // A plot map shared with a buyer on WhatsApp. Same reasoning: no session to check.
 app.use('/api/plot-map', publicPlotMapRouter);
-app.use('/api/camera-ingest', cameraIngestRouter);
 
 app.use(express.json({ limit: '2mb' }));
 // Multipart endpoints (registration, booking KYC, uploads) also receive plain form fields.

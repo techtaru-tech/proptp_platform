@@ -1,0 +1,14 @@
+# Answers only under /<STREAM_TOKEN>/ — a long random path set in .env — and forwards that to go2rtc.
+# Everything else is a plain 404, so a stranger who finds the site's address sees nothing.
+{
+	auto_https off
+}
+
+:80 {
+	@stream path /{$STREAM_TOKEN} /{$STREAM_TOKEN}/*
+	handle @stream {
+		uri strip_prefix /{$STREAM_TOKEN}
+		reverse_proxy go2rtc:1984
+	}
+	respond 404
+}

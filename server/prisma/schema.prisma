@@ -2988,53 +2988,20 @@ model OpsRuleFire {
 // ---------------------------------------------------------------------------
 
 model Camera {
-  id                   String    @id @default(cuid())
-  name                 String
-  project              Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  projectId            String
+  id        String   @id @default(cuid())
+  name      String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
   /// Where it points, in words: "Gate, facing Block A".
-  placement            String?
-  active               Boolean   @default(true)
-  /// How often the PC is expected to push. Silence beyond a couple of these is "offline".
-  expectedEveryMinutes Int       @default(60)
-  /// SHA-256 of the key; the key itself is shown once, when it is made or rotated.
-  keyHash              String    @unique
-  keyPrefix            String
-  lastImageAt          DateTime?
-  lastSeenAt           DateTime?
-  /// Where a live picture can be watched from, if the camera offers one (an HLS, MJPEG or web-page address).
-  liveUrl              String?
-  createdAt            DateTime  @default(now())
-
-  images CameraImage[]
+  placement String?
+  active    Boolean  @default(true)
+  /// Where its live picture is served from: an https address for a video stream (HLS .m3u8), an
+  /// MP4/MJPEG feed, or a player page. The camera itself speaks RTSP, which a browser cannot play,
+  /// so a gateway at the site turns the RTSP stream into one of these (tools/site-gateway).
+  liveUrl   String?
+  createdAt DateTime @default(now())
 
   @@index([projectId])
-}
-
-model CameraImage {
-  id         String   @id @default(cuid())
-  camera     Camera   @relation(fields: [cameraId], references: [id], onDelete: Cascade)
-  cameraId   String
-  url        String
-  /// When the picture was taken (the file's own time), as opposed to when it arrived.
-  capturedAt DateTime
-  receivedAt DateTime @default(now())
-  /// SHA-256 of the file: the same picture pushed twice is stored once.
-  fileHash   String
-  sizeBytes  Int
-
-  /// unreviewed | ok | flagged
-  review      String    @default("unreviewed")
-  flagNote    String?
-  flaggedById String?
-  flaggedAt   DateTime?
-  issueId     String?
-  /// Reserved for the automated review: pending | reviewed | skipped.
-  aiStatus    String    @default("pending")
-
-  @@unique([cameraId, fileHash])
-  @@index([cameraId, capturedAt])
-  @@index([review])
 }
 
 // ---------------------------------------------------------------------------

@@ -7,7 +7,6 @@ import { notify } from './notify';
 import { sendRawEmail } from './email';
 import { sendTemplateToNumber } from './whatsapp';
 import { sendSms } from './sms';
-import { healthOf } from './cameras';
 
 /**
  * Operations rules: the PDF's "when this happens, the system does this" table, with nothing fixed
@@ -350,37 +349,6 @@ const TRIGGERS: TriggerDef[] = [
           buyer: { name: r.file.buyerName, phone: r.file.phone }, refs: { fileId: r.fileId },
         };
       });
-    },
-  },
-  {
-    key: 'camera_offline', label: 'A site camera stops sending pictures',
-    description: 'A camera has delivered nothing for three times its expected interval. A new silence is a new alert.',
-    placeholders: ['camera', 'project', 'hours'], params: [], actions: ['notify', 'create_task'], hasBuyer: false, hasOwner: false,
-    async scan() {
-      const cams = await prisma.camera.findMany({ where: { active: true, lastImageAt: { not: null } }, include: { project: { select: { projectName: true } } } });
-      const out: Subject[] = [];
-      for (const c of cams) {
-        const { health, silentMinutes } = healthOf(c);
-        if (health !== 'offline') continue;
-        out.push({
-          // The key carries the last picture's time, so the same outage alerts once and a later one alerts afresh.
-          key: `camera:${c.id}:${c.lastImageAt!.getTime()}`, label: `${c.name} · ${c.project.projectName}`, since: new Date(c.lastImageAt!.getTime() + c.expectedEveryMinutes * 3 * 60_000),
-          values: { camera: c.name, project: c.project.projectName, hours: String(Math.floor((silentMinutes ?? 0) / 60)) }, refs: {},
-        });
-      }
-      return out;
-    },
-  },
-  {
-    key: 'camera_flagged', label: 'A camera picture is flagged as an issue',
-    description: 'Somebody flagged a picture. The site issue with the picture on it is already raised; use this to tell more people or add a task.',
-    placeholders: ['camera', 'project', 'note'], params: [], actions: ['notify', 'create_task'], hasBuyer: false, hasOwner: false, event: true,
-    async scan() {
-      const imgs = await prisma.cameraImage.findMany({ where: { review: 'flagged', flaggedAt: { not: null } }, include: { camera: { include: { project: { select: { projectName: true } } } } }, take: 500, orderBy: { flaggedAt: 'desc' } });
-      return imgs.map((i) => ({
-        key: `flag:${i.id}`, label: `${i.camera.name}: ${i.flagNote}`, since: i.flaggedAt!
-        ,values: { camera: i.camera.name, project: i.camera.project.projectName, note: i.flagNote ?? '' }, refs: {},
-      }));
     },
   },
 ];

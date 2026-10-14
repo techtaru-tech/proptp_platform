@@ -47,13 +47,6 @@ const RULES = [
     { delayHours: 0, action: { kind: 'close_file_mark_sold' } },
     { delayHours: 0, action: notify(['module:legal'], 'Registry done for {{buyer}}, plot {{unit}} ({{project}}), deed {{deed}}. File closed.', 'Registry completed') },
   ] },
-  { name: 'Camera offline → tell the owner, then escalate', trigger: 'camera_offline', config: {}, steps: [
-    { delayHours: 0, action: notify(['owner', 'module:cameras'], '{{camera}} at {{project}} has sent nothing for {{hours}} hours. Check the PC and the upload job.', 'Camera offline') },
-    { delayHours: 24, action: notify(['owner_manager', 'module:construction'], '{{camera}} at {{project}} is still silent.', 'Camera still offline') },
-  ] },
-  { name: 'Camera picture flagged → alert the site owner', trigger: 'camera_flagged', config: {}, steps: [
-    { delayHours: 0, action: notify(['owner', 'module:construction'], 'Flagged on {{camera}} ({{project}}): {{note}}', 'Camera issue') },
-  ] },
 ];
 
 export async function seedOpsRules(prisma: PrismaClient) {

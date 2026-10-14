@@ -130,10 +130,6 @@ export const NAV_ITEMS: NavItem[] = [
     to: '/cameras',
     icon: Camera,
     module: 'cameras',
-    children: [
-      { label: 'Cameras', to: '/cameras' },
-      { label: 'Flagged Pictures', to: '/cameras/flagged' },
-    ],
   },
   { label: 'Operations Rules', to: '/ops-rules', icon: Workflow, module: 'ops_rules' },
   { label: 'Assistant', to: '/assistant', icon: Bot, module: 'assistant' },

@@ -1,0 +1,3 @@
+# These hold camera passwords and the site's secret path: never commit them.
+.env
+go2rtc.yaml
