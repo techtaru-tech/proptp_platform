@@ -85,18 +85,35 @@ function mapStatus(raw: unknown, talkSeconds: number): string {
   return text.replace(/ /g, '_');
 }
 
+/** DeepCall's call types: IBD and DID are incoming; OBD, CTC (click-to-call) and QC (quick call) are outgoing. */
 function directionOf(raw: unknown, fallback: string | undefined): string {
   const value = String(raw ?? '').toLowerCase();
-  if (/out|click|c2c|ctc|api|obd|campaign|broadcast/.test(value)) return 'outgoing';
-  if (/in/.test(value)) return 'incoming';
+  if (/^(obd|ctc|qc)$/.test(value) || /out|click|c2c|api|campaign|broadcast/.test(value)) return 'outgoing';
+  if (/^(ibd|did)$/.test(value) || /in/.test(value)) return 'incoming';
   return fallback ?? 'incoming';
+}
+
+/** A list the provider sends as real JSON, as a JSON string, or as one value; its first entry. */
+function firstOf(raw: unknown): string | undefined {
+  if (Array.isArray(raw)) return raw.length ? String(raw[0]) : undefined;
+  const text = String(raw ?? '').trim();
+  if (!text) return undefined;
+  if (text.startsWith('[')) {
+    try {
+      const list = JSON.parse(text);
+      return Array.isArray(list) && list.length ? String(list[0]) : undefined;
+    } catch {
+      /* not JSON after all */
+    }
+  }
+  return text;
 }
 
 /** One recording link out of whatever DeepCall sends: a URL, a JSON list, or a list of objects. */
 function recordingOf(raw: unknown): string | null {
   if (!raw) return null;
   if (Array.isArray(raw)) return recordingOf(raw[0]);
-  if (typeof raw === 'object') return recordingOf((raw as any).url ?? (raw as any).link ?? (raw as any).recording ?? Object.values(raw as object)[0]);
+  if (typeof raw === 'object') return recordingOf((raw as any).url ?? (raw as any).link ?? (raw as any).file ?? (raw as any).recording ?? Object.values(raw as object)[0]);
   const text = String(raw).trim();
   if (!text) return null;
   if (text.startsWith('[') || text.startsWith('{')) {
@@ -106,6 +123,8 @@ function recordingOf(raw: unknown): string | null {
       /* not JSON after all */
     }
   }
+  // DeepCall's own payload carries a file path (/202104/...wav) rather than a link; a path is no
+  // use as a link, so only a full URL is kept (the path stays on the raw payload).
   const url = text.match(/https?:\/\/[^\s,"']+/);
   return url ? url[0] : null;
 }
@@ -133,10 +152,15 @@ function pick(source: Record<string, unknown>, ...names: string[]): string | und
  */
 export async function recordCallLog(payload: Record<string, unknown>): Promise<{ id: string; created: boolean }> {
   const uniqueId = pick(payload, 'callId', 'call_id', 'unique_id', 'uniqueId') ?? null;
-  const customer = normalizeNumber(pick(payload, 'customerNumber', 'cNumber10', 'cNumber', 'customer', 'caller', 'caller_id'));
-  const agentRaw = pick(payload, 'agentNumber', 'masterAgentNumber', 'agent_number', 'received_id');
+  // For a click-to-call, cNumber is not the customer: the number that was called is in nH.
+  const isCtc = /^ctc$/i.test(pick(payload, 'callType', 'cType', 'call_type') ?? '');
+  const customer = normalizeNumber(
+    pick(payload, 'customerNumber', 'cNumber10') ?? (isCtc ? firstOf(payload.nH) : undefined) ?? pick(payload, 'cNumber', 'customer', 'caller', 'caller_id')
+  );
+  const aHDetail = Array.isArray(payload.aHDetail) ? (payload.aHDetail as any[]) : [];
+  const agentRaw = pick(payload, 'agentNumber', 'masterAgentNumber', 'agent_number', 'received_id') ?? (aHDetail[0]?.agentNumber ? String(aHDetail[0].agentNumber) : undefined);
   const agentNumber = agentRaw ? (normalizeNumber(agentRaw).length >= 10 ? normalizeNumber(agentRaw) : agentRaw) : null;
-  const talkSeconds = durationToSeconds(pick(payload, 'talkDuration', 'duration', 'agentOnCallDuration', 'custAnswerDuration'));
+  const talkSeconds = durationToSeconds(pick(payload, 'talkDuration', 'lastFirstDuration', 'duration', 'agentOnCallDuration', 'custAnswerDuration'));
 
   let existing = uniqueId ? await prisma.callLog.findUnique({ where: { uniqueId } }) : null;
   if (!existing && customer) {
@@ -148,9 +172,9 @@ export async function recordCallLog(payload: Record<string, unknown>): Promise<{
 
   const [lead, agent] = await Promise.all([findLeadByNumber(customer), findAgentByNumber(agentNumber)]);
 
-  const startedAt = parseProviderTime(pick(payload, 'callTime', 'startTime', 'callFlowSTime', 'datetime')) ?? existing?.startedAt ?? new Date();
-  const hangupAt = parseProviderTime(pick(payload, 'hangupTime', 'lastHangupTime'));
-  const businessNumber = pick(payload, 'businessNumber', 'businessNum', 'business_number');
+  const startedAt = parseProviderTime(pick(payload, 'callTime', 'ivrSTime', 'startTime', 'callFlowSTime', 'datetime')) ?? existing?.startedAt ?? new Date();
+  const hangupAt = parseProviderTime(pick(payload, 'hangupTime', 'lastHangupTime', 'ivrETime'));
+  const businessNumber = pick(payload, 'businessNumber', 'businessNum', 'business_number', 'did');
   const dtmf = pick(payload, 'keyInput', 'dtmf');
   const disposition = pick(payload, 'disposition', 'callDisposition');
 

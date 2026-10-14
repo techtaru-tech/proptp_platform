@@ -349,8 +349,9 @@ async function handleCallReport(req: Request, res: Response) {
     return res.sendStatus(403);
   }
   // Acknowledged before the work, and never with an error: a provider that sees a failure here
-  // retries or disables the callback, and the payload is kept either way.
-  res.json({ status: 'ok' });
+  // retries or disables the callback, and the payload is kept either way. DeepCall only accepts
+  // a webhook that answers with exactly this string, both when it verifies the URL and on every push.
+  res.type('text/plain').send('GODBLESSYOU');
   try {
     const gluedParams = glued ? Object.fromEntries(new URLSearchParams(segment.slice(settings.webhookToken.length).replace(/^[?&]/, ''))) : {};
     const payload = {
@@ -359,7 +360,7 @@ async function handleCallReport(req: Request, res: Response) {
       ...((req.body ?? {}) as Record<string, unknown>),
     };
     // DeepCall pings a new webhook URL to verify it. That is not a call, and must not become one.
-    const hasCall = ['callId', 'call_id', 'unique_id', 'cNumber', 'cNumber10', 'customerNumber', 'customer', 'caller'].some(
+    const hasCall = ['callId', 'call_id', 'unique_id', 'cNumber', 'cNumber10', 'customerNumber', 'customer', 'caller', 'nH'].some(
       (key) => payload[key] !== undefined && String(payload[key]).trim() !== ''
     );
     if (!hasCall) {
