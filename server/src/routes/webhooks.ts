@@ -353,11 +353,20 @@ async function handleCallReport(req: Request, res: Response) {
   res.json({ status: 'ok' });
   try {
     const gluedParams = glued ? Object.fromEntries(new URLSearchParams(segment.slice(settings.webhookToken.length).replace(/^[?&]/, ''))) : {};
-    const result = await recordCallLog({
+    const payload = {
       ...gluedParams,
       ...(req.query as Record<string, unknown>),
       ...((req.body ?? {}) as Record<string, unknown>),
-    });
+    };
+    // DeepCall pings a new webhook URL to verify it. That is not a call, and must not become one.
+    const hasCall = ['callId', 'call_id', 'unique_id', 'cNumber', 'cNumber10', 'customerNumber', 'customer', 'caller'].some(
+      (key) => payload[key] !== undefined && String(payload[key]).trim() !== ''
+    );
+    if (!hasCall) {
+      await logTelephonyEvent({ kind: 'call_log', outcome: 'ok', request, response: { status: 'ok', ignored: 'No call in this request (a verification ping).' } });
+      return;
+    }
+    const result = await recordCallLog(payload);
     await logTelephonyEvent({
       kind: 'call_log',
       outcome: 'ok',
