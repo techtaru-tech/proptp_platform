@@ -25,7 +25,7 @@ export async function previewAudience(input: AudienceInput): Promise<BroadcastAu
 }
 
 export async function sendBroadcast(
-  input: AudienceInput & { templateName: string; language: string; params: string[] }
+  input: AudienceInput & { templateName: string; language: string; params: string[]; headerMediaUrl?: string }
 ): Promise<WhatsAppSendResult> {
   return api.post('/whatsapp-templates/send', input);
 }

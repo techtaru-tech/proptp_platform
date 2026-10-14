@@ -211,6 +211,9 @@ webhookRouter.post('/whatsapp/:accountId', async (req, res) => {
   const account = await prisma.whatsAppAccount.findUnique({ where: { id: String(req.params.accountId) } });
   if (!account || !account.active) return res.sendStatus(403);
 
+  // The Partners API does not sign its calls, so its webhook address carries the account's secret token.
+  if (account.provider === 'pinbot' && req.query.token !== account.verifyToken) return res.sendStatus(403);
+
   // Signature is checked before the ack: an unsigned body must not reach the database.
   if (account.appSecret) {
     const rawBody: Buffer = (req as any).rawBody;

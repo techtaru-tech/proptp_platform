@@ -178,6 +178,16 @@ whatsappTemplatesRouter.post('/send', async (req: AuthedRequest, res, next) => {
       });
     }
 
+    // A file header has no default: the link is given with every send, and WhatsApp fetches it.
+    let headerMedia: { format: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; link: string } | undefined;
+    if (template.headerFormat) {
+      const link = String(req.body?.headerMediaUrl ?? '').trim();
+      if (!/^https:\/\/\S+$/i.test(link)) {
+        return res.status(400).json({ error: `"${templateName}" has a ${template.headerFormat.toLowerCase()} header — give a public https link to it.` });
+      }
+      headerMedia = { format: template.headerFormat, link };
+    }
+
     const recipients = await resolveAudience(req.body ?? {});
     if (recipients.length === 0) return res.status(400).json({ error: 'No valid phone numbers matched.' });
     if (recipients.length > MAX_RECIPIENTS) {
@@ -194,7 +204,7 @@ whatsappTemplatesRouter.post('/send', async (req: AuthedRequest, res, next) => {
         await sendTemplateToNumber(
           account,
           recipient.phone,
-          { name: template.name, language: template.language, params: resolved, body: template.body },
+          { name: template.name, language: template.language, params: resolved, body: template.body, headerMedia },
           req.auth?.sub ?? null
         );
       } catch (err) {

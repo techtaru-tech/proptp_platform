@@ -122,6 +122,7 @@ function BroadcastForm({ source, onSent }: { source: WhatsAppBroadcastSource; on
 
   const [templateName, setTemplateName] = useState('');
   const [params, setParams] = useState<string[]>([]);
+  const [headerMediaUrl, setHeaderMediaUrl] = useState('');
   const [numbers, setNumbers] = useState('');
   const [useLeadFilter, setUseLeadFilter] = useState(false);
   const [leadFilter, setLeadFilter] = useState<BroadcastLeadFilter>({});
@@ -175,7 +176,7 @@ function BroadcastForm({ source, onSent }: { source: WhatsAppBroadcastSource; on
     setConfirmOpen(false);
     setSending(true);
     try {
-      const result = await sendBroadcast({ ...audienceInput, templateName: template.name, language: template.language, params });
+      const result = await sendBroadcast({ ...audienceInput, templateName: template.name, language: template.language, params, headerMediaUrl: template.headerFormat ? headerMediaUrl.trim() : undefined });
       toast({
         title: `${result.sent} sent${result.failed > 0 ? `, ${result.failed} failed` : ''}`,
         description: result.failed > 0 ? result.results.find((r) => !r.ok)?.message : undefined,
@@ -194,6 +195,9 @@ function BroadcastForm({ source, onSent }: { source: WhatsAppBroadcastSource; on
     e.preventDefault();
     if (!template) return toast({ title: 'Pick a template first', variant: 'error' });
     if (template.unsupported) return toast({ title: 'This template cannot be sent from here', description: template.unsupported, variant: 'error' });
+    if (template.headerFormat && !/^https:\/\/\S+$/i.test(headerMediaUrl.trim())) {
+      return toast({ title: `Add the ${template.headerFormat.toLowerCase()} link`, description: 'This template has a file header — paste a public https link to it.', variant: 'error' });
+    }
     if (!audience || audience.count === 0) return toast({ title: 'Nobody matches yet', description: 'Paste some numbers or switch on the lead filter.', variant: 'error' });
     if (audience.overLimit) return toast({ title: `That reaches ${audience.count} people`, description: `Narrow it to ${audience.limit} or fewer.`, variant: 'error' });
     setConfirmOpen(true);
@@ -227,6 +231,16 @@ function BroadcastForm({ source, onSent }: { source: WhatsAppBroadcastSource; on
               <AlertTriangle size={15} className="mt-0.5 shrink-0" />
               {template.unsupported}
             </p>
+          )}
+
+          {template?.headerFormat && (
+            <Input
+              label={`${template.headerFormat.charAt(0)}${template.headerFormat.slice(1).toLowerCase()} link`}
+              value={headerMediaUrl}
+              onChange={(e) => setHeaderMediaUrl(e.target.value)}
+              placeholder="https://…"
+              hint="Public https link. WhatsApp downloads the file from here when the message is sent."
+            />
           )}
 
           {template && template.variableCount > 0 && (

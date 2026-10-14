@@ -41,6 +41,7 @@ function serializeAccount(account: AccountRow, unread = 0) {
     displayPhone: account.displayPhone,
     phoneNumberId: account.phoneNumberId,
     wabaId: account.wabaId ?? undefined,
+    provider: account.provider,
     active: account.active,
     status: account.status,
     lastError: account.lastError ?? undefined,
@@ -48,7 +49,7 @@ function serializeAccount(account: AccountRow, unread = 0) {
     hasAccessToken: !!account.accessToken,
     hasAppSecret: !!account.appSecret,
     verifyToken: account.verifyToken,
-    webhookUrl: `${PUBLIC_BASE_URL}/api/webhook/whatsapp/${account.id}`,
+    webhookUrl: `${PUBLIC_BASE_URL}/api/webhook/whatsapp/${account.id}${account.provider === 'pinbot' ? `?token=${account.verifyToken}` : ''}`,
     conversationCount: account._count.conversations,
     unreadCount: unread,
     lastMessageAt: account.lastMessageAt?.toISOString(),
@@ -91,6 +92,7 @@ whatsappRouter.post('/accounts', async (req: AuthedRequest, res, next) => {
         displayPhone,
         phoneNumberId,
         wabaId: body.wabaId ? String(body.wabaId).trim() : null,
+        provider: body.provider === 'pinbot' ? 'pinbot' : 'meta',
         accessToken: body.accessToken ? encrypt(String(body.accessToken).trim()) : null,
         appSecret: body.appSecret ? encrypt(String(body.appSecret).trim()) : null,
         // Generated here rather than typed: it only has to match what we hand to Meta.
@@ -115,6 +117,7 @@ whatsappRouter.patch('/accounts/:id', async (req: AuthedRequest, res, next) => {
     if (body.displayPhone !== undefined) data.displayPhone = normalizeWaNumber(body.displayPhone);
     if (body.phoneNumberId !== undefined) data.phoneNumberId = String(body.phoneNumberId).trim();
     if (body.wabaId !== undefined) data.wabaId = String(body.wabaId).trim() || null;
+    if (body.provider !== undefined) data.provider = body.provider === 'pinbot' ? 'pinbot' : 'meta';
     if (body.active !== undefined) data.active = !!body.active;
     if (body.createLeadOnInbound !== undefined) data.createLeadOnInbound = !!body.createLeadOnInbound;
     // Blank means "keep the stored one" — the UI never receives it to send back.

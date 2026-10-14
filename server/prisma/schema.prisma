@@ -680,6 +680,11 @@ model WhatsAppAccount {
   phoneNumberId String  @unique
   wabaId        String?
 
+  /// meta = Meta's own Cloud API (Bearer token). pinbot = the WABA Partners API (apikey header),
+  /// which takes the same message and template bodies at a different address.
+  provider String @default("meta")
+
+  /// The Meta access token, or the Partners API key when provider is pinbot.
   accessToken String?
   /// App secret for X-Hub-Signature-256 on the inbound webhook.
   appSecret   String?

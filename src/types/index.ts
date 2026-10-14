@@ -1637,6 +1637,8 @@ export interface WhatsAppAccount {
   displayPhone: string;
   phoneNumberId: string;
   wabaId?: string;
+  /** meta = Meta Cloud API; pinbot = WABA Partners API. */
+  provider: 'meta' | 'pinbot';
   active: boolean;
   /** connected | disconnected | error */
   status: string;
@@ -1688,6 +1690,7 @@ export interface WhatsAppAccountInput {
   displayPhone: string;
   phoneNumberId: string;
   wabaId?: string;
+  provider?: 'meta' | 'pinbot';
   accessToken?: string;
   appSecret?: string;
   active?: boolean;
@@ -1752,7 +1755,9 @@ export interface ApprovedWhatsAppTemplate {
   /** The approved BODY text, with its {{1}} placeholders still in it. */
   body: string;
   variableCount: number;
-  /** Set when the template needs something this screen cannot supply, such as a header image. */
+  /** A file header (image, video or document): a public https link to it is given with every send. */
+  headerFormat?: 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+  /** Set when the template needs something this screen cannot supply, such as a header variable. */
   unsupported?: string;
 }
 

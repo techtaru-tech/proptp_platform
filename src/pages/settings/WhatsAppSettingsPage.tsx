@@ -4,6 +4,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { Card, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { Toggle } from '../../components/ui/Toggle';
 import { Modal } from '../../components/ui/Modal';
@@ -24,7 +25,7 @@ const STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> 
 };
 
 function emptyForm(): WhatsAppAccountInput {
-  return { label: '', displayPhone: '', phoneNumberId: '', wabaId: '', accessToken: '', appSecret: '' };
+  return { label: '', displayPhone: '', phoneNumberId: '', wabaId: '', provider: 'meta', accessToken: '', appSecret: '' };
 }
 
 export function WhatsAppSettingsPage() {
@@ -137,6 +138,13 @@ export function WhatsAppSettingsPage() {
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input label="Label" required value={form.label} onChange={(e) => patchForm({ label: e.target.value })} placeholder="Rosium Sales" />
+          <Select
+            label="Provider"
+            value={form.provider ?? 'meta'}
+            onChange={(e) => patchForm({ provider: e.target.value as 'meta' | 'pinbot' })}
+            options={[{ value: 'meta', label: 'Meta Cloud API' }, { value: 'pinbot', label: 'WABA Partners API (Pinbot)' }]}
+            wrapperClassName="sm:col-span-2"
+          />
           <Input
             label="Display number"
             required
@@ -154,7 +162,7 @@ export function WhatsAppSettingsPage() {
           />
           <Input label="WABA ID" value={form.wabaId ?? ''} onChange={(e) => patchForm({ wabaId: e.target.value })} hint="Optional." />
           <Input
-            label="Access token"
+            label={form.provider === 'pinbot' ? 'API key' : 'Access token'}
             type="password"
             secret
             value={form.accessToken ?? ''}
@@ -162,15 +170,17 @@ export function WhatsAppSettingsPage() {
             hint="Stored encrypted, never shown again."
             wrapperClassName="sm:col-span-2"
           />
-          <Input
-            label="App secret"
-            type="password"
-            secret
-            value={form.appSecret ?? ''}
-            onChange={(e) => patchForm({ appSecret: e.target.value })}
-            hint="Used to verify Meta's webhook signature. Strongly recommended."
-            wrapperClassName="sm:col-span-2"
-          />
+          {form.provider !== 'pinbot' && (
+            <Input
+              label="App secret"
+              type="password"
+              secret
+              value={form.appSecret ?? ''}
+              onChange={(e) => patchForm({ appSecret: e.target.value })}
+              hint="Used to verify Meta's webhook signature. Strongly recommended."
+              wrapperClassName="sm:col-span-2"
+            />
+          )}
         </div>
       </Modal>
 
@@ -236,7 +246,11 @@ function AccountCard({
       <div className="space-y-4">
         <div>
           <p className="mb-1 text-sm font-medium text-ink">Webhook URL</p>
-          <p className="mb-1.5 text-xs text-ink-faint">Meta → WhatsApp → Configuration → Callback URL. Subscribe to the "messages" field.</p>
+          <p className="mb-1.5 text-xs text-ink-faint">
+            {account.provider === 'pinbot'
+              ? 'Give this address to the Partners API provider as the webhook for this number. It already carries the secret token.'
+              : 'Meta → WhatsApp → Configuration → Callback URL. Subscribe to the "messages" field.'}
+          </p>
           <div className="flex items-center gap-2">
             <code className="flex-1 overflow-x-auto rounded-lg border border-line bg-surface-subtle px-3 py-2 text-xs text-ink-muted">
               {account.webhookUrl}
@@ -247,6 +261,7 @@ function AccountCard({
           </div>
         </div>
 
+        {account.provider !== 'pinbot' && (
         <div>
           <p className="mb-1 text-sm font-medium text-ink">Verify token</p>
           <div className="flex items-center gap-2">
@@ -258,24 +273,27 @@ function AccountCard({
             </Button>
           </div>
         </div>
+        )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
-            label="Access token"
+            label={account.provider === 'pinbot' ? 'API key' : 'Access token'}
             type="password"
             secret
             value={accessToken}
             onChange={(e) => setAccessToken(e.target.value)}
             placeholder={account.hasAccessToken ? '•••••••• stored — type to replace' : 'Paste the permanent token'}
           />
-          <Input
-            label="App secret"
-            type="password"
-            secret
-            value={appSecret}
-            onChange={(e) => setAppSecret(e.target.value)}
-            placeholder={account.hasAppSecret ? '•••••••• stored — type to replace' : 'Paste the app secret'}
-          />
+          {account.provider !== 'pinbot' && (
+            <Input
+              label="App secret"
+              type="password"
+              secret
+              value={appSecret}
+              onChange={(e) => setAppSecret(e.target.value)}
+              placeholder={account.hasAppSecret ? '•••••••• stored — type to replace' : 'Paste the app secret'}
+            />
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

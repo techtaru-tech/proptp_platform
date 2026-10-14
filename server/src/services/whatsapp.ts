@@ -13,6 +13,7 @@ import { decrypt } from './crypto';
 
 const GRAPH_VERSION = 'v21.0';
 const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
+const PINBOT_BASE = 'https://partnersv1.pinbot.ai/v3';
 const REQUEST_TIMEOUT_MS = 20_000;
 
 /** WhatsApp's customer-service window: freeform replies are only allowed inside 24h of the
@@ -63,10 +64,18 @@ function requireCredentials(account: WhatsAppAccount): string {
   return decrypt(account.accessToken);
 }
 
-async function postToGraph(account: WhatsAppAccount, payload: Record<string, unknown>): Promise<string | undefined> {
+/** The Partners API speaks Meta's message shapes; only the address and the auth header differ. */
+function apiFor(account: WhatsAppAccount): { base: string; headers: Record<string, string> } {
   const token = requireCredentials(account);
-  const { data } = await axios.post(`${GRAPH_BASE}/${account.phoneNumberId}/messages`, payload, {
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  return account.provider === 'pinbot'
+    ? { base: PINBOT_BASE, headers: { apikey: token, 'Content-Type': 'application/json' } }
+    : { base: GRAPH_BASE, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } };
+}
+
+async function postToGraph(account: WhatsAppAccount, payload: Record<string, unknown>): Promise<string | undefined> {
+  const { base, headers } = apiFor(account);
+  const { data } = await axios.post(`${base}/${account.phoneNumberId}/messages`, payload, {
+    headers,
     timeout: REQUEST_TIMEOUT_MS,
   });
   return data?.messages?.[0]?.id ? String(data.messages[0].id) : undefined;
@@ -223,7 +232,9 @@ export interface ApprovedTemplate {
   body: string;
   /** How many placeholders the body has — the send form asks for exactly this many values. */
   variableCount: number;
-  /** Meta allows variables in the header too; we do not fill them, so such templates are flagged. */
+  /** IMAGE | VIDEO | DOCUMENT when the header is a file — the sender supplies a link to it per send. */
+  headerFormat?: 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+  /** A header with its own {{1}} variable, which is not filled — such templates are flagged. */
   unsupported?: string;
 }
 
@@ -242,8 +253,9 @@ function readTemplate(raw: any): ApprovedTemplate {
   const text = String(body?.text ?? '');
   const placeholders = text.match(/\{\{\s*\d+\s*\}\}/g) ?? [];
 
-  const headerHasVariables = /\{\{\s*\d+\s*\}\}/.test(String(header?.text ?? '')) ||
-    ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(String(header?.format ?? ''));
+  const headerHasVariables = /\{\{\s*\d+\s*\}\}/.test(String(header?.text ?? ''));
+  const format = String(header?.format ?? '').toUpperCase();
+  const headerFormat = ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(format) ? (format as 'IMAGE' | 'VIDEO' | 'DOCUMENT') : undefined;
 
   return {
     name: String(raw?.name ?? ''),
@@ -251,17 +263,19 @@ function readTemplate(raw: any): ApprovedTemplate {
     category: String(raw?.category ?? ''),
     body: text,
     variableCount: placeholders.length,
-    unsupported: headerHasVariables ? 'This template has a header that needs its own content, which this screen cannot fill yet.' : undefined,
+    headerFormat,
+    unsupported: headerHasVariables ? 'This template has a header with its own variable, which this screen cannot fill yet.' : undefined,
   };
 }
 
 /** Only APPROVED templates — the others cannot be sent and would only be false choices. */
 export async function listApprovedTemplates(account: WhatsAppAccount): Promise<ApprovedTemplate[]> {
-  const token = requireCredentials(account);
+  const { base, headers } = apiFor(account);
   if (!account.wabaId) throw new WhatsAppError('This number has no WhatsApp Business Account ID saved.');
 
-  const { data } = await axios.get(`${GRAPH_BASE}/${account.wabaId}/message_templates`, {
-    params: { access_token: token, fields: 'name,status,language,category,components', limit: 200 },
+  const { data } = await axios.get(`${base}/${account.wabaId}/message_templates`, {
+    headers,
+    params: { fields: 'name,status,language,category,components', limit: 200 },
     timeout: REQUEST_TIMEOUT_MS,
   });
 
@@ -281,14 +295,20 @@ export async function listApprovedTemplates(account: WhatsAppAccount): Promise<A
 export async function sendTemplateToNumber(
   account: WhatsAppAccount,
   contactPhone: string,
-  template: { name: string; language: string; params: string[]; body?: string },
+  template: { name: string; language: string; params: string[]; body?: string; headerMedia?: { format: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; link: string } },
   sentByUserId?: string | null
 ): Promise<SendResult & { conversationId: string; leadId: string | null }> {
   const conversation = await ensureConversation(account, contactPhone);
 
-  const components = template.params.length > 0
-    ? [{ type: 'body', parameters: template.params.map((text) => ({ type: 'text', text })) }]
-    : undefined;
+  const parts: Record<string, unknown>[] = [];
+  if (template.headerMedia) {
+    const kind = template.headerMedia.format.toLowerCase();
+    parts.push({ type: 'header', parameters: [{ type: kind, [kind]: { link: template.headerMedia.link } }] });
+  }
+  if (template.params.length > 0) {
+    parts.push({ type: 'body', parameters: template.params.map((text) => ({ type: 'text', text })) });
+  }
+  const components = parts.length > 0 ? parts : undefined;
 
   const result = await deliver(account, conversation, {
     type: 'template',
@@ -330,7 +350,7 @@ async function deliver(
   } catch (err) {
     status = 'failed';
     error = axios.isAxiosError(err)
-      ? String(err.response?.data?.error?.message ?? err.message)
+      ? String(err.response?.data?.error?.message ?? err.response?.data?.message ?? err.message)
       : err instanceof Error
         ? err.message
         : 'Unknown error';
