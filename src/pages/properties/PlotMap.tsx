@@ -1,7 +1,7 @@
 import { moneyFactor, moneyUnit } from '../../utils/format';
 import { useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Copy, ExternalLink, Eye, Globe, Lock, Map as MapIcon, Pencil, RotateCw, Share2, Timer, Upload, X } from 'lucide-react';
+import { Copy, ExternalLink, Eye, Globe, Lock, Map as MapIcon, Pencil, RotateCw, Share2, Sparkles, Timer, Upload, X } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -29,11 +29,16 @@ import {
   PLOT_STATUS_ORDER,
   PLOT_UNLINKED_COLOR,
   getPlotMap,
+  readPlotMapLayout,
   setPlotMapSharing,
   setPlotMapStatus,
   uploadPlotMapLayout,
 } from '../../services/plotMapService';
 import { createPlotHold, getActiveHoldForUnit, releasePlotHold } from '../../services/plotHoldService';
+
+/** Original-layout view: a plot that is taken is yellow, as on a printed plan; the rest stay as drawn. */
+const LAYOUT_TAKEN_COLOR = { fill: '#FACC15', stroke: '#A16207', text: '#422006', halo: '#FEF9C3' };
+const LAYOUT_OPEN_COLOR = { fill: 'transparent', stroke: '#6B7280', text: '#1F2937', halo: '#FFFFFF' };
 
 interface Filters {
   statuses: PlotMapStatus[];
@@ -104,6 +109,8 @@ export function PlotMap() {
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [showLabels, setShowLabels] = useState(true);
+  /** status = every plot in its status colour; layout = the drawing as uploaded, booked plots filled yellow. */
+  const [viewStyle, setViewStyle] = useState<'status' | 'layout'>('status');
   const fileRef = useRef<HTMLInputElement>(null);
 
   const bundle = useAsync(() => getPlotMap(projectId), [projectId, reloadKey]);
@@ -119,7 +126,13 @@ export function PlotMap() {
   const viewPlots: ViewPlot[] = useMemo(
     () =>
       plots.map((plot) => {
-        const color = plot.status ? PLOT_STATUS_COLOR[plot.status] : PLOT_UNLINKED_COLOR;
+        const taken = plot.status === 'booked' || plot.status === 'soldOut';
+        // The original-layout view leaves the drawing as printed and only fills what is taken.
+        const color = viewStyle === 'layout'
+          ? taken
+            ? LAYOUT_TAKEN_COLOR
+            : LAYOUT_OPEN_COLOR
+          : plot.status ? PLOT_STATUS_COLOR[plot.status] : PLOT_UNLINKED_COLOR;
         const status = plot.status ? PLOT_STATUS_LABEL[plot.status] : 'Not linked to a plot';
         return {
           id: plot.shapeId,
@@ -131,7 +144,7 @@ export function PlotMap() {
           description: `${plot.label} — ${status}${plot.area ? `, ${plot.area}` : ''}`,
         };
       }),
-    [plots, filters, filtering]
+    [plots, filters, filtering, viewStyle]
   );
 
   const matchCount = filtering ? plots.filter((p) => matches(p, filters)).length : plots.length;
@@ -150,14 +163,29 @@ export function PlotMap() {
     }
   };
 
-  const uploadLayout = async (file: File | undefined, replacing: boolean) => {
-    if (!file) return;
-    const ok = await run(() => uploadPlotMapLayout(projectId, file), replacing ? 'Could not replace the layout' : 'Could not upload the layout');
+  /** The AI reads the stored layout: every plot, its number, size and outline, matched to the project's plots. */
+  const readWithAi = async () => {
+    let summary = '';
+    const ok = await run(async () => {
+      const r = await readPlotMapLayout(projectId);
+      summary = `${r.read} plots read, ${r.linked} linked${r.created ? `, ${r.created} created` : ''}${r.unmatched.length ? `. Not matched: ${r.unmatched.join(', ')}` : ''}.`;
+    }, 'Could not read the layout');
     if (ok) {
-      toast({ title: replacing ? 'Layout replaced' : 'Layout uploaded', description: 'Outline the plots, then publish.', variant: 'success' });
+      toast({ title: 'Layout read', description: `${summary} Check the outlines, then publish.`, variant: 'success' });
       setMode('edit');
       reload();
     }
+    return ok;
+  };
+
+  const uploadLayout = async (file: File | undefined, replacing: boolean) => {
+    if (!file) return;
+    const ok = await run(() => uploadPlotMapLayout(projectId, file), replacing ? 'Could not replace the layout' : 'Could not upload the layout');
+    if (!ok) return;
+    toast({ title: replacing ? 'Layout replaced' : 'Layout uploaded', description: 'Reading the plots from it…', variant: 'success' });
+    reload();
+    // A fresh upload is read straight away; the person only has to check what it found.
+    if (!(await readWithAi())) setMode('edit');
   };
 
   const togglePublished = async () => {
@@ -191,14 +219,14 @@ export function PlotMap() {
           <EmptyState
             icon={MapIcon}
             title="Upload this project's layout"
-            description="Add the layout as an image, outline each plot on it, and the same drawing becomes a live inventory board."
+            description="Add the layout as an image or a PDF. The plots are read off it automatically — number, size and outline — and the same drawing becomes a live inventory board."
             action={
               <>
-                <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => { void uploadLayout(e.target.files?.[0], false); e.target.value = ''; }} />
+                <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,application/pdf" className="hidden" onChange={(e) => { void uploadLayout(e.target.files?.[0], false); e.target.value = ''; }} />
                 <Button leftIcon={<Upload size={15} />} onClick={() => fileRef.current?.click()} isLoading={isBusy}>
-                  Upload layout image
+                  Upload layout (image or PDF)
                 </Button>
-                <p className="text-xs text-ink-faint">PNG or JPG. {data.unmappedUnits.length} plots are waiting to be placed on it.</p>
+                <p className="text-xs text-ink-faint">PNG, JPG or PDF. {data.unmappedUnits.length} plots are waiting to be placed on it.</p>
               </>
             }
           />
@@ -257,6 +285,29 @@ export function PlotMap() {
               </button>
             ))}
           </div>
+          {mode === 'board' && (
+            <div className="flex overflow-hidden rounded-lg border border-line bg-white" role="group" aria-label="Map look">
+              {(
+                [
+                  ['status', 'Status colours'],
+                  ['layout', 'Original layout'],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={viewStyle === id}
+                  onClick={() => setViewStyle(id)}
+                  className={cn('px-3 py-1.5 text-sm font-medium focus-ring', viewStyle === id ? 'bg-brand-600 text-white' : 'text-ink-muted hover:bg-surface-subtle')}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+          <Button variant="outline" leftIcon={<Sparkles size={14} />} onClick={() => void readWithAi()} isLoading={isBusy}>
+            Read layout with AI
+          </Button>
           <Button variant="outline" leftIcon={<Share2 size={14} />} onClick={() => setIsShareOpen(true)}>
             Share
           </Button>
@@ -392,7 +443,7 @@ export function PlotMap() {
           />
         </Card>
       ) : (
-        <PlotMapView imageUrl={map.imageUrl} width={map.imageWidth} height={map.imageHeight} plots={viewPlots} selectedId={selectedId} onSelect={setSelectedId} showLabels={showLabels} />
+        <PlotMapView imageUrl={map.imageUrl} width={map.imageWidth} height={map.imageHeight} plots={viewPlots} selectedId={selectedId} onSelect={setSelectedId} showLabels={viewStyle === 'layout' ? false : showLabels} />
       )}
 
       <PlotDrawer

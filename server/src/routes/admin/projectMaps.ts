@@ -10,6 +10,7 @@ import {
   toPublicPlot,
   type NormalisedPoint,
 } from '../../services/plotMap';
+import { PlotMapReadError, readAndApply } from '../../services/plotMapReader';
 
 /**
  * Plot map — /api/project-maps.
@@ -198,6 +199,34 @@ adminProjectMapsRouter.put('/:projectId/shapes', async (req: AuthedRequest, res,
 
     res.json({ saved: cleaned.length, linked: seenUnits.size });
   } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Read the uploaded layout with the AI: finds every plot, matches it to the project's plot by
+ * number, and saves the outlines as unconfirmed shapes for review. With createMissing, a plot the
+ * project does not have yet is created from what the layout prints (number, area, sides).
+ */
+adminProjectMapsRouter.post('/:projectId/read', async (req: AuthedRequest, res, next) => {
+  try {
+    const projectId = String(req.params.projectId);
+    const existing = await prisma.propertyUnit.count({ where: { projectId } });
+    // A project with no plots yet is being set up from this layout, so creating them is the point;
+    // one that already has its plots is only matched, unless the caller says otherwise.
+    const createMissing = req.body?.createMissing === undefined ? existing === 0 : !!req.body.createMissing;
+    const result = await readAndApply(projectId, { createMissing });
+
+    await writeAudit(req, {
+      module: 'Properties',
+      action: 'Read plot map layout with AI',
+      recordId: projectId,
+      recordLabel: 'Plot map',
+      description: `${result.read} plot(s) read, ${result.linked} linked, ${result.created} created.`,
+    });
+    res.json(result);
+  } catch (err) {
+    if (err instanceof PlotMapReadError) return res.status(err.status).json({ error: err.message });
     next(err);
   }
 });

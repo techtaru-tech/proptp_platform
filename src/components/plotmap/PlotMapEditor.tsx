@@ -562,7 +562,18 @@ export function PlotMapEditor({ projectId, imageUrl, width, height, initialShape
               </div>
             </div>
           )}
-          {needsReview > 0 && <p className="mt-2 text-xs text-ink-muted">{needsReview} outline{needsReview > 1 ? 's' : ''} still need review.</p>}
+          {needsReview > 0 && (
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <p className="text-xs text-ink-muted">{needsReview} outline{needsReview > 1 ? 's' : ''} still need review.</p>
+              <button
+                type="button"
+                onClick={() => { pushHistory(); setShapes((prev) => prev.map((s) => ({ ...s, confirmed: true }))); }}
+                className="shrink-0 text-xs font-medium text-brand-700 hover:underline focus-ring"
+              >
+                Confirm all
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">
