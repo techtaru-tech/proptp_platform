@@ -443,7 +443,7 @@ export function PlotMap() {
           />
         </Card>
       ) : (
-        <PlotMapView imageUrl={map.imageUrl} width={map.imageWidth} height={map.imageHeight} plots={viewPlots} selectedId={selectedId} onSelect={setSelectedId} showLabels={viewStyle === 'layout' ? false : showLabels} />
+        <PlotMapView imageUrl={map.imageUrl} width={map.imageWidth} height={map.imageHeight} plots={viewPlots} selectedId={selectedId} onSelect={setSelectedId} showLabels={viewStyle === 'layout' ? false : showLabels} evenFill={viewStyle === 'status'} />
       )}
 
       <PlotDrawer

@@ -29,6 +29,12 @@ interface PlotMapViewProps {
   onSelect?: (id: string | null) => void;
   /** Off when the layout already prints its own plot numbers and the overlay would double them. */
   showLabels?: boolean;
+  /**
+   * Washes each plot white before painting its status colour, so a layout that already colours
+   * its plots (yellow for sold, say) does not tint the status — every available plot reads the
+   * same green. The drawing's own print fades under it; the original-layout view keeps it.
+   */
+  evenFill?: boolean;
   className?: string;
 }
 
@@ -42,7 +48,7 @@ const MAX_ZOOM = 4;
  * move a shape. Zoom is just the image getting wider inside a scrollable frame — a layout with
  * hundreds of plots needs it, and it keeps every pointer coordinate in the editor honest.
  */
-export function PlotMapView({ imageUrl, width, height, plots, selectedId, onSelect, showLabels = true, className }: PlotMapViewProps) {
+export function PlotMapView({ imageUrl, width, height, plots, selectedId, onSelect, showLabels = true, evenFill = false, className }: PlotMapViewProps) {
   const [zoom, setZoom] = useState(1);
   const frameRef = useRef<HTMLDivElement>(null);
 
@@ -88,10 +94,11 @@ export function PlotMapView({ imageUrl, width, height, plots, selectedId, onSele
                 opacity={plot.dimmed ? 0.18 : 1}
               >
                 <title>{plot.description ?? plot.label}</title>
+                {evenFill && <polygon points={toSvgPoints(plot.points, width, height)} fill="#ffffff" fillOpacity={0.85} />}
                 <polygon
                   points={toSvgPoints(plot.points, width, height)}
                   fill={plot.fill}
-                  fillOpacity={0.5}
+                  fillOpacity={evenFill ? 0.7 : 0.5}
                   stroke={plot.stroke}
                   strokeWidth={selected ? 3.5 : 1.5}
                   vectorEffect="non-scaling-stroke"
