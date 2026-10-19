@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { fileUrl } from '../../services/apiClient';
@@ -30,12 +30,65 @@ interface PlotMapViewProps {
   /** Off when the layout already prints its own plot numbers and the overlay would double them. */
   showLabels?: boolean;
   /**
-   * Washes each plot white before painting its status colour, so a layout that already colours
-   * its plots (yellow for sold, say) does not tint the status — every available plot reads the
-   * same green. The drawing's own print fades under it; the original-layout view keeps it.
+   * Takes the layout's own yellow fill out, so a drawing that already colours its plots (yellow for
+   * sold, say) does not tint the status — every available plot reads the same green — while the
+   * printed sizes stay readable. The original-layout view keeps the drawing as uploaded.
    */
   evenFill?: boolean;
   className?: string;
+}
+
+/**
+ * The layout with its own yellow fill taken out. A drawing that already paints sold plots yellow
+ * would tint a status colour laid over it; here every yellow pixel becomes neutral grey (its
+ * brightness kept) so the printed sizes and lines stay readable and a status colour reads the same
+ * on every plot. Returns the original address until the new one is ready, or if the browser will not
+ * let the image be read.
+ */
+function useNeutralLayout(src: string, enabled: boolean): string {
+  const [neutral, setNeutral] = useState<{ src: string; url: string } | null>(null);
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0);
+        const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const px = data.data;
+        for (let i = 0; i < px.length; i += 4) {
+          const r = px[i], g = px[i + 1], b = px[i + 2];
+          const lum = Math.min(r, g);
+          // Yellow: red and green high together, blue well under them.
+          if (lum > 90 && b < lum - 40 && Math.abs(r - g) < 70) {
+            px[i] = lum;
+            px[i + 1] = lum;
+            px[i + 2] = lum;
+          }
+        }
+        ctx.putImageData(data, 0, 0);
+        canvas.toBlob((blob) => {
+          if (!blob || cancelled) return;
+          setNeutral({ src, url: URL.createObjectURL(blob) });
+        }, 'image/png');
+      } catch {
+        /* the image cannot be read here; the plain layout stays */
+      }
+    };
+    img.src = src;
+    return () => {
+      cancelled = true;
+    };
+  }, [src, enabled]);
+
+  useEffect(() => () => { if (neutral) URL.revokeObjectURL(neutral.url); }, [neutral]);
+  return enabled && neutral?.src === src ? neutral.url : src;
 }
 
 const MIN_ZOOM = 1;
@@ -51,6 +104,7 @@ const MAX_ZOOM = 4;
 export function PlotMapView({ imageUrl, width, height, plots, selectedId, onSelect, showLabels = true, evenFill = false, className }: PlotMapViewProps) {
   const [zoom, setZoom] = useState(1);
   const frameRef = useRef<HTMLDivElement>(null);
+  const baseSrc = useNeutralLayout(fileUrl(imageUrl) ?? imageUrl, evenFill);
 
   const step = (delta: number) => setZoom((z) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number((z + delta).toFixed(2)))));
 
@@ -72,7 +126,7 @@ export function PlotMapView({ imageUrl, width, height, plots, selectedId, onSele
           aria-label="Plot map"
           onClick={() => onSelect?.(null)}
         >
-          <image href={fileUrl(imageUrl)} width={width} height={height} />
+          <image href={baseSrc} width={width} height={height} />
 
           {plots.map((plot) => {
             const selected = plot.id === selectedId;
@@ -94,11 +148,10 @@ export function PlotMapView({ imageUrl, width, height, plots, selectedId, onSele
                 opacity={plot.dimmed ? 0.18 : 1}
               >
                 <title>{plot.description ?? plot.label}</title>
-                {evenFill && <polygon points={toSvgPoints(plot.points, width, height)} fill="#ffffff" fillOpacity={0.85} />}
                 <polygon
                   points={toSvgPoints(plot.points, width, height)}
                   fill={plot.fill}
-                  fillOpacity={evenFill ? 0.7 : 0.5}
+                  fillOpacity={0.5}
                   stroke={plot.stroke}
                   strokeWidth={selected ? 3.5 : 1.5}
                   vectorEffect="non-scaling-stroke"
