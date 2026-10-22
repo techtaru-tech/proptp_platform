@@ -6,7 +6,7 @@ import {
   Wallet,
   Users,
   Network,
-  Fingerprint,
+  UserCog,
   Banknote,
   LifeBuoy,
   Bell,
@@ -32,6 +32,8 @@ export interface NavChild {
   to: string;
   /** Hidden from people who only ever see their own work — there is no team for them to look at. */
   teamOnly?: boolean;
+  /** Set when the page belongs to a different permission than its section's (e.g. Payroll under HRMS). */
+  module?: ModuleKey;
 }
 
 /** Matches the module keys the server enforces — see server/src/services/permissions.ts. */
@@ -226,25 +228,27 @@ export const NAV_ITEMS: NavItem[] = [
     module: 'partners',
     children: [
       { label: 'Channel partners', to: '/channel-partners' },
-      { label: 'Employees', to: '/users/employees' },
       { label: 'Team Leaders', to: '/users/team-leaders' },
       { label: 'Leaders', to: '/users/leaders' },
     ],
   },
   { label: 'Teams / Referrals', to: '/teams', icon: Network, module: 'teams' },
   {
-    label: 'Attendance',
+    label: 'HRMS',
     to: '/attendance/today',
-    icon: Fingerprint,
+    icon: UserCog,
     module: 'attendance',
     children: [
-      { label: 'Today', to: '/attendance/today' },
-      { label: 'History', to: '/attendance/history' },
+      { label: 'Attendance Today', to: '/attendance/today' },
+      { label: 'Attendance History', to: '/attendance/history' },
       { label: 'Corrections', to: '/attendance/corrections' },
       { label: 'Leave Requests', to: '/attendance/leave' },
       { label: 'Leave Types', to: '/attendance/leave-types' },
       { label: 'Holidays', to: '/attendance/holidays' },
-      { label: 'Reports', to: '/attendance/reports' },
+      { label: 'Payroll', to: '/payouts/payroll', module: 'payouts' },
+      { label: 'Employees', to: '/users/employees', module: 'partners' },
+      { label: 'Attendance Policy', to: '/settings/attendance', module: 'settings' },
+      { label: 'Attendance Reports', to: '/attendance/reports' },
     ],
   },
   {
@@ -254,7 +258,6 @@ export const NAV_ITEMS: NavItem[] = [
     module: 'payouts',
     children: [
       { label: 'Partner Payouts', to: '/payouts' },
-      { label: 'Employee Payroll', to: '/payouts/payroll' },
     ],
   },
   { label: 'Incentive Requests', to: '/incentive-requests', icon: Gift, module: 'incentives' },
@@ -310,4 +313,30 @@ export const NAV_ITEMS: NavItem[] = [
       { label: 'Audit Log', to: '/settings/audit-log' },
     ],
   },
+];
+
+export interface NavSection {
+  label: string;
+  icon: LucideIcon;
+  /** Labels of the NAV_ITEMS that belong to this section, in display order. */
+  items: string[];
+}
+
+/**
+ * The sidebar's top level. Clicking a section opens everything inside it; a section holding a
+ * single item (CRM, HRMS) lists that item's pages directly instead of a one-entry wrapper.
+ * Every NAV_ITEMS label should appear in exactly one section.
+ */
+export const NAV_SECTIONS: NavSection[] = [
+  { label: 'Dashboard', icon: LayoutDashboard, items: ['Dashboard'] },
+  { label: 'CRM', icon: Target, items: ['CRM'] },
+  { label: 'HRMS', icon: UserCog, items: ['HRMS'] },
+  { label: 'Tasks', icon: ListChecks, items: ['Tasks'] },
+  { label: 'Real Estate', icon: Building2, items: ['Projects', 'Properties', 'Bookings', 'Investments / Deposits', 'Site Cameras'] },
+  { label: 'Finance', icon: Wallet, items: ['Payments / Transactions', 'Payouts / Earnings', 'Incentive Requests'] },
+  { label: 'Construction & Legal', icon: HardHat, items: ['Construction', 'Vendors & Material', 'Legal & Registry'] },
+  { label: 'People & Partners', icon: Users, items: ['Partners / Users', 'Teams / Referrals', 'Partner Portal', 'My Work'] },
+  { label: 'Support & Comms', icon: LifeBuoy, items: ['Support Tickets', 'Notifications', 'Assistant'] },
+  { label: 'Reports', icon: BarChart3, items: ['Reports / Exports'] },
+  { label: 'Settings', icon: Settings, items: ['Operations Rules', 'Settings'] },
 ];

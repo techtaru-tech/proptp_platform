@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { NAV_ITEMS, type ModuleKey, type NavItem } from './navConfig';
+import { NAV_ITEMS, type ModuleKey, type NavChild, type NavItem } from './navConfig';
 
 /**
  * What the signed-in panel user may open. The server enforces the same list (see
@@ -24,9 +24,12 @@ export function usePermissions() {
     // "My Work" is a vendor's own view, so it is in nobody's menu but a vendor's — a full-access
     // administrator can open every module, but has no vendor work of their own to see there.
     const isVendor = (session?.accountRole as string | undefined) === 'vendor';
-    const navItems: NavItem[] = NAV_ITEMS.filter((item) => (item.module === 'vendor_portal' ? isVendor : can(item.module))).map((item) =>
-      item.children ? { ...item, children: item.children.filter((c) => !c.teamOnly || hasTeam) } : item
-    );
+    // A section can hold pages from other modules (HRMS lists Payroll), so each child is checked
+    // against its own module and the section shows if anything inside it is open to this person.
+    const childAllowed = (item: NavItem, c: NavChild) => can(c.module ?? item.module) && (!c.teamOnly || hasTeam);
+    const navItems: NavItem[] = NAV_ITEMS.filter((item) =>
+      item.module === 'vendor_portal' ? isVendor : can(item.module) || !!item.children?.some((c) => c.module && can(c.module))
+    ).map((item) => (item.children ? { ...item, children: item.children.filter((c) => childAllowed(item, c)) } : item));
 
     return {
       isFullAccess,

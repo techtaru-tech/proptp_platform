@@ -1,16 +1,39 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { ChevronDown, ChevronsLeft, ChevronsRight, X } from 'lucide-react';
-import { NAV_ITEMS } from '../../app/navConfig';
+import { NAV_ITEMS, NAV_SECTIONS, type NavItem } from '../../app/navConfig';
 import { usePermissions } from '../../app/usePermissions';
 import { useUI } from '../../context/UIContext';
 import { cn } from '../../utils/cn';
 import techtaruLockup from '../../assets/brand/techtaru-lockup.png';
 import techtaruMark from '../../assets/brand/techtaru-mark.png';
 
+function ChildLink({ to, label }: { to: string; label: string }) {
+  return (
+    <NavLink
+      to={to}
+      end
+      className={({ isActive }) =>
+        cn(
+          'block rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors focus-ring',
+          isActive ? 'bg-brand-600 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
+        )
+      }
+    >
+      {label}
+    </NavLink>
+  );
+}
+
 function useAutoExpanded(pathname: string) {
-  const match = NAV_ITEMS.find((item) => item.children?.some((c) => pathname.startsWith(c.to)) || pathname.startsWith(item.to));
-  return match?.label;
+  // Longest matching child wins, so /payouts/payroll opens HRMS rather than Payouts.
+  let best: { label: string; len: number } | undefined;
+  for (const item of NAV_ITEMS) {
+    for (const c of item.children ?? []) {
+      if ((pathname === c.to || pathname.startsWith(`${c.to}/`)) && (!best || c.to.length > best.len)) best = { label: item.label, len: c.to.length };
+    }
+  }
+  return best?.label ?? NAV_ITEMS.find((item) => pathname.startsWith(item.to))?.label;
 }
 
 export function Sidebar() {
@@ -18,9 +41,16 @@ export function Sidebar() {
   const { navItems } = usePermissions();
   const location = useLocation();
   const autoExpanded = useAutoExpanded(location.pathname);
-  const [expanded, setExpanded] = useState<string | undefined>(autoExpanded);
-
-  const activeGroup = expanded ?? autoExpanded;
+  // Sections hold only the items this person may open, and drop out when none are left.
+  const sections = NAV_SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.map((label) => navItems.find((i) => i.label === label)).filter((i): i is NavItem => !!i),
+  })).filter((section) => section.items.length > 0);
+  const autoSection = sections.find((s) => s.items.some((i) => i.label === autoExpanded))?.label;
+  const [expandedSection, setExpandedSection] = useState<string | undefined>(undefined);
+  const [expandedItem, setExpandedItem] = useState<string>('');
+  // Follows the page until the person opens or closes a section themselves.
+  const activeSection = expandedSection ?? autoSection;
 
   const content = (
     <div className="flex h-full flex-col bg-shell-900 text-white">
@@ -53,64 +83,74 @@ export function Sidebar() {
       )}
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-2.5 pb-4 scrollbar-none">
-        {navItems.map((item) => {
-          const isActiveGroup = activeGroup === item.label;
-          const hasActiveChild = item.children?.some((c) => location.pathname.startsWith(c.to));
-          const isTopActive = !item.children && location.pathname.startsWith(item.to);
+        {sections.map((section) => {
+          const single = section.items.length === 1 ? section.items[0] : undefined;
+          const isOpen = activeSection === section.label;
+          const isCurrent = autoExpanded !== undefined && section.items.some((i) => i.label === autoExpanded);
+          const rowClass = (on: boolean) =>
+            cn(
+              'flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors focus-ring',
+              on ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white',
+              sidebarCollapsed && 'justify-center'
+            );
+
+          // A section that is just one page (Dashboard, Reports with no children) is a plain link.
+          if (single && !single.children) {
+            return (
+              <NavLink key={section.label} to={single.to} title={sidebarCollapsed ? section.label : undefined} className={rowClass(isCurrent)}>
+                <section.icon size={18} className="shrink-0" />
+                {!sidebarCollapsed && <span className="truncate">{section.label}</span>}
+              </NavLink>
+            );
+          }
 
           return (
-            <div key={item.label}>
-              {item.children ? (
-                <button
-                  type="button"
-                  onClick={() => setExpanded(isActiveGroup ? undefined : item.label)}
-                  className={cn(
-                    'flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors focus-ring',
-                    hasActiveChild || isActiveGroup ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white',
-                    sidebarCollapsed && 'justify-center'
-                  )}
-                  title={sidebarCollapsed ? item.label : undefined}
-                >
-                  <item.icon size={18} className="shrink-0" />
-                  {!sidebarCollapsed && (
-                    <>
-                      <span className="flex-1 truncate text-left">{item.label}</span>
-                      <ChevronDown size={14} className={cn('shrink-0 transition-transform', isActiveGroup && 'rotate-180')} />
-                    </>
-                  )}
-                </button>
-              ) : (
-                <NavLink
-                  to={item.to}
-                  className={cn(
-                    'flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors focus-ring',
-                    isTopActive ? 'bg-brand-600 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white',
-                    sidebarCollapsed && 'justify-center'
-                  )}
-                  title={sidebarCollapsed ? item.label : undefined}
-                >
-                  <item.icon size={18} className="shrink-0" />
-                  {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
-                </NavLink>
-              )}
+            <div key={section.label}>
+              <button
+                type="button"
+                onClick={() => setExpandedSection(isOpen ? '' : section.label)}
+                className={rowClass(isCurrent || isOpen)}
+                title={sidebarCollapsed ? section.label : undefined}
+              >
+                <section.icon size={18} className="shrink-0" />
+                {!sidebarCollapsed && (
+                  <>
+                    <span className="flex-1 truncate text-left">{section.label}</span>
+                    <ChevronDown size={14} className={cn('shrink-0 transition-transform', isOpen && 'rotate-180')} />
+                  </>
+                )}
+              </button>
 
-              {item.children && isActiveGroup && !sidebarCollapsed && (
+              {isOpen && !sidebarCollapsed && (
                 <div className="mb-1 ml-[1.65rem] mt-0.5 space-y-0.5 border-l border-white/10 pl-3">
-                  {item.children.map((child) => (
-                    <NavLink
-                      key={child.to}
-                      to={child.to}
-                      end
-                      className={({ isActive }) =>
-                        cn(
-                          'block rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors focus-ring',
-                          isActive ? 'bg-brand-600 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
+                  {single
+                    ? single.children!.map((child) => <ChildLink key={child.to} to={child.to} label={child.label} />)
+                    : section.items.map((item) =>
+                        item.children ? (
+                          <div key={item.label}>
+                            <button
+                              type="button"
+                              onClick={() => setExpandedItem(expandedItem === item.label ? '' : item.label)}
+                              className={cn(
+                                'flex w-full items-center rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors focus-ring',
+                                autoExpanded === item.label || expandedItem === item.label ? 'text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
+                              )}
+                            >
+                              <span className="flex-1 truncate text-left">{item.label}</span>
+                              <ChevronDown size={12} className={cn('shrink-0 transition-transform', (autoExpanded === item.label || expandedItem === item.label) && 'rotate-180')} />
+                            </button>
+                            {(autoExpanded === item.label || expandedItem === item.label) && (
+                              <div className="ml-2 space-y-0.5 border-l border-white/10 pl-2">
+                                {item.children.map((child) => (
+                                  <ChildLink key={child.to} to={child.to} label={child.label} />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <ChildLink key={item.to} to={item.to} label={item.label} />
                         )
-                      }
-                    >
-                      {child.label}
-                    </NavLink>
-                  ))}
+                      )}
                 </div>
               )}
             </div>

@@ -14,14 +14,13 @@ export function resolveBreadcrumb(pathname: string): CrumbInfo {
   // Pass 1: exact match against a known child route (e.g. /attendance/today).
   // Prefer the longest matching `to` so a section-root child (e.g. CRM's
   // "Overview" at `/crm`) doesn't shadow more specific siblings like `/crm/leads`.
+  let best: { item: (typeof NAV_ITEMS)[number]; child: { label: string; to: string } } | undefined;
   for (const item of NAV_ITEMS) {
-    if (!item.children) continue;
-    const matches = item.children.filter((c) => pathname === c.to || pathname.startsWith(`${c.to}/`));
-    if (matches.length > 0) {
-      const best = matches.reduce((a, b) => (b.to.length > a.to.length ? b : a));
-      return { sectionLabel: item.label, childLabel: best.label };
+    for (const c of item.children ?? []) {
+      if ((pathname === c.to || pathname.startsWith(`${c.to}/`)) && (!best || c.to.length > best.child.to.length)) best = { item, child: c };
     }
   }
+  if (best) return { sectionLabel: best.item.label, childLabel: best.child.label };
 
   // Pass 2: fall back to matching the top-level path segment (e.g. a dynamic
   // detail route like /attendance/:id that isn't a literal child path).
