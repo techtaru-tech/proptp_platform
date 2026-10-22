@@ -1,94 +1,84 @@
-# Deploying to console.rosium.in
+# Deploying to portal.techtaru.in
 
 GitHub → `git pull` → `./deploy.sh`. This repo holds **both** halves — the React frontend and
 the Express API — so one deploy builds and ships both.
 
 | | |
 |---|---|
+| URL | https://portal.techtaru.in |
 | Server | `ec2-user@65.2.106.176` (Amazon Linux 2023) |
-| App directory | `/home/ec2-user/rosium` |
-| Backend port | `127.0.0.1:4300` (never exposed publicly) |
-| Process manager | pm2, app name `rosium-backend` |
-| Web server | nginx, `/etc/nginx/conf.d/console-rosium.conf` |
-| Database | local PostgreSQL, database `rosium_platform` |
+| App directory | `/home/ec2-user/techtaru-portal` |
+| Backend port | `127.0.0.1:4600` (never exposed publicly) |
+| Process manager | pm2, app name `techtaru-portal-backend` |
+| Web server | nginx, `/etc/nginx/conf.d/techtaru-portal.conf` |
+| Database | local PostgreSQL, database `techtaru_portal` |
 | Frontend | built to `dist/`, served as static files by nginx |
 
-**This box is shared.** taskflow and the ShreeRam platform already run on it, on their own
-ports and databases. Rosium is the third, which is why it has its own port (4300), its own
-database, its own pm2 process and its own nginx server block — nothing here touches the
-neighbours. The memory note below is not optional advice.
+**This box is shared.** Other apps already run on it, each on its own port and database
+(4100, 4300, 4400, 4500). TechTaru portal is one more, which is why it has its own port (4600),
+its own database, its own pm2 process and its own nginx server block — nothing here touches the
+neighbours. The box has well under 1 GB of RAM, so a 2 GB swap file is required for the builds.
 
 ## First time
 
 ```bash
-# 1. DNS — point console.rosium.in at 65.2.106.176
-# 2. GitHub → repo → Settings → Deploy keys → add the box's public key (read-only is enough)
-#    The box already holds keys for other repos, so give this one its own host alias in
-#    ~/.ssh/config:
+# 1. DNS — an A record for portal.techtaru.in pointing at 65.2.106.176
+# 2. GitHub → repo → Settings → Deploy keys → add the box's public key (read-only is enough).
+#    Give this repo its own host alias in ~/.ssh/config on the box:
 #
-#      Host github-rosium
+#      Host github-techtaru-portal
 #        HostName github.com
-#        IdentityFile ~/.ssh/rosium_deploy
+#        User git
+#        IdentityFile ~/.ssh/techtaru_portal_deploy
 #        IdentitiesOnly yes
 
 # 3. On the server
 ssh -i ~/.ssh/taskflow-backend-key.pem ec2-user@65.2.106.176
-git clone git@github-rosium:techtaru-tech/rosium-platform.git ~/rosium
-cd ~/rosium && ./deploy/server-setup.sh
-```
-
-`server-setup.sh` makes sure swap exists, creates the database and user, installs the nginx
-config, and prints the `DATABASE_URL` to paste in. It is safe to re-run.
-
-Then, by hand:
-
-```bash
-cp server/.env.example server/.env && nano server/.env   # DATABASE_URL + fresh secrets
-echo 'VITE_API_BASE_URL=https://console.rosium.in/api' > .env.production
-
-./deploy.sh                                # builds both halves and starts pm2
-cd server && npm run prisma:seed && cd ..   # first time only — creates the admin user
-sudo certbot --nginx -d console.rosium.in  # TLS
-pm2 startup                                 # run the line it prints, then:
+git clone git@github-techtaru-portal:techtaru-tech/techtaru-portal.git ~/techtaru-portal
+cd ~/techtaru-portal && ./deploy/server-setup.sh   # swap, database, server/.env, nginx
+./deploy.sh                                        # install, migrate, build, start
+cd server && npx ts-node --transpile-only prisma/seed.ts   # once: reference data + the admin
+sudo certbot --nginx -d portal.techtaru.in         # TLS
 pm2 save
 ```
 
-## Every deploy after that
+`server-setup.sh` generates the database password, `JWT_SECRET` and `ENCRYPTION_KEY`, writes
+`server/.env`, and prints the admin login once. `SEED_MODE=production` makes the seed create only
+the pipelines, tags, email templates, property types and that admin — no demo data. Do **not** run
+the seed without it on this server: the demo seed adds vendor logins with a known password.
+
+**`ENCRYPTION_KEY` is set once.** Changing it makes every stored credential (WhatsApp, SMS, Meta,
+email) unreadable. Keep a copy of `server/.env` somewhere safe.
+
+## Every deploy
 
 ```bash
-# local
-git push origin main
-
-# server
 ssh -i ~/.ssh/taskflow-backend-key.pem ec2-user@65.2.106.176
-cd rosium && ./deploy.sh
+cd ~/techtaru-portal && ./deploy.sh
 ```
 
-## Things that bite
+It pulls, installs, applies migrations, builds both halves, restarts pm2 and checks `/api/health`.
 
-**Memory is the real constraint.** The box has 911 MB of RAM and now runs three apps plus
-Postgres. `vite build` is the heaviest thing that happens here and will be OOM-killed without
-swap — `server-setup.sh` ensures 2 GB. If a deploy dies mid-build, check `free -h` and
-`sudo swapon --show` first. `max_memory_restart` in `ecosystem.config.cjs` is set to 250M so a
-leak in this process restarts it rather than dragging the neighbours down with it.
+## Memory
 
-**`VITE_API_BASE_URL` is compiled in, not read at runtime.** Change it and you must rebuild —
-editing `.env.production` alone does nothing to a build that already happened.
+The builds need more heap than the box has free, so `deploy.sh` raises Node's heap and relies on
+swap. If a build is killed ("Killed" / exit 137), check `free -m` and `swapon --show` first.
 
-**`ENCRYPTION_KEY` can only be set once.** Every stored third-party credential (Meta app
-secret, Airphone token, WhatsApp token, Brevo key) is encrypted with it. Change it later and
-they all become unreadable and have to be re-entered.
+## Rolling back
 
-**Every webhook URL is derived from `PUBLIC_BASE_URL`.** After the first deploy, register all
-four with their providers:
+```bash
+cd ~/techtaru-portal && git log --oneline | head     # pick the last good commit
+git checkout <commit> && ./deploy.sh
+```
 
-| Provider | Where | URL |
-|---|---|---|
-| Meta Lead Ads | App → Webhooks → Page | `/api/webhook/meta` |
-| WhatsApp | App → WhatsApp → Configuration | `/api/webhook/whatsapp/<accountId>` |
-| Airphone | Portal | `/api/webhook/airphone/<token>` and `.../call-log` |
-| Brevo | Inbound parsing | `/api/webhook/email/<token>/inbound` |
+Migrations only move forward. Take a dump first if a deploy includes a destructive one:
+`pg_dump techtaru_portal | gzip > ~/backups/techtaru_portal_$(date +%F).sql.gz`.
 
-The exact URLs are shown, with copy buttons, on each integration's settings screen.
+## Useful
 
-**Health check:** `https://console.rosium.in/api/health` → `{"ok":true}`
+```bash
+pm2 logs techtaru-portal-backend --lines 100
+pm2 status
+sudo nginx -t && sudo systemctl reload nginx
+tail -f /var/log/nginx/error.log
+```

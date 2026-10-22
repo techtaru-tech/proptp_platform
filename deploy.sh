@@ -1,18 +1,19 @@
 #!/bin/bash
-# Rosium platform — pull, build, migrate, restart. Run on the server: ./deploy.sh
+# TechTaru portal — pull, build, migrate, restart. Run on the server: ./deploy.sh
 #
 # Both halves live in this one repo:
 #   frontend  -> built to dist/ and served as static files by nginx
 #   backend   -> built to server/dist/ and run by pm2, proxied at /api
 set -euo pipefail
 
-APP_DIR="/home/ec2-user/rosium"
-PM2_NAME="rosium-backend"
+APP_DIR="/home/ec2-user/techtaru-portal"
+PM2_NAME="techtaru-portal-backend"
+PORT=4600
 
 cd "$APP_DIR"
 
-# This box has ~1GB of RAM shared with other apps. The TypeScript and Vite builds exceed Node's
-# default heap and are killed (out of memory) unless allowed to spill into swap.
+# This box has under 1GB of RAM shared with other apps. The TypeScript and Vite builds exceed
+# Node's default heap and are killed (out of memory) unless allowed to spill into swap.
 export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=1400}"
 
 echo "==> Pulling latest code..."
@@ -49,8 +50,13 @@ else
 fi
 
 echo "==> Health check..."
-sleep 2
-curl -fsS http://127.0.0.1:4300/api/health && echo
+for i in 1 2 3 4 5 6 7 8; do
+  if curl -fsS "http://127.0.0.1:$PORT/api/health" > /dev/null 2>&1; then
+    curl -fsS "http://127.0.0.1:$PORT/api/health" && echo
+    break
+  fi
+  sleep 2
+done
 
 echo "==> Done."
 pm2 status

@@ -10,6 +10,7 @@ import { seedVendors } from './seedVendors';
 import { seedLegal } from './seedLegal';
 import { seedOpsRules } from './seedOpsRules';
 import { seedSales } from './seedSales';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -127,6 +128,35 @@ async function main() {
     await prisma.emailTemplate.upsert({ where: { name }, update: {}, create: { name, subject, body } });
   }
   console.log(`Seeded ${templates.length} email templates.`);
+
+  // A live database gets only what the panel cannot work without — the pipelines, tags and email
+  // templates above, the property-type choices and the admin sign-in — and none of the demo
+  // partners, leads, bookings or vendor logins below.
+  if (process.env.SEED_MODE === 'production') {
+    for (const name of ['Plot', 'Villa', 'Flat', 'Office', 'Shop', 'Farm Land']) {
+      await prisma.propertyTypeOption.upsert({ where: { name }, update: {}, create: { name } });
+    }
+    const email = process.env.SEED_ADMIN_EMAIL;
+    const password = process.env.SEED_ADMIN_PASSWORD;
+    if (!email || !password) throw new Error('SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD are required for a production seed.');
+    await prisma.user.upsert({
+      where: { phone: '9800000001' },
+      update: { email, passwordHash: await bcrypt.hash(password, 10) },
+      create: {
+        id: 'ADMIN-1',
+        name: 'TechTaru Admin',
+        phone: '9800000001',
+        email,
+        passwordHash: await bcrypt.hash(password, 10),
+        role: 'admin',
+        partnerCode: 'TT-ADM-0001',
+        referralCode: 'TT-ADM-0001',
+        kycStatus: 1,
+      },
+    });
+    console.log(`Production seed done: reference data and the admin ${email}.`);
+    return;
+  }
 
   // TechTaru operations + HRMS + partner app share this database, so they seed here too.
   console.log('Seeding platform (users, teams, projects, plots, lookups)...');
