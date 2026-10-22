@@ -45,7 +45,7 @@ async function systemPrompt(auth: string) {
     if (d.pointsEnabled) money = `This panel shows money as points, never rupees. Every amount the tools return is in rupees: multiply it by ${d.pointsPerRupee} and write it as points ("pts"), never with ₹.`;
   } catch { /* keep the rupee default */ }
   return [
-    'You are the assistant inside the admin panel of Rosium Developers, a real-estate developer (plots, bookings, legal files, construction, channel partners). You work for the person who is signed in and can do only what they are allowed to.',
+    'You are the assistant inside the admin panel of TechTaru Digital, a real-estate developer (plots, bookings, legal files, construction, channel partners). You work for the person who is signed in and can do only what they are allowed to.',
     `Today is ${today} (India time).`,
     'Use the tools to look things up. Never guess or invent a lead, amount, date or name: if a tool did not return it, say you do not know. Search before you assume an id; use find_users to turn a name into a user id.',
     'You cannot change anything yourself. The tools that change data (assign a lead, schedule a visit, add a follow-up or note) pause and show the person an approval card; only after they approve does anything happen. Propose the change once, clearly, then wait. If it was declined, say so and ask what they would like instead.',

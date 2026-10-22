@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { BarChart3, ShieldCheck, Users } from 'lucide-react';
-import rosiumLockup from '../assets/brand/rosium-lockup.png';
+import techtaruLockup from '../assets/brand/techtaru-lockup.png';
 
 const HIGHLIGHTS = [
   { icon: BarChart3, label: 'Projects, bookings and payments in one console' },
@@ -20,11 +20,11 @@ export function AuthLayout({ children }: { children: ReactNode }) {
         <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-brand-700 via-brand-600 to-blossom-500 p-12 text-white lg:flex">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.14),transparent_45%)]" />
 
-          {/* The wordmark is plum on transparent, which would disappear into the plum
-              gradient, so it sits on a white chip rather than directly on it. */}
+          {/* The wordmark is steel and leaf on transparent, which would disappear into the
+              teal-to-leaf gradient, so it sits on a white chip rather than directly on it. */}
           <div className="relative">
             <span className="inline-flex rounded-xl bg-white px-4 py-3 shadow-card">
-              <img src={rosiumLockup} alt="Rosium Developers" className="h-9 w-auto" />
+              <img src={techtaruLockup} alt="TechTaru Digital" className="h-9 w-auto" />
             </span>
           </div>
 
@@ -46,7 +46,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
             </ul>
           </div>
 
-          <p className="relative text-xs text-white/60">© {new Date().getFullYear()} Rosium Developers. All rights reserved.</p>
+          <p className="relative text-xs text-white/60">© {new Date().getFullYear()} TechTaru Digital. All rights reserved.</p>
         </div>
 
         <div className="flex items-center justify-center px-6 py-12 sm:px-14 sm:py-16">

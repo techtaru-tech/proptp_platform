@@ -110,7 +110,7 @@ async function main() {
     [
       'Introduction',
       'Great to connect, {{lead.first_name}}',
-      'Hi {{lead.first_name}},\n\nThanks for your interest in Rosium Developers. I would love to understand what you are looking for so I can point you at the right project.',
+      'Hi {{lead.first_name}},\n\nThanks for your interest in TechTaru Digital. I would love to understand what you are looking for so I can point you at the right project.',
     ],
     [
       'Site visit invitation',
@@ -128,7 +128,7 @@ async function main() {
   }
   console.log(`Seeded ${templates.length} email templates.`);
 
-  // Rosium operations + HRMS + partner app share this database, so they seed here too.
+  // TechTaru operations + HRMS + partner app share this database, so they seed here too.
   console.log('Seeding platform (users, teams, projects, plots, lookups)...');
   const people = await seedPlatform(prisma);
   console.log('Seeding operations (bookings, attendance, payouts, tickets, notifications)...');

@@ -1,4 +1,4 @@
-# Rosium Platform Server
+# TechTaru Platform Server
 
 Express + Prisma + PostgreSQL backend for the whole platform: the **CRM** (leads, pipelines,
 forms, automations, AI SDR agents), **operations** (projects, plots, bookings,
@@ -46,14 +46,14 @@ cd server
 npm install
 npm run prisma:migrate      # creates the Postgres tables (needs a running Postgres + DATABASE_URL in .env)
 npm run prisma:seed         # CRM pipelines/tags + partners, projects, plots, bookings, attendance
-npm run dev                 # starts the API on http://localhost:4300
+npm run dev                 # starts the API on http://localhost:4400
 ```
 
 The seed prints the admin sign-in it created:
 
 ```
-email:    admin@rosium.in
-password: Rosium@2026
+email:    admin@techtaru.com
+password: TechTaru@2026
 ```
 
 Override those with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` before seeding. The seed is
@@ -64,14 +64,14 @@ For the partner app, sign in as any seeded partner phone (`9700001507`, `9700001
 the `dev_otp` the OTP endpoint returns. See §10 of `appApi.md`.
 
 The frontend (`npm run dev` in the project root) is already configured via `.env` →
-`VITE_API_BASE_URL=http://localhost:4300/api` to talk to this server.
+`VITE_API_BASE_URL=http://localhost:4400/api` to talk to this server.
 
 ## 2. Environment variables (`server/.env`)
 
 | Variable | Purpose |
 |---|---|
 | `DATABASE_URL` | Postgres connection string |
-| `PORT` | API port (default 4300) |
+| `PORT` | API port (default 4400) |
 | `CLIENT_ORIGIN` | Vite dev server origin, for CORS |
 | `META_APP_ID` / `META_APP_SECRET` | From your Meta App (see below) — optional at the env level; can also be set per-connection from the Integrations UI |
 | `META_WEBHOOK_VERIFY_TOKEN` | Any random string. You'll paste the same value into the Meta App dashboard |
@@ -103,9 +103,9 @@ tied to your own Facebook Business account and a **Facebook Page** you administe
 Meta requires HTTPS here. For local development, run a tunnel:
 ```bash
 # either
-npx ngrok http 4300
+npx ngrok http 4400
 # or
-cloudflared tunnel --url http://localhost:4300
+cloudflared tunnel --url http://localhost:4400
 ```
 Use the `https://...` URL it gives you as both `PUBLIC_BASE_URL` in `.env` and the Callback URL above.
 
@@ -141,7 +141,7 @@ filled in from the Graph API response.
 **The entire CRM module is now backend-driven — no mock CRM data remains.** Every file under
 `src/data/mock{Leads,LeadNotes,LeadActivities,LeadTasks,Automations,Pipelines,Integrations,
 IntegrationActivity}.ts` has been deleted; nothing in `src/pages/crm/*` or the CRM services reads
-from an in-memory array anymore (`src/services/*.ts` call `http://localhost:4300/api/...`):
+from an in-memory array anymore (`src/services/*.ts` call `http://localhost:4400/api/...`):
 
 - **Leads** — list/detail/create/edit/status/assign/star/tags/stage-move, bulk actions (assign,
   status, priority, tag, untag, move stage, delete), CSV import. Every mutating action (single or

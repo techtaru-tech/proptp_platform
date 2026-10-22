@@ -5,8 +5,8 @@ import { NAV_ITEMS } from '../../app/navConfig';
 import { usePermissions } from '../../app/usePermissions';
 import { useUI } from '../../context/UIContext';
 import { cn } from '../../utils/cn';
-import rosiumLockup from '../../assets/brand/rosium-lockup.png';
-import rosiumMark from '../../assets/brand/rosium-mark.png';
+import techtaruLockup from '../../assets/brand/techtaru-lockup.png';
+import techtaruMark from '../../assets/brand/techtaru-mark.png';
 
 function useAutoExpanded(pathname: string) {
   const match = NAV_ITEMS.find((item) => item.children?.some((c) => pathname.startsWith(c.to)) || pathname.startsWith(item.to));
@@ -29,11 +29,11 @@ export function Sidebar() {
             so it sits on a white chip rather than directly on the dark surface. */}
         {sidebarCollapsed ? (
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white p-1.5 shadow-card">
-            <img src={rosiumMark} alt="Rosium Developers" className="h-full w-auto" />
+            <img src={techtaruMark} alt="TechTaru Digital" className="h-full w-auto" />
           </span>
         ) : (
           <span className="inline-flex rounded-lg bg-white px-2.5 py-1.5 shadow-card">
-            <img src={rosiumLockup} alt="Rosium Developers" className="h-6 w-auto" />
+            <img src={techtaruLockup} alt="TechTaru Digital" className="h-6 w-auto" />
           </span>
         )}
         <button

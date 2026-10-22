@@ -27,7 +27,7 @@ export async function getAssignedLocation() {
   const policy = await getPolicy();
   return prisma.workLocation.create({
     data: {
-      name: 'Rosium Office',
+      name: 'TechTaru Office',
       area: '',
       latitude: policy.officeLat,
       longitude: policy.officeLng,

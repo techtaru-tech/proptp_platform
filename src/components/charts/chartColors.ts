@@ -1,9 +1,10 @@
-/** Shared categorical palette for Recharts — the Rosium brand colours plus semantic tones. */
+/** Shared categorical palette for Recharts — the TechTaru brand colours plus semantic tones. */
 export const CHART_COLORS = {
-  brand: '#652251',
-  accent: '#2596BE',
-  blossom: '#D4166C',
-  shell: '#80687b',
+  brand: '#00a3a3',
+  accent: '#f97316',
+  blossom: '#64b975',
+  steel: '#428797',
+  shell: '#525c6b',
   success: '#12b76a',
   info: '#2e90fa',
   warning: '#f79009',
@@ -13,17 +14,17 @@ export const CHART_COLORS = {
 };
 
 /**
- * Ordered so neighbouring series never share a hue family: the plum primary, the blue
- * secondary, then the logo's pink, which is far enough in lightness from the plum to stay
- * readable beside it.
+ * Ordered so neighbouring series never share a hue family: the teal primary, the saffron
+ * secondary, then the logo's leaf green. Warning-orange and success-green are left out of the
+ * series on purpose — they sit too close to saffron and leaf to tell apart in a legend.
  */
 export const CHART_SERIES = [
   CHART_COLORS.brand,
   CHART_COLORS.accent,
   CHART_COLORS.blossom,
-  CHART_COLORS.success,
-  CHART_COLORS.warning,
+  CHART_COLORS.info,
   CHART_COLORS.violet,
+  CHART_COLORS.shell,
 ];
 
 export const GRID_STROKE = '#e4e7ec';

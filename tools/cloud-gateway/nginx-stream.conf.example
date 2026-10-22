@@ -1,4 +1,4 @@
-# Goes inside the console.rosium.in server block (443). Only the secret path reaches go2rtc.
+# Goes inside the <your-crm-domain> server block (443). Only the secret path reaches go2rtc.
 # MSE playback uses a websocket, hence the Upgrade headers.
 location /STREAM_TOKEN/ {
     proxy_pass http://127.0.0.1:1984/;

@@ -155,13 +155,13 @@ function Editor({ settings, onSaved }: { settings: EmailSettings; onSaved: () =>
               hint="Stored encrypted and never sent back to this screen."
               wrapperClassName="sm:col-span-2"
             />
-            <Input label="From name" value={values.fromName} onChange={(e) => patch({ fromName: e.target.value })} placeholder="Rosium Developers" />
+            <Input label="From name" value={values.fromName} onChange={(e) => patch({ fromName: e.target.value })} placeholder="TechTaru Digital" />
             <Input
               label="From address"
               type="email"
               value={values.fromEmail}
               onChange={(e) => patch({ fromEmail: e.target.value })}
-              placeholder="sales@rosium.in"
+              placeholder="sales@techtaru.com"
               hint="Must be on a domain verified with the provider."
             />
             <Input
@@ -169,7 +169,7 @@ function Editor({ settings, onSaved }: { settings: EmailSettings; onSaved: () =>
               type="email"
               value={values.replyToEmail}
               onChange={(e) => patch({ replyToEmail: e.target.value })}
-              placeholder="reply@mail.rosium.in"
+              placeholder="reply@mail.techtaru.com"
               hint="Point this at the inbound route so replies come back into the CRM."
             />
           </div>

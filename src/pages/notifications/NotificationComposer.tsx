@@ -362,7 +362,7 @@ function PhonePreview({ title, body, scheduled }: { title: string; body: string;
           {/* The notch, and the clock a lock screen always shows above it. */}
           <span className="absolute left-1/2 top-[-18px] h-4 w-20 -translate-x-1/2 rounded-b-xl bg-ink" />
           <p className="text-3xl font-light text-white">{when === 'now' ? 'Now' : when}</p>
-          <p className="text-xs text-white/60">Rosium Partner</p>
+          <p className="text-xs text-white/60">TechTaru Partner</p>
         </div>
 
         <div className="rounded-2xl bg-white/95 p-3 shadow-card backdrop-blur">
@@ -370,7 +370,7 @@ function PhonePreview({ title, body, scheduled }: { title: string; body: string;
             <span className="flex h-4 w-4 items-center justify-center rounded bg-brand-600">
               <BellRing size={10} className="text-white" />
             </span>
-            <span className="text-[11px] font-medium text-ink-muted">Rosium Developers</span>
+            <span className="text-[11px] font-medium text-ink-muted">TechTaru Digital</span>
             <span className="ml-auto text-[11px] text-ink-faint">{when === 'now' ? 'now' : when}</span>
           </div>
           <p className="line-clamp-1 text-sm font-semibold text-ink">

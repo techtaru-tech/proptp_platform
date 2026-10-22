@@ -1,4 +1,4 @@
-// Rosium Platform — CRM, operations and HRMS on one database
+// TechTaru Platform — CRM, operations and HRMS on one database
 // Mirrors the shapes already used by the frontend mock layer (src/types/index.ts)
 // so migrating the frontend services from mock data to this API is a drop-in swap.
 
@@ -1360,7 +1360,7 @@ model AttendancePolicySettings {
 // ===========================================================================
 // PROJECTS & PROPERTIES
 //
-// Rosium sells land plots: a Project is a layout/scheme, a PropertyUnit is one
+// TechTaru sells land plots: a Project is a layout/scheme, a PropertyUnit is one
 // plot inside it. Columns follow the real Laravel `projects` / `manage_properties`
 // tables (which the admin panel is already built against). The app doc's flatter
 // shape is produced by mapping, not by a second set of columns:
@@ -2172,7 +2172,7 @@ model ReferralToggleSettings {
 /// Singletons behind Settings > Organization / Notifications.
 model OrganizationSettings {
   id             String   @id @default("singleton")
-  companyName    String   @default("Rosium Developers")
+  companyName    String   @default("TechTaru Digital")
   logoUrl        String   @default("")
   contactEmail   String   @default("")
   contactPhone   String   @default("")

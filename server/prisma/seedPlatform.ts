@@ -2,7 +2,7 @@ import type { PrismaClient, UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 /**
- * Seeds the Rosium operations + HRMS + partner-app side of the shared database:
+ * Seeds the TechTaru operations + HRMS + partner-app side of the shared database:
  * one admin, a partner hierarchy, lookup tables, projects with plots, bookings with their
  * ledger side effects, attendance history, payouts, tickets and notifications.
  *
@@ -38,16 +38,16 @@ const ADDRESSES = ['Vesu', 'Adajan', 'Bopal', 'SG Highway', 'Alkapuri', 'Race Co
   'Vijay Nagar', 'Manjalpur', 'Katargam', 'Gota', 'Wakad'];
 
 const PROJECTS = [
-  ['Rosium Elysium', 'Vesu, Surat', 'residential'],
-  ['Rosium Meridian', 'Adajan, Surat', 'residential'],
-  ['Rosium Orchid Residency', 'Bopal, Ahmedabad', 'residential'],
-  ['Rosium Business Hub', 'SG Highway, Ahmedabad', 'commercial'],
-  ['Rosium Riverside Heights', 'Alkapuri, Vadodara', 'residential'],
-  ['Rosium Green Valley', 'Race Course, Rajkot', 'agricultural'],
-  ['Rosium Skyline Towers', 'Baner, Pune', 'residential'],
-  ['Rosium Sapphire Court', 'Vijay Nagar, Indore', 'commercial'],
-  ['Rosium Emerald Enclave', 'Manjalpur, Vadodara', 'residential'],
-  ['Rosium Platinum Square', 'Katargam, Surat', 'commercial'],
+  ['TechTaru Elysium', 'Vesu, Surat', 'residential'],
+  ['TechTaru Meridian', 'Adajan, Surat', 'residential'],
+  ['TechTaru Orchid Residency', 'Bopal, Ahmedabad', 'residential'],
+  ['TechTaru Business Hub', 'SG Highway, Ahmedabad', 'commercial'],
+  ['TechTaru Riverside Heights', 'Alkapuri, Vadodara', 'residential'],
+  ['TechTaru Green Valley', 'Race Course, Rajkot', 'agricultural'],
+  ['TechTaru Skyline Towers', 'Baner, Pune', 'residential'],
+  ['TechTaru Sapphire Court', 'Vijay Nagar, Indore', 'commercial'],
+  ['TechTaru Emerald Enclave', 'Manjalpur, Vadodara', 'residential'],
+  ['TechTaru Platinum Square', 'Katargam, Surat', 'commercial'],
 ] as const;
 
 const FACING_VALUES = ['North', 'South', 'East', 'West', 'North-East', 'South-West'];
@@ -78,11 +78,11 @@ export async function seedPlatform(prisma: PrismaClient) {
     update: {},
     create: {
       id: 'singleton',
-      companyName: 'Rosium Developers',
+      companyName: 'TechTaru Digital',
       logoUrl: '',
-      contactEmail: 'contact@rosium.in',
+      contactEmail: 'contact@techtaru.com',
       contactPhone: '+91 90000 00000',
-      address: 'Rosium Corporate House, Vesu, Surat, Gujarat 395007',
+      address: 'TechTaru Corporate House, Vesu, Surat, Gujarat 395007',
     },
   });
   await prisma.notificationSettings.upsert({ where: { id: 'singleton' }, update: {}, create: { id: 'singleton' } });
@@ -97,7 +97,7 @@ export async function seedPlatform(prisma: PrismaClient) {
     update: {},
     create: {
       id: 'LOC-HQ',
-      name: 'Rosium Office',
+      name: 'TechTaru Office',
       area: 'Vesu, Surat',
       latitude: policy.officeLat,
       longitude: policy.officeLng,
@@ -158,14 +158,14 @@ export async function seedPlatform(prisma: PrismaClient) {
   // -------------------------------------------------------------------------
   // People: one admin, then leaders -> employees -> agents
   // -------------------------------------------------------------------------
-  const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@rosium.in';
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'Rosium@2026';
+  const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@techtaru.com';
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'TechTaru@2026';
   const admin = await prisma.user.upsert({
     where: { phone: '9800000001' },
     update: { passwordHash: await bcrypt.hash(adminPassword, 10) },
     create: {
       id: 'ADMIN-1',
-      name: 'Rosium',
+      name: 'TechTaru',
       phone: '9800000001',
       email: adminEmail,
       passwordHash: await bcrypt.hash(adminPassword, 10),
@@ -189,7 +189,7 @@ export async function seedPlatform(prisma: PrismaClient) {
       create: {
         name,
         phone: phoneFor(seq),
-        email: `${name.toLowerCase().replace(/\s+/g, '.')}${seq}@rosium.in`,
+        email: `${name.toLowerCase().replace(/\s+/g, '.')}${seq}@techtaru.com`,
         role,
         status: rng() > 0.12 ? 'active' : rng() > 0.5 ? 'inactive' : 'suspended',
         partnerCode: code,

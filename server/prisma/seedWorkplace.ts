@@ -33,7 +33,7 @@ const TASK_TITLES = [
   'Prepare the Sunday site-visit roster',
   'Follow up on the pending KYC approvals',
   'Chase the three overdue instalments',
-  'Update the Rosium Meridian layout plan on the site',
+  'Update the TechTaru Meridian layout plan on the site',
   'Draft the festive offer for the Rajkot plots',
   'Verify the new agent onboarding documents',
   'Collect feedback from last month’s buyers',
@@ -41,7 +41,7 @@ const TASK_TITLES = [
   'Book the hoarding for the Surat highway',
   'Refresh the brochure with the new phase pricing',
   'Reply to the pending support tickets',
-  'Reconfirm the bank NOC for Rosium Elysium',
+  'Reconfirm the bank NOC for TechTaru Elysium',
   'Shortlist candidates for the Vadodara desk',
 ];
 

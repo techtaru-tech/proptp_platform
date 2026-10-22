@@ -5,7 +5,7 @@ import type { PrismaClient, VendorCategory } from '@prisma/client';
 
 /**
  * Demo vendors, work orders, bills and material. Two vendors have portal logins (password
- * SEED_VENDOR_PASSWORD or Rosium@2026) and are given a couple of construction activities each, so
+ * SEED_VENDOR_PASSWORD or TechTaru@2026) and are given a couple of construction activities each, so
  * their portal has work in it. Skipped if any vendor exists.
  */
 const UPLOAD_DIR = path.resolve(__dirname, '../uploads');
@@ -18,8 +18,8 @@ function photo(file: string, label: string) {
 }
 
 const VENDORS: { name: string; category: VendorCategory; contact: string; phone: string; value: number; login?: string }[] = [
-  { name: 'Shree Infra Contractors', category: 'contractor', contact: 'Mahesh Jain', phone: '9811100001', value: 18500000, login: 'shreeinfra@vendor.rosium.in' },
-  { name: 'Bharat Cement & Aggregates', category: 'supplier', contact: 'Sunil Gupta', phone: '9811100002', value: 6200000, login: 'bharatcement@vendor.rosium.in' },
+  { name: 'Shree Infra Contractors', category: 'contractor', contact: 'Mahesh Jain', phone: '9811100001', value: 18500000, login: 'shreeinfra@vendor.techtaru.com' },
+  { name: 'Bharat Cement & Aggregates', category: 'supplier', contact: 'Sunil Gupta', phone: '9811100002', value: 6200000, login: 'bharatcement@vendor.techtaru.com' },
   { name: 'Studio Vastu Architects', category: 'architect', contact: 'Neha Kulkarni', phone: '9811100003', value: 2400000 },
   { name: 'TerraCheck Consultants', category: 'consultant', contact: 'Imran Qureshi', phone: '9811100004', value: 850000 },
   { name: 'BrandWave Media', category: 'agency', contact: 'Rhea Dsouza', phone: '9811100005', value: 1200000 },
@@ -32,7 +32,7 @@ export async function seedVendors(prisma: PrismaClient) {
   }
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
   const projects = await prisma.project.findMany({ orderBy: { id: 'asc' }, take: 2 });
-  const staff = (await prisma.user.findFirst({ where: { email: 'gaurav@rosium.in' } })) ?? (await prisma.user.findFirst({ where: { role: 'employee' } }));
+  const staff = (await prisma.user.findFirst({ where: { email: 'gaurav@techtaru.com' } })) ?? (await prisma.user.findFirst({ where: { role: 'employee' } }));
   const admin = await prisma.user.findFirst({ where: { role: 'admin' } });
   if (projects.length === 0 || !staff || !admin) return;
 
@@ -40,7 +40,7 @@ export async function seedVendors(prisma: PrismaClient) {
     where: { name: 'Vendor Portal' }, update: {},
     create: { name: 'Vendor Portal', description: 'A vendor sees only their own work, material and bills.', modules: ['vendor_portal'], isSystem: true },
   });
-  const hash = await bcrypt.hash(process.env.SEED_VENDOR_PASSWORD || 'Rosium@2026', 10);
+  const hash = await bcrypt.hash(process.env.SEED_VENDOR_PASSWORD || 'TechTaru@2026', 10);
 
   const made: Record<string, { id: string; userId: string | null }> = {};
   for (const [i, v] of VENDORS.entries()) {

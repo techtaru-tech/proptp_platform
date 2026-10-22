@@ -57,7 +57,7 @@ const LOCATIONS = ['Vesu', 'Adajan', 'Bopal', 'SG Highway', 'Alkapuri', 'Race Co
  */
 const SOURCES = ['meta', 'meta', 'meta', 'web_form', 'web_form', 'google_ads', 'whatsapp', 'manual', 'manual', 'other'];
 
-const CAMPAIGNS = ['Rosium Elysium — Launch', 'Monsoon Plots Offer', 'Vesu Premium Plots', 'NRI Investor Push'];
+const CAMPAIGNS = ['TechTaru Elysium — Launch', 'Monsoon Plots Offer', 'Vesu Premium Plots', 'NRI Investor Push'];
 const ADS = ['Carousel — Plot Sizes', 'Video — Site Walkthrough', 'Single Image — Price Drop', 'Lead Form — Brochure'];
 const META_FORMS = ['Brochure Download', 'Site Visit Booking', 'Price List Request'];
 
@@ -147,9 +147,9 @@ export async function seedCrm(
     {
       id: 'CONN-META',
       source: 'meta',
-      name: 'Rosium — Facebook Page',
+      name: 'TechTaru — Facebook Page',
       status: 'connected',
-      connectedAccountLabel: 'Rosium Developers',
+      connectedAccountLabel: 'TechTaru Digital',
       lastReceivedAt: hoursAgo(5),
     },
     {
@@ -157,7 +157,7 @@ export async function seedCrm(
       source: 'web_form',
       name: 'Website — Enquiry Form',
       status: 'connected',
-      connectedAccountLabel: 'console.rosium.in',
+      connectedAccountLabel: 'console.techtaru.com',
       lastReceivedAt: hoursAgo(19),
     },
     {
@@ -165,7 +165,7 @@ export async function seedCrm(
       source: 'google_ads',
       name: 'Google Ads — Lead Form',
       status: 'error',
-      connectedAccountLabel: 'Rosium Search',
+      connectedAccountLabel: 'TechTaru Search',
       lastError: 'Refresh token expired. Reconnect the account.',
       lastReceivedAt: daysAgo(9),
     },
@@ -245,7 +245,7 @@ export async function seedCrm(
         utmSource: isMeta ? 'facebook' : source === 'google_ads' ? 'google' : source === 'web_form' ? 'direct' : null,
         utmMedium: isMeta || source === 'google_ads' ? 'cpc' : null,
         utmCampaign: isMeta || source === 'google_ads' ? pick(CAMPAIGNS) : null,
-        landingPage: source === 'web_form' ? 'https://console.rosium.in/enquiry' : null,
+        landingPage: source === 'web_form' ? 'https://console.techtaru.com/enquiry' : null,
         status: status as never,
         priority: (chance(0.18) ? 'high' : chance(0.3) ? 'low' : 'normal') as never,
         leadScore: randInt(10, 98),
@@ -453,7 +453,7 @@ export async function seedCrm(
       id: 'FORM-ENQUIRY',
       name: 'Website Enquiry',
       slug: 'enquiry',
-      displayTitle: 'Talk to a Rosium advisor',
+      displayTitle: 'Talk to a TechTaru advisor',
       description: 'Tell us what you are looking for and we will call you back the same day.',
       thankYouMessage: 'Thanks! One of our advisors will call you shortly.',
       isMultiStep: false,
@@ -489,7 +489,7 @@ export async function seedCrm(
     'FORM-SITEVISIT': [
       { type: 'text', label: 'Full name', fieldKey: 'firstName', required: true, step: 1 },
       { type: 'phone', label: 'Mobile number', fieldKey: 'phone', required: true, step: 1 },
-      { type: 'dropdown', label: 'Project', fieldKey: 'purpose', options: ['Rosium Elysium', 'Rosium Meridian', 'Rosium Green Valley'], step: 2 },
+      { type: 'dropdown', label: 'Project', fieldKey: 'purpose', options: ['TechTaru Elysium', 'TechTaru Meridian', 'TechTaru Green Valley'], step: 2 },
       { type: 'date', label: 'Preferred date', fieldKey: 'expectedCloseDate', step: 2 },
     ],
     'FORM-BROCHURE': [
@@ -507,7 +507,7 @@ export async function seedCrm(
         isActive: form.isActive ?? true,
         pipelineId: salesPipeline.id,
         pipelineStageId: openStages[0]?.id ?? stages[0].id,
-        accentColor: '#652251',
+        accentColor: '#007d7d',
         submitLabel: form.isMultiStep ? 'Book my visit' : 'Send enquiry',
       },
     });
@@ -540,7 +540,7 @@ export async function seedCrm(
         data: { firstName: 'See lead', phone: 'See lead', budgetRange: pick(BUDGETS) },
         ipAddress: `49.36.${randInt(1, 254)}.${randInt(1, 254)}`,
         userAgent: 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36',
-        pageUrl: 'https://console.rosium.in/enquiry',
+        pageUrl: 'https://console.techtaru.com/enquiry',
         createdAt: lead.createdAt,
       },
     });
@@ -637,7 +637,7 @@ export async function seedCrm(
     },
   });
   const seqSteps = [
-    { sortOrder: 0, delayDays: 0, delayHours: 1, subject: 'Thanks for your interest in Rosium', body: 'Hi {{lead.first_name}},\n\nThanks for reaching out. Here is the price list and the layout plan.\n\n— Rosium Developers' },
+    { sortOrder: 0, delayDays: 0, delayHours: 1, subject: 'Thanks for your interest in TechTaru', body: 'Hi {{lead.first_name}},\n\nThanks for reaching out. Here is the price list and the layout plan.\n\n— TechTaru Digital' },
     { sortOrder: 1, delayDays: 3, delayHours: 0, subject: 'Still looking, {{lead.first_name}}?', body: 'Hi {{lead.first_name}},\n\nJust checking whether you had a chance to look at the layout. Happy to arrange a site visit this weekend.' },
     { sortOrder: 2, delayDays: 7, delayHours: 0, subject: 'Last note from us', body: 'Hi {{lead.first_name}},\n\nWe will stop emailing after this one. If plots are still on your mind later, we are a call away.' },
   ];
@@ -695,7 +695,7 @@ export async function seedCrm(
       goal: 'qualify_lead',
       channel: 'whatsapp',
       persona: 'Polite, brief, never pushy. Speaks in simple English with a little Hindi if the lead does.',
-      offerContext: 'Rosium plots in Surat, Ahmedabad, Vadodara and Rajkot. Sizes 1000–3000 sq ft, JDA and RERA approved.',
+      offerContext: 'TechTaru plots in Surat, Ahmedabad, Vadodara and Rajkot. Sizes 1000–3000 sq ft, JDA and RERA approved.',
       maxFollowUps: 3,
       minHoursBetweenFollowUps: 24,
       respectBusinessHours: true,
@@ -721,7 +721,7 @@ export async function seedCrm(
       },
     });
     const script: [string, string, string][] = [
-      ['outbound', 'ai', 'Hi! This is Rosium. You enquired about our plots — may I share the sizes and prices?'],
+      ['outbound', 'ai', 'Hi! This is TechTaru. You enquired about our plots — may I share the sizes and prices?'],
       ['inbound', 'human', 'Yes please send'],
       ['outbound', 'ai', 'Sizes are 1000 to 3000 sq ft, starting ₹18 L. Which location suits you — Surat or Ahmedabad?'],
       ['inbound', 'human', 'Surat. What is the payment plan?'],
@@ -784,7 +784,7 @@ export async function seedCrm(
     update: {},
     create: {
       id: 'WA-MAIN',
-      label: 'Rosium Sales',
+      label: 'TechTaru Sales',
       displayPhone: '918048123456',
       phoneNumberId: 'demo-phone-number-id',
       verifyToken: 'demo-verify-token',

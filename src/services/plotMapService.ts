@@ -169,7 +169,7 @@ export const PLOT_STATUS_COLOR: Record<PlotMapStatus, { fill: string; stroke: st
   onHold: { fill: '#f79009', stroke: '#b54708', text: '#6b2e05', halo: '#ffffff' },
   booked: { fill: '#2596BE', stroke: '#1d6581', text: '#0f3f52', halo: '#ffffff' },
   // Light text on a dark fill: the outline has to be dark too, or it reads as a white smear.
-  soldOut: { fill: '#652251', stroke: '#411534', text: '#ffffff', halo: '#411534' },
+  soldOut: { fill: '#2b333f', stroke: '#0f131a', text: '#ffffff', halo: '#0f131a' },
 };
 
 /** An outline drawn but not yet matched to a plot has no status to colour it by. */

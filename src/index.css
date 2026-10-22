@@ -1,6 +1,36 @@
 @import 'tailwindcss';
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @config '../tailwind.config.js';
+
+/* Self-hosted, the same files techtaru.com serves — no text waits on a third-party origin.
+   Inter is one variable file for every weight; Clash Display is one file per weight. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url('/fonts/inter-variable.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Clash Display';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/clash-display-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Clash Display';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/clash-display-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Clash Display';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/clash-display-700.woff2') format('woff2');
+}
 
 :root {
   color-scheme: light;
@@ -14,8 +44,19 @@ body {
   @apply bg-surface-subtle text-ink font-sans antialiased;
 }
 
+/* Page and section titles take TechTaru's display face, as on techtaru.com. */
+@layer base {
+  h1, h2 {
+    @apply font-display tracking-[0.01em];
+  }
+}
+
 * {
   border-color: #e4e7ec;
+}
+
+::selection {
+  background: rgba(0, 201, 201, 0.25);
 }
 
 ::-webkit-scrollbar {
@@ -30,7 +71,7 @@ body {
   border-radius: 8px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #98a2b3;
+  background: #00a3a3;
 }
 
 .focus-ring {

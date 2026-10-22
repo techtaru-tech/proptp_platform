@@ -6,67 +6,80 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        // TechTaru's headline face (techtaru.com) — headings only, body stays Inter.
+        display: ['"Clash Display"', 'Inter', 'system-ui', 'sans-serif'],
       },
       colors: {
-        // The app shell — a plum-tinted dark neutral rather than a true grey, so the
-        // sidebar and every dark surface sit in the same family as the Rosium primary
-        // instead of reading as a second, unrelated brand colour.
+        // The app shell — TechTaru's deep ink neutrals (the techtaru.com page background is
+        // 950), so the sidebar and every dark surface sit in the website's own family.
         shell: {
-          50: '#f8f5f8',
-          100: '#efe8ee',
-          200: '#ddd0da',
-          300: '#c2aebe',
-          400: '#a0869b',
-          500: '#80687b',
-          600: '#665061',
-          700: '#4e3c4a',
-          800: '#382837',
-          900: '#231021',
-          950: '#160a15',
+          50: '#f5f6f7',
+          100: '#e8eaed',
+          200: '#cbd0d6',
+          300: '#a3acb6',
+          400: '#717c89',
+          500: '#525c6b',
+          600: '#3d4654',
+          700: '#2b333f',
+          800: '#1a1f29',
+          900: '#0f131a',
+          950: '#070a0f',
         },
-        // Rosium primary — #652251, the plum of the ROSIUM wordmark's second half.
-        // 600 is the exact brand value; it is what solid buttons and active nav use.
+        // TechTaru primary — the "taru" teal of techtaru.com (#00c9c9 is 400 here).
+        // The scale is shifted one step darker than the website's so that 600 — what solid
+        // buttons and active nav use, always with white text — is #007d7d, which passes
+        // contrast; the website's own 600 (#00a3a3) does not under white text.
         brand: {
-          50: '#faf1f6',
-          100: '#f3e0ec',
-          200: '#e7c2da',
-          300: '#d29ac0',
-          400: '#b56b9d',
-          500: '#7a2a62',
-          600: '#652251',
-          700: '#531b42',
-          800: '#411534',
-          900: '#300f26',
-          950: '#1d0917',
+          50: '#e6fbfb',
+          100: '#ccf6f6',
+          200: '#99eded',
+          300: '#4fdede',
+          400: '#00c9c9',
+          500: '#00a3a3',
+          600: '#007d7d',
+          700: '#006a6a',
+          800: '#005757',
+          900: '#003d3d',
+          950: '#002626',
         },
-        // Rosium secondary — #2596BE. White on 500 is too low-contrast for a filled
-        // control, so anything with text on it uses 600 or darker.
+        // TechTaru secondary — the saffron of techtaru.com (#f97316 is 500). White on 500
+        // is too low-contrast for a filled control, so anything with text on it uses 600
+        // or darker.
         accent: {
-          50: '#eff9fd',
-          100: '#d8f0f9',
-          200: '#b2e1f2',
-          300: '#7dcbe7',
-          400: '#47b0d6',
-          500: '#2596BE',
-          600: '#1f7ca0',
-          700: '#1d6581',
-          800: '#1e536a',
-          900: '#1d465a',
-          950: '#0f2c3c',
+          50: '#fff8eb',
+          100: '#ffeec6',
+          200: '#ffd98c',
+          300: '#ffba53',
+          400: '#ff9a2e',
+          500: '#f97316',
+          600: '#c2410c',
+          700: '#9a3412',
+          800: '#7c2d12',
+          900: '#5c210d',
+          950: '#3b1508',
         },
-        // The vivid pink of the mark and the "ROS" half of the wordmark. Not a UI colour —
-        // it is here so charts and illustrations can reach for the logo's own accent.
+        // The leaf green of the logo's "taru" half and its crown (#64b975 is 500). Not a UI
+        // colour — it is here so charts, gradients and illustrations can reach for the logo.
         blossom: {
-          50: '#fdf0f6',
-          100: '#fce0ec',
-          200: '#f9c1da',
-          300: '#f28fbc',
-          400: '#e85398',
-          500: '#D4166C',
-          600: '#b90f5c',
-          700: '#98104d',
-          800: '#7d1241',
-          900: '#69143a',
+          50: '#f0f8f2',
+          100: '#e0f1e4',
+          200: '#c1e3c8',
+          300: '#a2d5ac',
+          400: '#83c791',
+          500: '#64b975',
+          600: '#50945e',
+          700: '#3c6f46',
+          800: '#2f5737',
+          900: '#23412a',
+        },
+        // The steel blue of the logo's "Tech" half (#428797 is 500).
+        steel: {
+          200: '#b3cfd5',
+          300: '#8eb7c1',
+          400: '#689fac',
+          500: '#428797',
+          600: '#356c79',
+          700: '#28515b',
         },
         surface: {
           DEFAULT: '#ffffff',

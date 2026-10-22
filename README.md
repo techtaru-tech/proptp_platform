@@ -1,6 +1,6 @@
-# Rosium Platform
+# TechTaru Platform
 
-The admin panel and API behind Rosium Developers — CRM, property operations and HRMS on one
+The admin panel and API behind TechTaru Digital — CRM, property operations and HRMS on one
 database, serving both a React admin panel and the Flutter partner app.
 
 | | |
@@ -55,12 +55,12 @@ cp .env.example .env          # set DATABASE_URL and generate the two secrets
 npm install
 npm run prisma:migrate        # creates the tables
 npm run prisma:seed           # reference data + demo partners, projects, bookings
-npm run dev                   # http://localhost:4300
+npm run dev                   # http://localhost:4400
 
 # Frontend, from the repo root
-cp .env.example .env          # VITE_API_BASE_URL=http://localhost:4300/api
+cp .env.example .env          # VITE_API_BASE_URL=http://localhost:4400/api
 npm install
-npm run dev                   # http://localhost:5273
+npm run dev                   # http://localhost:5373
 ```
 
 The seed prints the admin sign-in it created. Partners sign in to the app API with any seeded
