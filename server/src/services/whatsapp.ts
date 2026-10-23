@@ -608,8 +608,10 @@ async function deliver(
     data: {
       lastMessageAt: message.sentAt,
       lastMessagePreview: previewOf(message),
-      // "Intervened" means a person replied here, as opposed to an automation.
-      intervened: input.sentByUserId ? true : conversation.intervened,
+      // "Intervened" means a person typed a reply here. A template sent by a broadcast or a drip
+      // campaign is an automation's message even though a user pressed Send, and counting it would
+      // silence the auto-reply bot for everyone who had ever been messaged that way.
+      intervened: input.sentByUserId && input.type === 'text' ? true : conversation.intervened,
     },
   });
   await prisma.whatsAppAccount.update({
