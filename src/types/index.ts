@@ -2177,3 +2177,49 @@ export interface WhatsAppDripSend {
   message?: string;
   sentAt: string;
 }
+
+// ---------------------------------------------------------------------------
+// WhatsApp auto-reply bots — server/src/routes/whatsappBots.ts
+// ---------------------------------------------------------------------------
+
+export interface WhatsAppBotButton {
+  title: string;
+  type: 'reply' | 'url';
+  url?: string;
+  /** Key of the message a reply option leads to. */
+  nextKey?: string;
+}
+
+export interface WhatsAppBotNode {
+  key: string;
+  label: string;
+  body: string;
+  headerImageUrl?: string;
+  buttons: WhatsAppBotButton[];
+  /** Adds a note on the lead that this person is waiting for the team. */
+  handoff: boolean;
+}
+
+export interface WhatsAppBot {
+  id: string;
+  name: string;
+  status: WhatsAppDripStatus;
+  triggerType: 'any' | 'keywords';
+  keywords: string[];
+  cooldownHours: number;
+  startKey: string;
+  nodeCount: number;
+  createdAt: string;
+  /** Present on the detail response only. */
+  nodes?: WhatsAppBotNode[];
+}
+
+export interface WhatsAppBotInput {
+  name: string;
+  status: WhatsAppDripStatus;
+  triggerType: 'any' | 'keywords';
+  keywords: string[];
+  cooldownHours: number;
+  startKey: string;
+  nodes: WhatsAppBotNode[];
+}

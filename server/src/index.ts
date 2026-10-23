@@ -31,6 +31,7 @@ import { startAutomationPoller } from './services/automationEngine';
 import { startEmailSequencePoller } from './services/emailSequenceEngine';
 import { startNotificationPoller } from './services/notify';
 import { whatsappDripsRouter } from './routes/whatsappDrips';
+import { whatsappBotsRouter } from './routes/whatsappBots';
 import { startWhatsAppDripPoller } from './services/whatsappDripEngine';
 import { startFollowUpReminderPoller } from './services/followUpReminders';
 
@@ -214,6 +215,7 @@ app.use('/api/email-settings', emailSettingsRouter);
 app.use('/api/whatsapp', whatsappRouter);
 app.use('/api/whatsapp-templates', whatsappTemplatesRouter);
 app.use('/api/whatsapp-drips', whatsappDripsRouter);
+app.use('/api/whatsapp-bots', whatsappBotsRouter);
 app.use('/api/lead-fields', leadFieldsRouter);
 
 // Task management

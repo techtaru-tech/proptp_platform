@@ -31,6 +31,8 @@ import { AiSdrAgents } from './pages/crm/AiSdrAgents';
 import { EmailSequences } from './pages/crm/EmailSequences';
 import { EmailSequenceBuilder } from './pages/crm/EmailSequenceBuilder';
 import { EmailSequenceDetail } from './pages/crm/EmailSequenceDetail';
+import { WhatsAppBots } from './pages/crm/WhatsAppBots';
+import { WhatsAppBotBuilder } from './pages/crm/WhatsAppBotBuilder';
 import { WhatsAppDrips } from './pages/crm/WhatsAppDrips';
 import { WhatsAppDripBuilder } from './pages/crm/WhatsAppDripBuilder';
 import { WhatsAppDripDetail } from './pages/crm/WhatsAppDripDetail';
@@ -246,6 +248,9 @@ function App() {
                 <Route path="/crm/email-sequences/new" element={<EmailSequenceBuilder />} />
                 <Route path="/crm/email-sequences/:id" element={<EmailSequenceDetail />} />
                 <Route path="/crm/email-sequences/:id/edit" element={<EmailSequenceBuilder />} />
+                <Route path="/crm/whatsapp-bots" element={<WhatsAppBots />} />
+                <Route path="/crm/whatsapp-bots/new" element={<WhatsAppBotBuilder />} />
+                <Route path="/crm/whatsapp-bots/:id" element={<WhatsAppBotBuilder />} />
                 <Route path="/crm/whatsapp-drips" element={<WhatsAppDrips />} />
                 <Route path="/crm/whatsapp-drips/new" element={<WhatsAppDripBuilder />} />
                 <Route path="/crm/whatsapp-drips/:id" element={<WhatsAppDripDetail />} />

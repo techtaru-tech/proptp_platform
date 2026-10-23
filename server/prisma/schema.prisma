@@ -728,6 +728,8 @@ model WhatsAppConversation {
   unreadCount        Int       @default(0)
   /// True once a person (not an automation) has replied here — the "Intervened" tab.
   intervened         Boolean   @default(false)
+  /// When the auto-reply bot last answered here — what its cooldown is measured from.
+  botRepliedAt       DateTime?
   archived           Boolean   @default(false)
 
   messages WhatsAppMessage[]
@@ -3362,4 +3364,51 @@ model WhatsAppDripSend {
   sentAt DateTime @default(now())
 
   @@index([enrollmentId])
+}
+
+// ---------------------------------------------------------------------------
+// WhatsApp auto-reply bots — a flow of messages, each with reply options or a link.
+// A reply option leads to another message in the same flow; a link button opens a URL.
+// ---------------------------------------------------------------------------
+
+model WhatsAppBot {
+  id          String  @id @default(cuid())
+  name        String
+  /// draft | active | paused — only `active` answers.
+  status      String  @default("draft")
+
+  /// any = answers a first message of any kind; keywords = only when the text contains one of them.
+  triggerType String   @default("any")
+  keywords    String[] @default([])
+  /// After answering, stay quiet on that chat for this long, so "Ok" does not restart the welcome.
+  cooldownHours Int    @default(12)
+
+  /// Key of the node sent first.
+  startKey String @default("m1")
+  nodes    WhatsAppBotNode[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+model WhatsAppBotNode {
+  id    String      @id @default(cuid())
+  bot   WhatsAppBot @relation(fields: [botId], references: [id], onDelete: Cascade)
+  botId String
+  /// Short id other nodes point at, stable across edits.
+  key   String
+  /// Only for the person building the flow.
+  label String      @default("")
+  sortOrder Int     @default(0)
+
+  body           String
+  headerImageUrl String?
+  /// [{ title, type: "reply" | "url", url?, nextKey? }] — replies, or a single link.
+  buttons        Json   @default("[]")
+  /// Adds a note on the lead that this person asked for a human.
+  handoff        Boolean @default(false)
+
+  @@unique([botId, key])
 }

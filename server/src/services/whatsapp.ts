@@ -547,6 +547,19 @@ export async function sendTemplateToNumber(
   return { ...result, conversationId: conversation.id, leadId: conversation.leadId };
 }
 
+/**
+ * Sends a message someone else has already shaped — an interactive one with buttons, say. The
+ * caller says what the thread should show for it; this does the sending and the bookkeeping.
+ */
+export async function sendPrepared(
+  conversationId: string,
+  input: { type: string; body: string; payload: Record<string, unknown> }
+): Promise<SendResult> {
+  const conversation = await prisma.whatsAppConversation.findUnique({ where: { id: conversationId }, include: { account: true } });
+  if (!conversation) throw new WhatsAppError('Conversation not found.', 404);
+  return deliver(conversation.account, conversation, { ...input, sentByUserId: null });
+}
+
 /** One write path for every outbound message, so the thread summary can never drift. */
 async function deliver(
   account: WhatsAppAccount,
@@ -622,7 +635,7 @@ async function deliver(
 // Inbound — called by the webhook
 // ---------------------------------------------------------------------------
 
-interface InboundMessage {
+export interface InboundMessage {
   id?: string;
   from?: string;
   type?: string;
@@ -634,7 +647,7 @@ interface InboundMessage {
   video?: { id?: string; mime_type?: string; caption?: string };
   location?: { latitude?: number; longitude?: number; name?: string };
   button?: { text?: string };
-  interactive?: { button_reply?: { title?: string }; list_reply?: { title?: string } };
+  interactive?: { button_reply?: { id?: string; title?: string }; list_reply?: { id?: string; title?: string } };
 }
 
 /** Flattens Meta's per-type message shapes into the one row we store. */
@@ -703,6 +716,15 @@ export async function recordInbound(
     await prisma.leadActivity.create({
       data: { leadId: conversation.leadId, type: 'note_added', description: `WhatsApp received: "${previewOf(created)}"` },
     });
+  }
+
+  // The auto-reply bot answers last, once the message is safely recorded — and whatever it does,
+  // a failure there must never lose or reject an inbound message.
+  try {
+    const { handleBotInbound } = await import('./whatsappBot');
+    await handleBotInbound(conversation.id, message, parsed);
+  } catch (err) {
+    console.error('[whatsapp bot] failed:', err instanceof Error ? err.message : err);
   }
 }
 
