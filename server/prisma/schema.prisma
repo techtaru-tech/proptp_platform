@@ -205,6 +205,7 @@ model Lead {
   formSubmissions LeadFormSubmission[]
   sdrEnrollments  AiSdrEnrollment[]
   emailSequences  EmailSequenceEnrollment[]
+  whatsAppDripEnrollments WhatsAppDripEnrollment[]
   calls           CallLog[]
   whatsappThreads WhatsAppConversation[]
   stageHistory    LeadStageHistoryEntry[]
@@ -3265,4 +3266,100 @@ model AssistantMessage {
   createdAt      DateTime              @default(now())
 
   @@index([conversationId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// WhatsApp drip campaigns — the same shape as email sequences, one approved template per step.
+// ---------------------------------------------------------------------------
+
+model WhatsAppDrip {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  /// draft | active | paused — only `active` sends. Draft and paused hold their enrollments.
+  status      String  @default("draft")
+
+  /// Unenroll when the lead sends any WhatsApp message after enrolling — a person should answer now.
+  stopOnReply Boolean @default(true)
+  /// Unenroll when the lead's status becomes "won".
+  stopOnWon   Boolean @default(true)
+
+  steps       WhatsAppDripStep[]
+  enrollments WhatsAppDripEnrollment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+model WhatsAppDripStep {
+  id        String       @id @default(cuid())
+  drip      WhatsAppDrip @relation(fields: [dripId], references: [id], onDelete: Cascade)
+  dripId    String
+  sortOrder Int          @default(0)
+
+  /// Measured from the previous step, or from enrollment for the first step.
+  delayDays  Int @default(0)
+  delayHours Int @default(0)
+
+  /// An approved template on the linked number, read live from Meta at send time.
+  templateName String
+  language     String   @default("en")
+  /// One value per {{n}}; may hold {first_name}, {last_name}, {full_name}.
+  params       String[] @default([])
+  /// A public https link, for templates whose header is an image, video or document.
+  headerMediaUrl String?
+
+  sends WhatsAppDripSend[]
+
+  @@index([dripId, sortOrder])
+}
+
+model WhatsAppDripEnrollment {
+  id     String       @id @default(cuid())
+  drip   WhatsAppDrip @relation(fields: [dripId], references: [id], onDelete: Cascade)
+  dripId String
+  lead   Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId String
+
+  /// active | completed | stopped
+  status        String    @default("active")
+  /// Index of the next step to send. Equals the step count once every step has gone out.
+  currentStep   Int       @default(0)
+  nextSendAt    DateTime?
+  /// When this run began — set again on re-enrolment, so only replies since then stop it.
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  stoppedAt     DateTime?
+  stoppedReason String?
+
+  sends WhatsAppDripSend[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// One enrollment per drip+lead — re-enrolling restarts the existing row.
+  @@unique([dripId, leadId])
+  @@index([status, nextSendAt])
+}
+
+/// What actually went out, with the values filled in, so the record reads correctly after the step is edited.
+model WhatsAppDripSend {
+  id           String                 @id @default(cuid())
+  enrollment   WhatsAppDripEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  enrollmentId String
+  step         WhatsAppDripStep       @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  stepId       String
+  stepIndex    Int
+
+  templateName String
+  body         String
+  /// sent | failed
+  status       String
+  message      String?
+
+  sentAt DateTime @default(now())
+
+  @@index([enrollmentId])
 }

@@ -240,6 +240,20 @@ export interface ApprovedTemplate {
   unsupported?: string;
 }
 
+/**
+ * Fills the tokens a variable may carry with this person's own details. Meta rejects an empty
+ * variable outright, so an unknown name becomes a greeting that still reads.
+ */
+export function resolveTemplateParams(params: string[], person: { firstName: string; lastName: string }): string[] {
+  return params.map((param) => {
+    const filled = param
+      .replace(/\{first_name\}/gi, person.firstName)
+      .replace(/\{last_name\}/gi, person.lastName)
+      .replace(/\{full_name\}/gi, `${person.firstName} ${person.lastName}`.trim());
+    return filled.trim() || 'there';
+  });
+}
+
 /** Substitutes {{1}}, {{2}} … with the values actually sent, for the copy kept in the thread. */
 export function fillPlaceholders(text: string, params: string[]): string {
   return params.reduce(

@@ -8,7 +8,7 @@ import type { AuthedRequest } from '../../services/auth';
 import { UPLOAD_DIR } from '../../services/upload';
 import { buildLeadWhere, type LeadFilter } from '../../services/leadFilters';
 import {
-  createTemplate, deleteTemplate, type NewTemplate, type TemplateButton, fillPlaceholders, listAllTemplates, listApprovedTemplates, localPart, sendTemplateToNumber, toWaAddress,
+  createTemplate, deleteTemplate, type NewTemplate, type TemplateButton, fillPlaceholders, listAllTemplates, listApprovedTemplates, resolveTemplateParams, localPart, sendTemplateToNumber, toWaAddress,
   WhatsAppError,
 } from '../../services/whatsapp';
 
@@ -34,14 +34,7 @@ interface Recipient {
 }
 
 function resolveParams(params: string[], recipient: Recipient): string[] {
-  return params.map((param) => {
-    const filled = param
-      .replace(/\{first_name\}/gi, recipient.firstName)
-      .replace(/\{last_name\}/gi, recipient.lastName)
-      .replace(/\{full_name\}/gi, `${recipient.firstName} ${recipient.lastName}`.trim());
-    // Meta rejects an empty variable outright, so an unknown name becomes a greeting that reads.
-    return filled.trim() || 'there';
-  });
+  return resolveTemplateParams(params, recipient);
 }
 
 /** The account every broadcast goes through — the first active linked number. */

@@ -2111,3 +2111,69 @@ export interface NewWhatsAppTemplate {
   buttons: WhatsAppTemplateButton[];
   samples: string[];
 }
+
+// ---------------------------------------------------------------------------
+// WhatsApp drip campaigns — server/src/routes/whatsappDrips.ts
+// ---------------------------------------------------------------------------
+
+export type WhatsAppDripStatus = 'draft' | 'active' | 'paused';
+
+export interface WhatsAppDripStep {
+  id?: string;
+  delayDays: number;
+  delayHours: number;
+  templateName: string;
+  language: string;
+  /** One value per {{n}}; may carry {first_name}, {last_name}, {full_name}. */
+  params: string[];
+  headerMediaUrl?: string;
+}
+
+export interface WhatsAppDrip {
+  id: string;
+  name: string;
+  description?: string;
+  status: WhatsAppDripStatus;
+  stopOnReply: boolean;
+  stopOnWon: boolean;
+  stepCount: number;
+  activeEnrollments: number;
+  completedEnrollments: number;
+  stoppedEnrollments: number;
+  createdAt: string;
+  /** Present on the detail response only. */
+  steps?: WhatsAppDripStep[];
+}
+
+export interface WhatsAppDripInput {
+  name: string;
+  description: string;
+  status: WhatsAppDripStatus;
+  stopOnReply: boolean;
+  stopOnWon: boolean;
+  steps: WhatsAppDripStep[];
+}
+
+export interface WhatsAppDripEnrollment {
+  id: string;
+  leadId: string;
+  leadName: string;
+  leadPhone: string;
+  leadStatus: string;
+  status: 'active' | 'completed' | 'stopped';
+  currentStep: number;
+  sendCount: number;
+  nextSendAt?: string;
+  stoppedReason?: string;
+  createdAt: string;
+}
+
+export interface WhatsAppDripSend {
+  id: string;
+  stepIndex: number;
+  templateName: string;
+  body: string;
+  status: 'sent' | 'failed';
+  message?: string;
+  sentAt: string;
+}

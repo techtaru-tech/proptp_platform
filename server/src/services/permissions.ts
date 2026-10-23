@@ -63,6 +63,7 @@ const PATH_MODULE_ENTRIES = [
   { prefix: '/reports', module: 'crm' },
   { prefix: '/sdr-agents', module: 'crm' },
   { prefix: '/email-sequences', module: 'crm' },
+  { prefix: '/whatsapp-drips', module: 'crm' },
   { prefix: '/email-templates', module: 'crm' },
   { prefix: '/email-settings', module: 'crm' },
   { prefix: '/calls', module: 'crm' },

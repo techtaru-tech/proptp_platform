@@ -30,6 +30,8 @@ import { unsubscribeRouter } from './routes/unsubscribe';
 import { startAutomationPoller } from './services/automationEngine';
 import { startEmailSequencePoller } from './services/emailSequenceEngine';
 import { startNotificationPoller } from './services/notify';
+import { whatsappDripsRouter } from './routes/whatsappDrips';
+import { startWhatsAppDripPoller } from './services/whatsappDripEngine';
 import { startFollowUpReminderPoller } from './services/followUpReminders';
 
 // --- Admin panel (operations + HRMS) ---
@@ -211,6 +213,7 @@ app.use('/api/calls', callsRouter);
 app.use('/api/email-settings', emailSettingsRouter);
 app.use('/api/whatsapp', whatsappRouter);
 app.use('/api/whatsapp-templates', whatsappTemplatesRouter);
+app.use('/api/whatsapp-drips', whatsappDripsRouter);
 app.use('/api/lead-fields', leadFieldsRouter);
 
 // Task management
@@ -266,5 +269,6 @@ app.listen(PORT, HOST, () => {
   startEmailSequencePoller();
   startNotificationPoller();
   startFollowUpReminderPoller();
+  startWhatsAppDripPoller();
   startOpsRulePoller();
 });

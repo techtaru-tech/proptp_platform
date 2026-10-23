@@ -31,6 +31,9 @@ import { AiSdrAgents } from './pages/crm/AiSdrAgents';
 import { EmailSequences } from './pages/crm/EmailSequences';
 import { EmailSequenceBuilder } from './pages/crm/EmailSequenceBuilder';
 import { EmailSequenceDetail } from './pages/crm/EmailSequenceDetail';
+import { WhatsAppDrips } from './pages/crm/WhatsAppDrips';
+import { WhatsAppDripBuilder } from './pages/crm/WhatsAppDripBuilder';
+import { WhatsAppDripDetail } from './pages/crm/WhatsAppDripDetail';
 import { CallHistory } from './pages/crm/CallHistory';
 import { TelephonySettingsPage } from './pages/settings/TelephonySettingsPage';
 import { EmailSettingsPage } from './pages/settings/EmailSettingsPage';
@@ -243,6 +246,10 @@ function App() {
                 <Route path="/crm/email-sequences/new" element={<EmailSequenceBuilder />} />
                 <Route path="/crm/email-sequences/:id" element={<EmailSequenceDetail />} />
                 <Route path="/crm/email-sequences/:id/edit" element={<EmailSequenceBuilder />} />
+                <Route path="/crm/whatsapp-drips" element={<WhatsAppDrips />} />
+                <Route path="/crm/whatsapp-drips/new" element={<WhatsAppDripBuilder />} />
+                <Route path="/crm/whatsapp-drips/:id" element={<WhatsAppDripDetail />} />
+                <Route path="/crm/whatsapp-drips/:id/edit" element={<WhatsAppDripBuilder />} />
                 <Route path="/crm/calls" element={<CallHistory />} />
                 <Route path="/crm/conversations" element={<Conversations />} />
                 <Route path="/crm/integrations" element={<Integrations />} />
