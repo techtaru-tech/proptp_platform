@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, Info, MessageSquare, Plus, Trash2 } from 'lucide-react';
+import { Copy, Info, MessageSquare, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -217,6 +217,8 @@ function AccountCard({
 }) {
   const [accessToken, setAccessToken] = useState('');
   const [appSecret, setAppSecret] = useState('');
+  const [editingToken, setEditingToken] = useState(false);
+  const [newToken, setNewToken] = useState('');
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
@@ -228,6 +230,9 @@ function AccountCard({
       setAppSecret('');
       toast({ title: 'Saved', variant: 'success' });
       onChanged();
+    } catch (err) {
+      toast({ title: 'Could not save', description: err instanceof Error ? err.message : undefined, variant: 'error' });
+      throw err;
     } finally {
       setSaving(false);
     }
@@ -264,14 +269,63 @@ function AccountCard({
         {account.provider !== 'pinbot' && (
         <div>
           <p className="mb-1 text-sm font-medium text-ink">Verify token</p>
-          <div className="flex items-center gap-2">
-            <code className="flex-1 rounded-lg border border-line bg-surface-subtle px-3 py-2 text-xs text-ink-muted">
-              {account.verifyToken}
-            </code>
-            <Button variant="outline" size="icon" aria-label="Copy verify token" onClick={() => onCopy(account.verifyToken)}>
-              <Copy size={14} />
-            </Button>
-          </div>
+          {editingToken ? (
+            <div className="space-y-2">
+              <Input
+                value={newToken}
+                onChange={(e) => setNewToken(e.target.value)}
+                placeholder="Your own token — letters, numbers, - or _"
+                hint="8–100 characters. After saving, enter the same value in Meta → WhatsApp → Configuration, or its handshake will fail."
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  isLoading={saving}
+                  disabled={newToken.trim().length < 8}
+                  onClick={async () => {
+                    await save({ verifyToken: newToken.trim() }).then(() => setEditingToken(false), () => undefined);
+                  }}
+                >
+                  Save token
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<RefreshCw size={13} />}
+                  isLoading={saving}
+                  onClick={async () => {
+                    await save({ regenerateVerifyToken: true }).then(() => setEditingToken(false), () => undefined);
+                  }}
+                >
+                  Generate random
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setEditingToken(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <code className="flex-1 overflow-x-auto rounded-lg border border-line bg-surface-subtle px-3 py-2 text-xs text-ink-muted">
+                {account.verifyToken}
+              </code>
+              <Button variant="outline" size="icon" aria-label="Copy verify token" onClick={() => onCopy(account.verifyToken)}>
+                <Copy size={14} />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Change verify token"
+                onClick={() => {
+                  setNewToken('');
+                  setEditingToken(true);
+                }}
+              >
+                <Pencil size={14} />
+              </Button>
+            </div>
+          )}
         </div>
         )}
 

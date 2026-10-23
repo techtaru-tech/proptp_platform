@@ -285,6 +285,113 @@ export async function listApprovedTemplates(account: WhatsAppAccount): Promise<A
     .sort((a: ApprovedTemplate, b: ApprovedTemplate) => a.name.localeCompare(b.name));
 }
 
+// ---------------------------------------------------------------------------
+// Template management — create, track approval, delete
+//
+// Meta reviews every template (usually minutes, sometimes a day) and answers APPROVED,
+// PENDING or REJECTED. Nothing is stored here: the status shown is whatever Meta says now.
+// ---------------------------------------------------------------------------
+
+export interface ManagedTemplate {
+  id?: string;
+  name: string;
+  language: string;
+  category: string;
+  /** APPROVED | PENDING | REJECTED | PAUSED | DISABLED … exactly as Meta reports it. */
+  status: string;
+  rejectedReason?: string;
+  header?: string;
+  body: string;
+  footer?: string;
+}
+
+function metaFailure(err: unknown): WhatsAppError {
+  if (axios.isAxiosError(err)) {
+    const e = err.response?.data?.error;
+    // `error_user_msg` is Meta's plain-language reason, e.g. why a template body was refused.
+    return new WhatsAppError(String(e?.error_user_msg ?? e?.message ?? err.response?.data?.message ?? err.message), 502);
+  }
+  return new WhatsAppError(err instanceof Error ? err.message : 'WhatsApp request failed.', 502);
+}
+
+export async function listAllTemplates(account: WhatsAppAccount): Promise<ManagedTemplate[]> {
+  const { base, headers } = apiFor(account);
+  if (!account.wabaId) throw new WhatsAppError('This number has no WhatsApp Business Account ID saved.');
+  try {
+    const { data } = await axios.get(`${base}/${account.wabaId}/message_templates`, {
+      headers,
+      params: { fields: 'name,status,language,category,components,rejected_reason', limit: 200 },
+      timeout: REQUEST_TIMEOUT_MS,
+    });
+    return (Array.isArray(data?.data) ? data.data : []).map((t: any): ManagedTemplate => {
+      const components: any[] = Array.isArray(t?.components) ? t.components : [];
+      const text = (type: string) => components.find((c) => c?.type === type)?.text as string | undefined;
+      const reason = String(t?.rejected_reason ?? '');
+      return {
+        id: t?.id ? String(t.id) : undefined,
+        name: String(t?.name ?? ''),
+        language: String(t?.language ?? 'en'),
+        category: String(t?.category ?? ''),
+        status: String(t?.status ?? '').toUpperCase(),
+        // Meta answers NONE for a template that was not rejected.
+        rejectedReason: reason && reason !== 'NONE' ? reason : undefined,
+        header: text('HEADER'),
+        body: text('BODY') ?? '',
+        footer: text('FOOTER'),
+      };
+    });
+  } catch (err) {
+    throw metaFailure(err);
+  }
+}
+
+export interface NewTemplate {
+  name: string;
+  language: string;
+  category: 'MARKETING' | 'UTILITY';
+  header?: string;
+  body: string;
+  footer?: string;
+  /** One sample per {{n}} in the body — Meta will not review a template without them. */
+  samples: string[];
+}
+
+export async function createTemplate(account: WhatsAppAccount, input: NewTemplate): Promise<{ id?: string; status: string }> {
+  const { base, headers } = apiFor(account);
+  if (!account.wabaId) throw new WhatsAppError('This number has no WhatsApp Business Account ID saved.');
+
+  const components: Record<string, unknown>[] = [];
+  if (input.header) components.push({ type: 'HEADER', format: 'TEXT', text: input.header });
+  const count = (input.body.match(/\{\{\s*\d+\s*\}\}/g) ?? []).length;
+  components.push({
+    type: 'BODY',
+    text: input.body,
+    ...(count > 0 ? { example: { body_text: [input.samples.slice(0, count)] } } : {}),
+  });
+  if (input.footer) components.push({ type: 'FOOTER', text: input.footer });
+
+  try {
+    const { data } = await axios.post(
+      `${base}/${account.wabaId}/message_templates`,
+      { name: input.name, language: input.language, category: input.category, components },
+      { headers, timeout: REQUEST_TIMEOUT_MS }
+    );
+    return { id: data?.id ? String(data.id) : undefined, status: String(data?.status ?? 'PENDING').toUpperCase() };
+  } catch (err) {
+    throw metaFailure(err);
+  }
+}
+
+export async function deleteTemplate(account: WhatsAppAccount, name: string): Promise<void> {
+  const { base, headers } = apiFor(account);
+  if (!account.wabaId) throw new WhatsAppError('This number has no WhatsApp Business Account ID saved.');
+  try {
+    await axios.delete(`${base}/${account.wabaId}/message_templates`, { headers, params: { name }, timeout: REQUEST_TIMEOUT_MS });
+  } catch (err) {
+    throw metaFailure(err);
+  }
+}
+
 /**
  * One approved template to one number, starting the thread if there is not one yet.
  *

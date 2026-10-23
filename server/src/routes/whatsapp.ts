@@ -120,6 +120,16 @@ whatsappRouter.patch('/accounts/:id', async (req: AuthedRequest, res, next) => {
     if (body.provider !== undefined) data.provider = body.provider === 'pinbot' ? 'pinbot' : 'meta';
     if (body.active !== undefined) data.active = !!body.active;
     if (body.createLeadOnInbound !== undefined) data.createLeadOnInbound = !!body.createLeadOnInbound;
+    // Changing it only helps once the same value is saved in Meta's webhook configuration.
+    if (body.regenerateVerifyToken) {
+      data.verifyToken = crypto.randomBytes(12).toString('hex');
+    } else if (body.verifyToken !== undefined) {
+      const token = String(body.verifyToken).trim();
+      if (!/^[A-Za-z0-9_-]{8,100}$/.test(token)) {
+        return res.status(400).json({ error: 'The verify token must be 8–100 characters: letters, numbers, - or _.' });
+      }
+      data.verifyToken = token;
+    }
     // Blank means "keep the stored one" — the UI never receives it to send back.
     if (body.accessToken) data.accessToken = encrypt(String(body.accessToken).trim());
     if (body.appSecret) data.appSecret = encrypt(String(body.appSecret).trim());

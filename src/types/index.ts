@@ -1693,6 +1693,9 @@ export interface WhatsAppAccountInput {
   provider?: 'meta' | 'pinbot';
   accessToken?: string;
   appSecret?: string;
+  /** Your own token, or `regenerateVerifyToken` for a random one. Must match what Meta is given. */
+  verifyToken?: string;
+  regenerateVerifyToken?: boolean;
   active?: boolean;
   createLeadOnInbound?: boolean;
 }
@@ -2070,4 +2073,27 @@ export interface Holiday {
   days: number;
   description: string | null;
   upcoming: boolean;
+}
+
+/** A template as Meta holds it — any approval state, not just the sendable ones. */
+export interface ManagedWhatsAppTemplate {
+  name: string;
+  language: string;
+  category: string;
+  /** APPROVED | PENDING | REJECTED | PAUSED | DISABLED, as Meta reports it. */
+  status: string;
+  rejectedReason?: string;
+  header?: string;
+  body: string;
+  footer?: string;
+}
+
+export interface NewWhatsAppTemplate {
+  name: string;
+  category: 'MARKETING' | 'UTILITY';
+  language: string;
+  header?: string;
+  body: string;
+  footer?: string;
+  samples: string[];
 }

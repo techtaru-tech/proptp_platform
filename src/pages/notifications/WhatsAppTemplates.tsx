@@ -18,6 +18,7 @@ import {
 import {
   getBroadcastSource, listWhatsAppSends, previewAudience, sendBroadcast,
 } from '../../services/whatsappTemplateService';
+import { TemplateManager } from './TemplateManager';
 import { formatDateTime } from '../../utils/format';
 import type {
   BroadcastAudience, BroadcastLeadFilter, WhatsAppBroadcastSource, WhatsAppTemplateSendRow,
@@ -87,6 +88,7 @@ export function WhatsAppTemplates() {
             </p>
           </div>
 
+          <TemplateManager onChanged={load} />
           <BroadcastForm source={source} onSent={load} />
         </>
       ) : null}

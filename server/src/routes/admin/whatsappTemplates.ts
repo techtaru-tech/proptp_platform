@@ -5,7 +5,7 @@ import { writeAudit } from '../../services/audit';
 import type { AuthedRequest } from '../../services/auth';
 import { buildLeadWhere, type LeadFilter } from '../../services/leadFilters';
 import {
-  fillPlaceholders, listApprovedTemplates, localPart, sendTemplateToNumber, toWaAddress,
+  createTemplate, deleteTemplate, fillPlaceholders, listAllTemplates, listApprovedTemplates, localPart, sendTemplateToNumber, toWaAddress,
   WhatsAppError,
 } from '../../services/whatsapp';
 
@@ -241,6 +241,71 @@ whatsappTemplatesRouter.post('/send', async (req: AuthedRequest, res, next) => {
     });
 
     res.json({ sent, failed: results.length - sent, results });
+  } catch (err) {
+    handle(err, res, next);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Managing templates — create, watch approval, delete
+// ---------------------------------------------------------------------------
+
+/** Every template on the number with the status Meta gives it right now, not just approved ones. */
+whatsappTemplatesRouter.get('/manage', async (_req, res, next) => {
+  try {
+    const account = await activeAccount();
+    res.json({ templates: await listAllTemplates(account) });
+  } catch (err) {
+    handle(err, res, next);
+  }
+});
+
+whatsappTemplatesRouter.post('/manage', async (req: AuthedRequest, res, next) => {
+  try {
+    const account = await activeAccount();
+    const body = req.body ?? {};
+    // Meta only accepts lowercase letters, digits and underscores in a name.
+    const name = String(body.name ?? '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+    const text = String(body.body ?? '').trim();
+    const header = String(body.header ?? '').trim();
+    const footer = String(body.footer ?? '').trim();
+    const samples: string[] = Array.isArray(body.samples) ? body.samples.map((v: unknown) => String(v ?? '').trim()) : [];
+    const category = body.category === 'UTILITY' ? 'UTILITY' : 'MARKETING';
+
+    if (!/^[a-z0-9_]{1,512}$/.test(name)) return res.status(400).json({ error: 'Name may only use letters, numbers and underscores.' });
+    if (!text) return res.status(400).json({ error: 'The message text is required.' });
+    if (text.length > 1024) return res.status(400).json({ error: 'The message text is limited to 1024 characters.' });
+    if (header.length > 60) return res.status(400).json({ error: 'The header is limited to 60 characters.' });
+    if (/\{\{/.test(header)) return res.status(400).json({ error: 'A header cannot hold a variable here.' });
+    if (footer.length > 60) return res.status(400).json({ error: 'The footer is limited to 60 characters.' });
+
+    const placeholders = Array.from(new Set(text.match(/\{\{\s*\d+\s*\}\}/g) ?? []));
+    if (placeholders.length > 0) {
+      const numbers = placeholders.map((p) => Number(p.replace(/\D/g, ''))).sort((a, b) => a - b);
+      if (numbers.some((n, i) => n !== i + 1)) return res.status(400).json({ error: 'Variables must run {{1}}, {{2}}, {{3}} with no gaps.' });
+      if (samples.length < numbers.length || samples.slice(0, numbers.length).some((v) => !v)) {
+        return res.status(400).json({ error: 'Give an example value for every variable — Meta will not review the template without them.' });
+      }
+    }
+
+    const created = await createTemplate(account, {
+      name, language: String(body.language ?? 'en').trim() || 'en', category,
+      header: header || undefined, body: text, footer: footer || undefined, samples,
+    });
+    await writeAudit(req, { module: 'Notifications', action: 'Submitted a WhatsApp template for approval', recordId: name, recordLabel: name });
+    res.status(201).json({ name, ...created });
+  } catch (err) {
+    handle(err, res, next);
+  }
+});
+
+whatsappTemplatesRouter.delete('/manage/:name', async (req: AuthedRequest, res, next) => {
+  try {
+    const account = await activeAccount();
+    const name = String(req.params.name);
+    await deleteTemplate(account, name);
+    await writeAudit(req, { module: 'Notifications', action: 'Deleted a WhatsApp template', recordId: name, recordLabel: name });
+    res.status(204).end();
   } catch (err) {
     handle(err, res, next);
   }

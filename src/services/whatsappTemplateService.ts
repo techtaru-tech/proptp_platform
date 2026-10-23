@@ -1,5 +1,5 @@
 import type {
-  BroadcastAudience, BroadcastLeadFilter, WhatsAppBroadcastSource, WhatsAppSendResult,
+  BroadcastAudience, BroadcastLeadFilter, ManagedWhatsAppTemplate, NewWhatsAppTemplate, WhatsAppBroadcastSource, WhatsAppSendResult,
   WhatsAppTemplateSendRow,
 } from '../types';
 import { api } from './apiClient';
@@ -33,4 +33,17 @@ export async function sendBroadcast(
 export async function listWhatsAppSends(limit = 50): Promise<WhatsAppTemplateSendRow[]> {
   const { sends } = await api.get<{ sends: WhatsAppTemplateSendRow[] }>(`/whatsapp-templates/sends?limit=${limit}`);
   return sends;
+}
+
+export async function listManagedTemplates(): Promise<ManagedWhatsAppTemplate[]> {
+  const { templates } = await api.get<{ templates: ManagedWhatsAppTemplate[] }>('/whatsapp-templates/manage');
+  return templates;
+}
+
+export async function submitTemplate(input: NewWhatsAppTemplate): Promise<{ name: string; status: string }> {
+  return api.post('/whatsapp-templates/manage', input);
+}
+
+export async function removeTemplate(name: string): Promise<void> {
+  await api.delete(`/whatsapp-templates/manage/${encodeURIComponent(name)}`);
 }
