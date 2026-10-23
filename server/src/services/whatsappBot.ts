@@ -95,12 +95,22 @@ async function sendNode(bot: WhatsAppBot, node: WhatsAppBotNode, conversation: {
   }
 }
 
+/**
+ * Whole-word match, so "app" is not found inside "WhatsApp" or "happy", and "crm" is not found
+ * inside a longer word. A keyword of several words matches that phrase.
+ */
+export function mentions(text: string, keyword: string): boolean {
+  const k = keyword.trim().toLowerCase();
+  if (!k) return false;
+  const escaped = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+  return new RegExp(`(^|[^\\p{L}\\p{N}])${escaped}($|[^\\p{L}\\p{N}])`, 'iu').test(text);
+}
+
 /** Which active bot answers a message that is not a tap: a keyword match first, else the catch-all. */
 async function pickBot(text: string): Promise<WhatsAppBot | null> {
   const bots = await prisma.whatsAppBot.findMany({ where: { status: 'active' }, orderBy: { createdAt: 'asc' } });
-  const lower = text.toLowerCase();
   return (
-    bots.find((b) => b.triggerType === 'keywords' && b.keywords.some((k) => k && lower.includes(k.toLowerCase()))) ??
+    bots.find((b) => b.triggerType === 'keywords' && b.keywords.some((k) => mentions(text, k))) ??
     bots.find((b) => b.triggerType === 'any') ??
     null
   );

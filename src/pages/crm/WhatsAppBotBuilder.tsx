@@ -189,7 +189,7 @@ export function WhatsAppBotBuilder() {
               />
               <Input label="Quiet for (hours)" type="number" min={0} value={String(form.cooldownHours)} onChange={(e) => setForm((f) => ({ ...f, cooldownHours: Math.max(0, Number(e.target.value) || 0) }))} hint="After answering, stay silent on that chat for this long, so a reply like “Ok” does not restart the welcome." />
               {form.triggerType === 'keywords' && (
-                <Input label="Keywords" value={keywordText} onChange={(e) => setKeywordText(e.target.value)} placeholder="price, book, demo" hint="Separate with commas. Matches anywhere in the message." wrapperClassName="sm:col-span-2" />
+                <Input label="Keywords" value={keywordText} onChange={(e) => setKeywordText(e.target.value)} placeholder="price, book, demo" hint="Separate with commas. Whole words or phrases — “app” does not match “WhatsApp”." wrapperClassName="sm:col-span-2" />
               )}
             </div>
           </Card>
