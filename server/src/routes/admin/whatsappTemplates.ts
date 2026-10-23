@@ -1,11 +1,14 @@
+import fs from 'fs';
+import path from 'path';
 import { Router } from 'express';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../prisma';
 import { writeAudit } from '../../services/audit';
 import type { AuthedRequest } from '../../services/auth';
+import { UPLOAD_DIR } from '../../services/upload';
 import { buildLeadWhere, type LeadFilter } from '../../services/leadFilters';
 import {
-  createTemplate, deleteTemplate, fillPlaceholders, listAllTemplates, listApprovedTemplates, localPart, sendTemplateToNumber, toWaAddress,
+  createTemplate, deleteTemplate, type NewTemplate, type TemplateButton, fillPlaceholders, listAllTemplates, listApprovedTemplates, localPart, sendTemplateToNumber, toWaAddress,
   WhatsAppError,
 } from '../../services/whatsapp';
 
@@ -260,6 +263,16 @@ whatsappTemplatesRouter.get('/manage', async (_req, res, next) => {
   }
 });
 
+const SAMPLE_MIME: Record<string, string> = {
+  '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp',
+  '.mp4': 'video/mp4', '.pdf': 'application/pdf',
+};
+const HEADER_EXTENSIONS: Record<string, string[]> = {
+  IMAGE: ['.jpg', '.jpeg', '.png'],
+  VIDEO: ['.mp4'],
+  DOCUMENT: ['.pdf'],
+};
+
 whatsappTemplatesRouter.post('/manage', async (req: AuthedRequest, res, next) => {
   try {
     const account = await activeAccount();
@@ -267,30 +280,76 @@ whatsappTemplatesRouter.post('/manage', async (req: AuthedRequest, res, next) =>
     // Meta only accepts lowercase letters, digits and underscores in a name.
     const name = String(body.name ?? '').trim().toLowerCase().replace(/[\s-]+/g, '_');
     const text = String(body.body ?? '').trim();
-    const header = String(body.header ?? '').trim();
     const footer = String(body.footer ?? '').trim();
     const samples: string[] = Array.isArray(body.samples) ? body.samples.map((v: unknown) => String(v ?? '').trim()) : [];
     const category = body.category === 'UTILITY' ? 'UTILITY' : 'MARKETING';
+    const fail = (error: string) => res.status(400).json({ error });
 
-    if (!/^[a-z0-9_]{1,512}$/.test(name)) return res.status(400).json({ error: 'Name may only use letters, numbers and underscores.' });
-    if (!text) return res.status(400).json({ error: 'The message text is required.' });
-    if (text.length > 1024) return res.status(400).json({ error: 'The message text is limited to 1024 characters.' });
-    if (header.length > 60) return res.status(400).json({ error: 'The header is limited to 60 characters.' });
-    if (/\{\{/.test(header)) return res.status(400).json({ error: 'A header cannot hold a variable here.' });
-    if (footer.length > 60) return res.status(400).json({ error: 'The footer is limited to 60 characters.' });
+    if (!/^[a-z0-9_]{1,512}$/.test(name)) return fail('Name may only use letters, numbers and underscores.');
+    if (!text) return fail('The message text is required.');
+    if (text.length > 1024) return fail(`The message text is limited to 1024 characters — this one is ${text.length}.`);
+    if (footer.length > 60) return fail('The footer is limited to 60 characters.');
+    if (/\{\{/.test(footer)) return fail('A footer cannot hold a variable.');
+
+    // Header: none, a line of text, or a file whose sample Meta's reviewers get to see.
+    let header: NewTemplate['header'];
+    const h = body.header ?? {};
+    const format = String(h.format ?? 'NONE').toUpperCase();
+    if (format === 'TEXT') {
+      const headerText = String(h.text ?? '').trim();
+      if (!headerText) return fail('Type the header text, or choose no header.');
+      if (headerText.length > 60) return fail('The header is limited to 60 characters.');
+      if (/\{\{/.test(headerText)) return fail('A text header cannot hold a variable here.');
+      header = { format: 'TEXT', text: headerText };
+    } else if (format in HEADER_EXTENSIONS) {
+      const url = String(h.sampleUrl ?? '');
+      if (!/^\/uploads\/[\w.-]+$/.test(url)) return fail(`Upload an example ${format.toLowerCase()} for the header first.`);
+      const file = path.join(UPLOAD_DIR, path.basename(url));
+      const ext = path.extname(file).toLowerCase();
+      if (!HEADER_EXTENSIONS[format].includes(ext) || !fs.existsSync(file)) {
+        return fail(`The example must be a ${HEADER_EXTENSIONS[format].join(' / ')} file.`);
+      }
+      header = { format: format as 'IMAGE' | 'VIDEO' | 'DOCUMENT', sample: { path: file, mime: SAMPLE_MIME[ext], name: path.basename(file) } };
+    }
 
     const placeholders = Array.from(new Set(text.match(/\{\{\s*\d+\s*\}\}/g) ?? []));
     if (placeholders.length > 0) {
       const numbers = placeholders.map((p) => Number(p.replace(/\D/g, ''))).sort((a, b) => a - b);
-      if (numbers.some((n, i) => n !== i + 1)) return res.status(400).json({ error: 'Variables must run {{1}}, {{2}}, {{3}} with no gaps.' });
+      if (numbers.some((n, i) => n !== i + 1)) return fail('Variables must run {{1}}, {{2}}, {{3}} with no gaps.');
       if (samples.length < numbers.length || samples.slice(0, numbers.length).some((v) => !v)) {
-        return res.status(400).json({ error: 'Give an example value for every variable — Meta will not review the template without them.' });
+        return fail('Give an example value for every variable — Meta will not review the template without them.');
       }
     }
 
+    // Buttons: Meta allows 10 in all, of which at most 2 links and 1 phone number.
+    const buttons: TemplateButton[] = [];
+    for (const raw of Array.isArray(body.buttons) ? body.buttons : []) {
+      const label = String(raw?.text ?? '').trim();
+      if (!label) return fail('Every button needs its label.');
+      if (label.length > 25) return fail(`The button "${label}" is over 25 characters.`);
+      if (raw.type === 'URL') {
+        const url = String(raw.url ?? '').trim();
+        if (!/^https?:\/\/\S+$/i.test(url)) return fail(`The button "${label}" needs a link starting with https://`);
+        const dynamic = /\{\{1\}\}$/.test(url);
+        if (/\{\{/.test(url) && !dynamic) return fail('A link variable must be {{1}} at the very end of the link.');
+        const example = String(raw.example ?? '').trim();
+        if (dynamic && !/^https?:\/\/\S+$/i.test(example)) return fail(`Give an example full link for the button "${label}".`);
+        buttons.push({ type: 'URL', text: label, url, example: dynamic ? example : undefined });
+      } else if (raw.type === 'PHONE_NUMBER') {
+        const phone = String(raw.phone ?? '').replace(/[^\d+]/g, '');
+        if (phone.replace(/\D/g, '').length < 8) return fail(`The button "${label}" needs a phone number with its country code.`);
+        buttons.push({ type: 'PHONE_NUMBER', text: label, phone });
+      } else {
+        buttons.push({ type: 'QUICK_REPLY', text: label });
+      }
+    }
+    if (buttons.length > 10) return fail('A template can have at most 10 buttons.');
+    if (buttons.filter((b) => b.type === 'URL').length > 2) return fail('At most 2 link buttons are allowed.');
+    if (buttons.filter((b) => b.type === 'PHONE_NUMBER').length > 1) return fail('Only 1 call button is allowed.');
+
     const created = await createTemplate(account, {
       name, language: String(body.language ?? 'en').trim() || 'en', category,
-      header: header || undefined, body: text, footer: footer || undefined, samples,
+      header, body: text, footer: footer || undefined, buttons, samples,
     });
     await writeAudit(req, { module: 'Notifications', action: 'Submitted a WhatsApp template for approval', recordId: name, recordLabel: name });
     res.status(201).json({ name, ...created });

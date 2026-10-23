@@ -269,7 +269,9 @@ export const NAV_ITEMS: NavItem[] = [
     module: 'notifications',
     children: [
       { label: 'Sent Notifications', to: '/notifications' },
-      { label: 'WhatsApp Broadcast', to: '/notifications/whatsapp' },
+      { label: 'WhatsApp Templates', to: '/notifications/whatsapp/templates' },
+      { label: 'Create Template', to: '/notifications/whatsapp/templates/new' },
+      { label: 'Send WhatsApp', to: '/notifications/whatsapp' },
     ],
   },
   {

@@ -2075,6 +2075,11 @@ export interface Holiday {
   upcoming: boolean;
 }
 
+export type WhatsAppTemplateButton =
+  | { type: 'QUICK_REPLY'; text: string }
+  | { type: 'URL'; text: string; url: string; example?: string }
+  | { type: 'PHONE_NUMBER'; text: string; phone: string };
+
 /** A template as Meta holds it — any approval state, not just the sendable ones. */
 export interface ManagedWhatsAppTemplate {
   name: string;
@@ -2084,16 +2089,25 @@ export interface ManagedWhatsAppTemplate {
   status: string;
   rejectedReason?: string;
   header?: string;
+  /** TEXT | IMAGE | VIDEO | DOCUMENT */
+  headerFormat?: string;
   body: string;
   footer?: string;
+  buttons: WhatsAppTemplateButton[];
 }
+
+export type WhatsAppHeaderInput =
+  | { format: 'NONE' }
+  | { format: 'TEXT'; text: string }
+  | { format: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; sampleUrl: string };
 
 export interface NewWhatsAppTemplate {
   name: string;
   category: 'MARKETING' | 'UTILITY';
   language: string;
-  header?: string;
+  header: WhatsAppHeaderInput;
   body: string;
   footer?: string;
+  buttons: WhatsAppTemplateButton[];
   samples: string[];
 }

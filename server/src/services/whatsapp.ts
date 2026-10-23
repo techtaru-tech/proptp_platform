@@ -1,7 +1,9 @@
+import fs from 'fs';
 import axios from 'axios';
 import type { Prisma, WhatsAppAccount, WhatsAppConversation } from '@prisma/client';
 import { prisma } from '../prisma';
 import { decrypt } from './crypto';
+import { UPLOAD_DIR } from './upload';
 
 /**
  * WhatsApp Business via Meta's Cloud API.
@@ -257,6 +259,12 @@ function readTemplate(raw: any): ApprovedTemplate {
   const format = String(header?.format ?? '').toUpperCase();
   const headerFormat = ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(format) ? (format as 'IMAGE' | 'VIDEO' | 'DOCUMENT') : undefined;
 
+  // Quick-reply, phone and fixed-link buttons need nothing at send time; the rest take a value we do not collect.
+  const buttons: any[] = components.find((c) => c?.type === 'BUTTONS')?.buttons ?? [];
+  const buttonNeedsValue = buttons.some(
+    (b) => (String(b?.type).toUpperCase() === 'URL' && /\{\{/.test(String(b?.url ?? ''))) || !['URL', 'PHONE_NUMBER', 'QUICK_REPLY'].includes(String(b?.type).toUpperCase())
+  );
+
   return {
     name: String(raw?.name ?? ''),
     language: String(raw?.language ?? 'en'),
@@ -264,7 +272,11 @@ function readTemplate(raw: any): ApprovedTemplate {
     body: text,
     variableCount: placeholders.length,
     headerFormat,
-    unsupported: headerHasVariables ? 'This template has a header with its own variable, which this screen cannot fill yet.' : undefined,
+    unsupported: headerHasVariables
+      ? 'This template has a header with its own variable, which this screen cannot fill yet.'
+      : buttonNeedsValue
+        ? 'This template has a button that needs a value per message (a link with a variable, or a copy-code button), which this screen cannot fill yet.'
+        : undefined,
   };
 }
 
@@ -301,9 +313,17 @@ export interface ManagedTemplate {
   status: string;
   rejectedReason?: string;
   header?: string;
+  /** TEXT | IMAGE | VIDEO | DOCUMENT — what kind of header the template carries. */
+  headerFormat?: string;
   body: string;
   footer?: string;
+  buttons: TemplateButton[];
 }
+
+export type TemplateButton =
+  | { type: 'QUICK_REPLY'; text: string }
+  | { type: 'URL'; text: string; url: string; example?: string }
+  | { type: 'PHONE_NUMBER'; text: string; phone: string };
 
 function metaFailure(err: unknown): WhatsAppError {
   if (axios.isAxiosError(err)) {
@@ -336,8 +356,15 @@ export async function listAllTemplates(account: WhatsAppAccount): Promise<Manage
         // Meta answers NONE for a template that was not rejected.
         rejectedReason: reason && reason !== 'NONE' ? reason : undefined,
         header: text('HEADER'),
+        headerFormat: components.find((c) => c?.type === 'HEADER')?.format ? String(components.find((c) => c?.type === 'HEADER').format).toUpperCase() : undefined,
         body: text('BODY') ?? '',
         footer: text('FOOTER'),
+        buttons: ((components.find((c) => c?.type === 'BUTTONS')?.buttons ?? []) as any[]).map((b): TemplateButton => {
+          const type = String(b?.type ?? '').toUpperCase();
+          if (type === 'URL') return { type: 'URL', text: String(b.text ?? ''), url: String(b.url ?? '') };
+          if (type === 'PHONE_NUMBER') return { type: 'PHONE_NUMBER', text: String(b.text ?? ''), phone: String(b.phone_number ?? '') };
+          return { type: 'QUICK_REPLY', text: String(b.text ?? '') };
+        }),
       };
     });
   } catch (err) {
@@ -349,11 +376,60 @@ export interface NewTemplate {
   name: string;
   language: string;
   category: 'MARKETING' | 'UTILITY';
-  header?: string;
+  /** A text header, or a file header whose sample Meta's reviewers see. The file itself is sent per message. */
+  header?:
+    | { format: 'TEXT'; text: string }
+    | { format: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; sample: { path: string; mime: string; name: string } };
   body: string;
   footer?: string;
+  buttons?: TemplateButton[];
   /** One sample per {{n}} in the body — Meta will not review a template without them. */
   samples: string[];
+}
+
+/** The App ID Meta's file-upload API is addressed to. Read from the token itself when not configured. */
+async function resolveAppId(token: string): Promise<string> {
+  if (process.env.META_APP_ID) return process.env.META_APP_ID;
+  try {
+    const { data } = await axios.get(`${GRAPH_BASE}/debug_token`, {
+      params: { input_token: token, access_token: token },
+      timeout: REQUEST_TIMEOUT_MS,
+    });
+    if (data?.data?.app_id) return String(data.data.app_id);
+  } catch {
+    // fall through to the explanation below
+  }
+  throw new WhatsAppError('Could not work out the Meta App ID needed to upload the sample file. Set META_APP_ID in server/.env.');
+}
+
+/**
+ * Meta will not review a template with an image, video or document header unless it is shown
+ * an example of it, and that example has to go through its Resumable Upload API first.
+ * Returns the handle (`h`) the template refers to.
+ */
+async function uploadSampleHandle(account: WhatsAppAccount, sample: { path: string; mime: string; name: string }): Promise<string> {
+  if (account.provider === 'pinbot') {
+    throw new WhatsAppError('Image, video and document headers can only be created on a number linked through Meta directly.');
+  }
+  const token = requireCredentials(account);
+  const buffer = fs.readFileSync(sample.path);
+  try {
+    const appId = await resolveAppId(token);
+    const { data: session } = await axios.post(`${GRAPH_BASE}/${appId}/uploads`, null, {
+      params: { file_length: buffer.length, file_type: sample.mime, file_name: sample.name, access_token: token },
+      timeout: REQUEST_TIMEOUT_MS,
+    });
+    const { data } = await axios.post(`${GRAPH_BASE}/${session.id}`, buffer, {
+      headers: { Authorization: `OAuth ${token}`, file_offset: '0', 'Content-Type': 'application/octet-stream' },
+      maxBodyLength: Infinity,
+      timeout: 120_000,
+    });
+    if (!data?.h) throw new WhatsAppError('Meta did not accept the sample file.', 502);
+    return String(data.h);
+  } catch (err) {
+    if (err instanceof WhatsAppError) throw err;
+    throw metaFailure(err);
+  }
 }
 
 export async function createTemplate(account: WhatsAppAccount, input: NewTemplate): Promise<{ id?: string; status: string }> {
@@ -361,7 +437,13 @@ export async function createTemplate(account: WhatsAppAccount, input: NewTemplat
   if (!account.wabaId) throw new WhatsAppError('This number has no WhatsApp Business Account ID saved.');
 
   const components: Record<string, unknown>[] = [];
-  if (input.header) components.push({ type: 'HEADER', format: 'TEXT', text: input.header });
+  if (input.header?.format === 'TEXT') {
+    components.push({ type: 'HEADER', format: 'TEXT', text: input.header.text });
+  } else if (input.header) {
+    const handle = await uploadSampleHandle(account, input.header.sample);
+    components.push({ type: 'HEADER', format: input.header.format, example: { header_handle: [handle] } });
+  }
+
   const count = (input.body.match(/\{\{\s*\d+\s*\}\}/g) ?? []).length;
   components.push({
     type: 'BODY',
@@ -369,6 +451,19 @@ export async function createTemplate(account: WhatsAppAccount, input: NewTemplat
     ...(count > 0 ? { example: { body_text: [input.samples.slice(0, count)] } } : {}),
   });
   if (input.footer) components.push({ type: 'FOOTER', text: input.footer });
+
+  if (input.buttons && input.buttons.length > 0) {
+    components.push({
+      type: 'BUTTONS',
+      buttons: input.buttons.map((b) => {
+        if (b.type === 'URL') {
+          return { type: 'URL', text: b.text, url: b.url, ...(b.example ? { example: [b.example] } : {}) };
+        }
+        if (b.type === 'PHONE_NUMBER') return { type: 'PHONE_NUMBER', text: b.text, phone_number: b.phone };
+        return { type: 'QUICK_REPLY', text: b.text };
+      }),
+    });
+  }
 
   try {
     const { data } = await axios.post(

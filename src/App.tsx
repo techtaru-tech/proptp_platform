@@ -129,6 +129,8 @@ import { LeaveRequests } from './pages/hr/LeaveRequests';
 import { LeaveSettings } from './pages/hr/LeaveSettings';
 import { Payroll } from './pages/hr/Payroll';
 import { WhatsAppTemplates } from './pages/notifications/WhatsAppTemplates';
+import { WhatsAppTemplateList } from './pages/notifications/WhatsAppTemplateList';
+import { WhatsAppTemplateCreate } from './pages/notifications/WhatsAppTemplateCreate';
 
 import { ReportsHome } from './pages/reports/ReportsHome';
 import { ProjectReportPage } from './pages/reports/ProjectReportPage';
@@ -315,6 +317,8 @@ function App() {
                 <Route path="/payouts/payroll" element={<Payroll />} />
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/notifications/whatsapp" element={<WhatsAppTemplates />} />
+                <Route path="/notifications/whatsapp/templates" element={<WhatsAppTemplateList />} />
+                <Route path="/notifications/whatsapp/templates/new" element={<WhatsAppTemplateCreate />} />
 
                 <Route path="/reports" element={<ReportsHome />} />
                 <Route path="/reports/suite/:key" element={<ProjectReportPage />} />

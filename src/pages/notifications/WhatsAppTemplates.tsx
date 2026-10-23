@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { AlertTriangle, Info, Send, Users } from 'lucide-react';
+import { AlertTriangle, Info, Send, Upload, Users } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -18,7 +18,7 @@ import {
 import {
   getBroadcastSource, listWhatsAppSends, previewAudience, sendBroadcast,
 } from '../../services/whatsappTemplateService';
-import { TemplateManager } from './TemplateManager';
+import { fileUrl, uploadFiles } from '../../services/apiClient';
 import { formatDateTime } from '../../utils/format';
 import type {
   BroadcastAudience, BroadcastLeadFilter, WhatsAppBroadcastSource, WhatsAppTemplateSendRow,
@@ -59,9 +59,9 @@ export function WhatsAppTemplates() {
   return (
     <div>
       <PageHeader
-        title="WhatsApp Broadcast"
-        description="Send an approved template to a filtered set of leads, or to numbers you paste in."
-        breadcrumb={[{ label: 'Notifications', to: '/notifications' }, { label: 'WhatsApp Broadcast' }]}
+        title="Send WhatsApp"
+        description="Send an approved template to a filtered set of leads, or to numbers you paste in. Create and track templates under WhatsApp Templates."
+        breadcrumb={[{ label: 'Notifications', to: '/notifications' }, { label: 'Send WhatsApp' }]}
       />
 
       {loadError ? (
@@ -88,7 +88,6 @@ export function WhatsAppTemplates() {
             </p>
           </div>
 
-          <TemplateManager onChanged={load} />
           <BroadcastForm source={source} onSent={load} />
         </>
       ) : null}
@@ -132,6 +131,23 @@ function BroadcastForm({ source, onSent }: { source: WhatsAppBroadcastSource; on
   const [checking, setChecking] = useState(false);
   const [sending, setSending] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  // The file goes to this server's own /uploads, which is public, so WhatsApp can fetch it by link.
+  const uploadHeader = async (file: File | undefined) => {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const [url] = await uploadFiles([file]);
+      const link = fileUrl(url) ?? url;
+      // A relative API base leaves the link without a host, and WhatsApp needs a full https address.
+      setHeaderMediaUrl(/^https?:/i.test(link) ? link : `${window.location.origin}${link}`);
+    } catch (err) {
+      toast({ title: 'Upload failed', description: err instanceof Error ? err.message : undefined, variant: 'error' });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const template = source.templates.find((t) => t.name === templateName);
 
@@ -236,13 +252,25 @@ function BroadcastForm({ source, onSent }: { source: WhatsAppBroadcastSource; on
           )}
 
           {template?.headerFormat && (
-            <Input
-              label={`${template.headerFormat.charAt(0)}${template.headerFormat.slice(1).toLowerCase()} link`}
-              value={headerMediaUrl}
-              onChange={(e) => setHeaderMediaUrl(e.target.value)}
-              placeholder="https://…"
-              hint="Public https link. WhatsApp downloads the file from here when the message is sent."
-            />
+            <div className="space-y-2">
+              <Input
+                label={`${template.headerFormat.charAt(0)}${template.headerFormat.slice(1).toLowerCase()} for this message`}
+                value={headerMediaUrl}
+                onChange={(e) => setHeaderMediaUrl(e.target.value)}
+                placeholder="https://…  or upload a file"
+                hint="Public https link. WhatsApp downloads the file from here when the message is sent."
+              />
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-subtle">
+                <Upload size={14} />
+                {uploading ? 'Uploading…' : 'Upload from this computer'}
+                <input
+                  type="file"
+                  className="hidden"
+                  accept={template.headerFormat === 'IMAGE' ? 'image/jpeg,image/png' : template.headerFormat === 'VIDEO' ? 'video/mp4' : 'application/pdf'}
+                  onChange={(e) => void uploadHeader(e.target.files?.[0])}
+                />
+              </label>
+            </div>
           )}
 
           {template && template.variableCount > 0 && (
