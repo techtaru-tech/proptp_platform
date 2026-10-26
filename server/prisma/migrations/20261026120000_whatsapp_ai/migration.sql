@@ -2,7 +2,7 @@
 CREATE TABLE "WhatsAppAiSettings" (
     "id" TEXT NOT NULL DEFAULT 'default',
     "enabled" BOOLEAN NOT NULL DEFAULT false,
-    "model" TEXT NOT NULL DEFAULT 'claude-opus-5-5',
+    "model" TEXT NOT NULL DEFAULT 'claude-haiku-5-5',
     "instructions" TEXT NOT NULL DEFAULT '',
     "maxRepliesPerHour" INTEGER NOT NULL DEFAULT 20,
     "voiceEnabled" BOOLEAN NOT NULL DEFAULT false,

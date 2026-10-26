@@ -16,9 +16,9 @@ import { localPart, sendPrepared } from './whatsapp';
  */
 
 export const AI_MODELS = [
-  { value: 'claude-opus-5-5', label: 'Claude Opus 5.5 — most capable' },
+  { value: 'claude-haiku-5-5', label: 'Claude Haiku 5.5 — fastest and cheapest (recommended)' },
   { value: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5 — balanced' },
-  { value: 'claude-haiku-5-5', label: 'Claude Haiku 5.5 — fastest and cheapest' },
+  { value: 'claude-opus-5-5', label: 'Claude Opus 5.5 — most capable, costs the most' },
 ];
 
 export const DEFAULT_INSTRUCTIONS = `You answer for TechTaru Digital (tagline: "Design. Develop. Dominate."), a company that builds websites, mobile apps, CRM and custom software for businesses in India.

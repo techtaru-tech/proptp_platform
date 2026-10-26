@@ -3422,7 +3422,8 @@ model WhatsAppBotNode {
 model WhatsAppAiSettings {
   id      String  @id @default("default")
   enabled Boolean @default(false)
-  model   String  @default("claude-opus-5-5")
+  /// Haiku by default: a short, grounded WhatsApp answer does not need more, and it costs a fraction.
+  model   String  @default("claude-haiku-5-5")
   /// Business context and tone, added to the assistant's standing rules.
   instructions String @default("")
   /// A chat that has had this many AI replies in the last hour gets no more — a cost and abuse cap.
