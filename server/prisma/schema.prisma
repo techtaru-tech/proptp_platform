@@ -3412,3 +3412,65 @@ model WhatsAppBotNode {
 
   @@unique([botId, key])
 }
+
+// ---------------------------------------------------------------------------
+// WhatsApp AI assistant — answers any message (text or voice note) from a knowledge base the
+// team writes plus the sender's own lead record. See services/whatsappAi.ts.
+// ---------------------------------------------------------------------------
+
+/// Single row, id "default". Keys are stored encrypted and never returned to the browser.
+model WhatsAppAiSettings {
+  id      String  @id @default("default")
+  enabled Boolean @default(false)
+  model   String  @default("claude-opus-5-5")
+  /// Business context and tone, added to the assistant's standing rules.
+  instructions String @default("")
+  /// A chat that has had this many AI replies in the last hour gets no more — a cost and abuse cap.
+  maxRepliesPerHour Int @default(20)
+
+  voiceEnabled          Boolean @default(false)
+  /// groq | openai — both take the same transcription request.
+  transcriptionProvider String  @default("groq")
+
+  anthropicKey    String?
+  transcriptionKey String?
+
+  updatedAt DateTime @updatedAt
+}
+
+/// What the assistant may state as fact. It reads all of it on every reply.
+model WhatsAppKnowledge {
+  id       String  @id @default(cuid())
+  title    String
+  content  String
+  active   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active])
+}
+
+/// One row per AI answer: what was asked, what went back, and what it cost.
+model WhatsAppAiReply {
+  id             String   @id @default(cuid())
+  conversationId String
+  /// The customer's words, or the transcript of their voice note.
+  inbound        String
+  reply          String
+  voice          Boolean  @default(false)
+  handoff        Boolean  @default(false)
+  handoffReason  String?
+  /// ok | error
+  status         String   @default("ok")
+  error          String?
+  model          String
+  inputTokens    Int      @default(0)
+  outputTokens   Int      @default(0)
+  cacheReadTokens Int     @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId, createdAt])
+  @@index([createdAt])
+}

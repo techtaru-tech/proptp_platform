@@ -2223,3 +2223,64 @@ export interface WhatsAppBotInput {
   startKey: string;
   nodes: WhatsAppBotNode[];
 }
+
+// ---------------------------------------------------------------------------
+// WhatsApp AI assistant — server/src/routes/whatsappAi.ts
+// ---------------------------------------------------------------------------
+
+export interface WhatsAppAiSettings {
+  enabled: boolean;
+  model: string;
+  instructions: string;
+  maxRepliesPerHour: number;
+  voiceEnabled: boolean;
+  transcriptionProvider: 'groq' | 'openai';
+  hasAnthropicKey: boolean;
+  hasTranscriptionKey: boolean;
+  models: { value: string; label: string }[];
+}
+
+export interface WhatsAppAiSettingsInput {
+  enabled?: boolean;
+  model?: string;
+  instructions?: string;
+  maxRepliesPerHour?: number;
+  voiceEnabled?: boolean;
+  transcriptionProvider?: 'groq' | 'openai';
+  /** Blank keeps the stored key. */
+  anthropicKey?: string;
+  transcriptionKey?: string;
+}
+
+export interface WhatsAppKnowledgeEntry {
+  id: string;
+  title: string;
+  content: string;
+  active: boolean;
+  updatedAt: string;
+}
+
+export interface WhatsAppAiTestResult {
+  reply: string;
+  handoff: boolean;
+  handoffReason?: string;
+  record: string;
+  usage: { input: number; output: number; cacheRead: number };
+}
+
+export interface WhatsAppAiReplyRow {
+  id: string;
+  contact: string;
+  inbound: string;
+  reply: string;
+  voice: boolean;
+  handoff: boolean;
+  handoffReason?: string;
+  status: 'ok' | 'error';
+  error?: string;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  createdAt: string;
+}

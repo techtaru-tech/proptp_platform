@@ -1,6 +1,7 @@
 import type { Prisma, WhatsAppBot, WhatsAppBotNode } from '@prisma/client';
 import { prisma } from '../prisma';
 import { sendPrepared, type InboundMessage } from './whatsapp';
+import { aiReadiness, answerWithAi } from './whatsappAi';
 
 /**
  * Auto-reply bots. A bot is a small flow of messages: the first one answers whoever writes in,
@@ -106,15 +107,29 @@ export function mentions(text: string, keyword: string): boolean {
   return new RegExp(`(^|[^\\p{L}\\p{N}])${escaped}($|[^\\p{L}\\p{N}])`, 'iu').test(text);
 }
 
-/** Which active bot answers a message that is not a tap: a keyword match first, else the catch-all. */
-async function pickBot(text: string): Promise<WhatsAppBot | null> {
-  const bots = await prisma.whatsAppBot.findMany({ where: { status: 'active' }, orderBy: { createdAt: 'asc' } });
-  return (
-    bots.find((b) => b.triggerType === 'keywords' && b.keywords.some((k) => mentions(text, k))) ??
-    bots.find((b) => b.triggerType === 'any') ??
-    null
-  );
+/** The active keyword bot whose keywords the message mentions, if any. */
+async function pickKeywordBot(text: string): Promise<WhatsAppBot | null> {
+  const bots = await prisma.whatsAppBot.findMany({ where: { status: 'active', triggerType: 'keywords' }, orderBy: { createdAt: 'asc' } });
+  return bots.find((b) => b.keywords.some((k) => mentions(text, k))) ?? null;
 }
+
+/** The catch-all welcome bot, which answers a first hello. */
+function pickWelcomeBot(): Promise<WhatsAppBot | null> {
+  return prisma.whatsAppBot.findFirst({ where: { status: 'active', triggerType: 'any' }, orderBy: { createdAt: 'asc' } });
+}
+
+/** A greeting is what the welcome menu is for; anything with more in it deserves a real answer. */
+export function isGreeting(text: string): boolean {
+  return /^(hi+|hii+|hello+|helo|hey+|hlo|namaste|namaskar|good\s+(morning|afternoon|evening)|start|menu|help|hi\s+there|hello\s+sir|hello\s+ji|ji)\W*$/i.test(text.trim());
+}
+
+/** "Ok", "thanks", a thumbs-up: the end of a thought, not a question — answering it starts a pointless loop. */
+export function isAcknowledgement(text: string): boolean {
+  return /^(ok+|okay|k|kk|thanks?|thank\s*you|thx|ty|theek\s*hai|thik\s*hai|shukriya|dhanyavaad?|dhanyawad|done|got\s*it|noted|sure|yes|yup|👍|🙏|👌)\W*$/iu.test(text.trim());
+}
+
+const cooledDown = (conversation: { botRepliedAt: Date | null }, bot: WhatsAppBot) =>
+  !conversation.botRepliedAt || Date.now() - conversation.botRepliedAt.getTime() >= bot.cooldownHours * 3_600_000;
 
 export async function handleBotInbound(
   conversationId: string,
@@ -137,14 +152,38 @@ export async function handleBotInbound(
     return;
   }
 
-  // Anything else is a fresh message. Only plain text starts a flow — a photo or a voice note
-  // is not a question the bot can answer — and never over a person who has stepped in.
-  if (parsed.type !== 'text' || !parsed.body.trim() || conversation.intervened) return;
+  // Anything else is a fresh message. Never over a person who has stepped in.
+  if (conversation.intervened) return;
+  const text = parsed.type === 'text' ? parsed.body.trim() : '';
+  const voice = parsed.type === 'audio';
+  // A photo or a document is not something the bot can answer.
+  if (!text && !voice) return;
+  if (text && isAcknowledgement(text)) return;
 
-  const bot = await pickBot(parsed.body);
-  if (!bot) return;
-  if (conversation.botRepliedAt && Date.now() - conversation.botRepliedAt.getTime() < bot.cooldownHours * 3_600_000) return;
+  // 1. A question the team has scripted an exact answer for: its keyword bot.
+  if (text) {
+    const keywordBot = await pickKeywordBot(text);
+    if (keywordBot && cooledDown(conversation, keywordBot)) {
+      const start = await prisma.whatsAppBotNode.findUnique({ where: { botId_key: { botId: keywordBot.id, key: keywordBot.startKey } } });
+      if (start) return void (await sendNode(keywordBot, start, conversation));
+    }
+  }
 
-  const start = await prisma.whatsAppBotNode.findUnique({ where: { botId_key: { botId: bot.id, key: bot.startKey } } });
-  if (start) await sendNode(bot, start, conversation);
+  // 2. Everything else goes to the AI assistant, if it is switched on and set up.
+  const { ready, voiceReady } = await aiReadiness();
+  if (voice) {
+    if (voiceReady) await answerWithAi({ conversationId: conversation.id, messageId: message.id, audioId: message.audio?.id });
+    return;
+  }
+  if (ready && !isGreeting(text)) return void (await answerWithAi({ conversationId: conversation.id, messageId: message.id }));
+
+  // 3. A plain hello gets the welcome menu — or, with no menu, the assistant's own greeting.
+  const welcome = await pickWelcomeBot();
+  if (welcome) {
+    if (!cooledDown(conversation, welcome)) return;
+    const start = await prisma.whatsAppBotNode.findUnique({ where: { botId_key: { botId: welcome.id, key: welcome.startKey } } });
+    if (start) await sendNode(welcome, start, conversation);
+    return;
+  }
+  if (ready) await answerWithAi({ conversationId: conversation.id, messageId: message.id });
 }
