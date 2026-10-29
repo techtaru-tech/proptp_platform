@@ -31,6 +31,9 @@ import { AiSdrAgents } from './pages/crm/AiSdrAgents';
 import { EmailSequences } from './pages/crm/EmailSequences';
 import { EmailSequenceBuilder } from './pages/crm/EmailSequenceBuilder';
 import { EmailSequenceDetail } from './pages/crm/EmailSequenceDetail';
+import { WaCampaigns } from './pages/crm/campaigns/WaCampaigns';
+import { WaCampaignBuilder } from './pages/crm/campaigns/WaCampaignBuilder';
+import { WaCampaignDetail } from './pages/crm/campaigns/WaCampaignDetail';
 import { WhatsAppAi } from './pages/crm/WhatsAppAi';
 import { WhatsAppBots } from './pages/crm/WhatsAppBots';
 import { WhatsAppBotBuilder } from './pages/crm/WhatsAppBotBuilder';
@@ -249,6 +252,10 @@ function App() {
                 <Route path="/crm/email-sequences/new" element={<EmailSequenceBuilder />} />
                 <Route path="/crm/email-sequences/:id" element={<EmailSequenceDetail />} />
                 <Route path="/crm/email-sequences/:id/edit" element={<EmailSequenceBuilder />} />
+                <Route path="/crm/wa-campaigns" element={<WaCampaigns />} />
+                <Route path="/crm/wa-campaigns/new" element={<WaCampaignBuilder />} />
+                <Route path="/crm/wa-campaigns/:id" element={<WaCampaignDetail />} />
+                <Route path="/crm/wa-campaigns/:id/edit" element={<WaCampaignBuilder />} />
                 <Route path="/crm/whatsapp-ai" element={<WhatsAppAi />} />
                 <Route path="/crm/whatsapp-bots" element={<WhatsAppBots />} />
                 <Route path="/crm/whatsapp-bots/new" element={<WhatsAppBotBuilder />} />

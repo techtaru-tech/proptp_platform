@@ -2,6 +2,7 @@ import type { Prisma, WhatsAppBot, WhatsAppBotNode } from '@prisma/client';
 import { prisma } from '../prisma';
 import { sendPrepared, type InboundMessage } from './whatsapp';
 import { aiReadiness, answerWithAi } from './whatsappAi';
+import { handleCampaignInbound } from './waCampaign';
 
 /**
  * Auto-reply bots. A bot is a small flow of messages: the first one answers whoever writes in,
@@ -138,6 +139,9 @@ export async function handleBotInbound(
 ): Promise<void> {
   const conversation = await prisma.whatsAppConversation.findUnique({ where: { id: conversationId } });
   if (!conversation) return;
+
+  // A campaign's own taps, and STOP, come before any bot — and nothing else answers what it handled.
+  if (await handleCampaignInbound(conversationId, message, parsed)) return;
 
   // A tap on one of our options: go wherever that option leads.
   const tapped = message.interactive?.button_reply?.id ?? message.interactive?.list_reply?.id;

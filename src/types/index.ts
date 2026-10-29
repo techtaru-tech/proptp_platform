@@ -2284,3 +2284,126 @@ export interface WhatsAppAiReplyRow {
   cacheReadTokens: number;
   createdAt: string;
 }
+
+// ---------------------------------------------------------------------------
+// WhatsApp campaigns — server/src/routes/waCampaigns.ts
+// ---------------------------------------------------------------------------
+
+export type WaCampaignKind = 'flow' | 'single';
+
+export interface WaCampaign {
+  id: string;
+  name: string;
+  kind: WaCampaignKind;
+  status: WhatsAppDripStatus;
+  startsAt?: string;
+  endsAt?: string;
+  termsUrl?: string;
+  dailySendCap: number;
+  slotCap: number;
+  introTemplate?: string;
+  introLanguage: string;
+  introHeaderVideoUrl?: string;
+  introParams: string[];
+  nudgeTemplate?: string;
+  nudgeLanguage: string;
+  nudgeParams: string[];
+  confirmTemplate?: string;
+  reminderTemplate?: string;
+  demoVideoEn?: string;
+  demoVideoHi?: string;
+  minSamples: number;
+  minLabAgeYears: number;
+  copy: Record<string, string>;
+  calendlyUrl?: string;
+  hasCalendlyToken: boolean;
+  calendlyConnected: boolean;
+  calendlyWebhookUrl: string;
+  lastError?: string;
+  warnings: string[];
+  createdAt: string;
+  contactCount?: number;
+}
+
+export type WaCampaignInput = Omit<WaCampaign, 'id' | 'hasCalendlyToken' | 'calendlyConnected' | 'calendlyWebhookUrl' | 'lastError' | 'warnings' | 'createdAt' | 'contactCount'>;
+
+export interface WaContactRow {
+  id: string;
+  name: string;
+  phone: string;
+  leadId?: string;
+  state: string;
+  column: string;
+  language?: string;
+  sampleBand?: string;
+  professionalType?: string;
+  labAgeYears?: number;
+  b2c?: boolean;
+  labName?: string;
+  city?: string;
+  verification: 'none' | 'verified' | 'rejected';
+  reviewNote?: string;
+  optInSource: string;
+  nextActionAt?: string;
+  lastError?: string;
+  updatedAt: string;
+}
+
+export interface WaBoard {
+  columns: { name: string; total: number; contacts: WaContactRow[] }[];
+}
+
+export interface WaReviewQueue {
+  slotCap: number;
+  slotsTaken: number;
+  minSamples: number;
+  minLabAgeYears: number;
+  contacts: WaContactRow[];
+}
+
+export interface WaImportRow {
+  name?: string;
+  phone?: string;
+  city?: string;
+  labName?: string;
+}
+
+export interface WaImportResult {
+  added: number;
+  duplicates: number;
+  optedOut: number;
+  invalid: { row: number; value: string; reason: string }[];
+}
+
+export interface WaDashboard {
+  imported: number;
+  optedIn: number;
+  optedOut: number;
+  sent: number;
+  delivered: number;
+  read: number;
+  replies: number;
+  demoRequested: number;
+  demoSent: number;
+  english: number;
+  hindi: number;
+  interested: number;
+  reviewRequired: number;
+  verifiedEligible: number;
+  notEligible: number;
+  linkSent: number;
+  meetingsBooked: number;
+  meetingsActive: number;
+  meetingsCompleted: number;
+  notInterested: number;
+  unresponsive: number;
+  failed: number;
+  byColumn: Record<string, number>;
+}
+
+export interface WaOptOutRow {
+  phone: string;
+  reason: string;
+  source: string;
+  createdAt: string;
+}

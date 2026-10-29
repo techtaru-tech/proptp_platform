@@ -206,6 +206,7 @@ model Lead {
   sdrEnrollments  AiSdrEnrollment[]
   emailSequences  EmailSequenceEnrollment[]
   whatsAppDripEnrollments WhatsAppDripEnrollment[]
+  waContacts WaContact[]
   calls           CallLog[]
   whatsappThreads WhatsAppConversation[]
   stageHistory    LeadStageHistoryEntry[]
@@ -3474,4 +3475,166 @@ model WhatsAppAiReply {
 
   @@index([conversationId, createdAt])
   @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// WhatsApp campaigns — an imported list is sent an approved template, and (for the demo flow)
+// each tap moves the person along: language, demo video, interest, eligibility, a Calendly
+// booking. See services/waCampaign.ts.
+// ---------------------------------------------------------------------------
+
+model WaCampaign {
+  id     String @id @default(cuid())
+  name   String
+  /// flow = the demo journey; single = one template to everyone on the list, nothing after it.
+  kind   String @default("flow")
+  /// draft | active | paused — only `active` sends.
+  status String @default("draft")
+
+  /// Nothing is sent before this or after that, in Asia/Kolkata.
+  startsAt DateTime?
+  endsAt   DateTime?
+  termsUrl String?
+
+  /// Business-initiated WhatsApp messages are tiered by Meta (a new number starts at 250 a day).
+  dailySendCap Int @default(250)
+  /// How many labs may be approved for the offer. 0 = no cap.
+  slotCap      Int @default(0)
+
+  // The first message — an approved template, with a video header for the demo flow.
+  introTemplate       String?
+  introLanguage       String   @default("en")
+  introHeaderVideoUrl String?
+  introParams         String[] @default(["{first_name}", "{terms_url}"])
+  /// Buttons on the template, in order, for the flow to read their taps.
+  nudgeTemplate       String?
+  nudgeLanguage       String   @default("en")
+  nudgeParams         String[] @default(["{first_name}"])
+  confirmTemplate     String?
+  reminderTemplate    String?
+
+  demoVideoEn String?
+  demoVideoHi String?
+
+  /// Eligibility thresholds — the owner's to approve, never hard-coded.
+  minSamples     Int @default(50)
+  minLabAgeYears Int @default(3)
+
+  /// Overrides for the message texts (M02 … M16). Anything not here uses the default copy.
+  copy Json @default("{}")
+
+  calendlyUrl        String?
+  calendlyToken      String?
+  calendlySigningKey String?
+  calendlyWebhookId  String?
+
+  /// Set when a step cannot run (a template that is not approved), so the page can say so.
+  lastError String?
+
+  contacts WaContact[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+model WaContact {
+  id         String     @id @default(cuid())
+  campaign   WaCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaignId String
+  lead       Lead?      @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  leadId     String?
+
+  /// Digits with the country code, e.g. 919876543210.
+  phone String
+  name  String @default("")
+
+  /// Consent, recorded where it came from: opted_in | opted_out.
+  optInStatus String   @default("opted_in")
+  optInSource String   @default("")
+  optInAt     DateTime @default(now())
+
+  /// QUEUED, UGC_SENT, LANGUAGE_PENDING, DEMO_SENT, INTEREST_PENDING, ELIG_Q1, ELIG_Q2,
+  /// REVIEW_REQUIRED, ELIGIBLE, INELIGIBLE, CALENDLY_LINK_SENT, MEETING_BOOKED, MEETING_COMPLETED,
+  /// DEFERRED, CLOSED, OPTED_OUT, UNRESPONSIVE, HUMAN, SENT, FAILED
+  state        String    @default("QUEUED")
+  language     String?
+  nextActionAt DateTime?
+  nudgeCount   Int       @default(0)
+  attempts     Int       @default(0)
+  lastError    String?
+  introSentAt  DateTime?
+  importBatch  String?
+
+  // What the lab told us, and what the team has verified.
+  sampleBand       String?
+  professionalType String?
+  labAgeYears      Int?
+  b2c              Boolean?
+  labName          String?
+  city             String?
+  /// none | verified | rejected
+  verification     String    @default("none")
+  verifiedBy       String?
+  verifiedAt       DateTime?
+  reviewNote       String?
+
+  meetings WaMeeting[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([campaignId, phone])
+  @@index([campaignId, state])
+  @@index([state, nextActionAt])
+  @@index([phone])
+}
+
+model WaMeeting {
+  id         String    @id @default(cuid())
+  contact    WaContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  contactId  String
+  campaignId String
+
+  /// Calendly's own ids, so a replayed webhook cannot book the same meeting twice.
+  inviteeUri String   @unique
+  eventUri   String?
+  startsAt   DateTime
+  endsAt     DateTime?
+  joinUrl    String?
+  /// booked | canceled | rescheduled | completed
+  status     String   @default("booked")
+  reminderSentAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, startsAt])
+}
+
+/// A row each time something happens to someone — the dashboard counts these.
+model WaEvent {
+  id         String   @id @default(cuid())
+  campaignId String
+  contactId  String?
+  /// intro_sent, replied, demo_requested, demo_sent, interested, review_required, eligible,
+  /// ineligible, link_sent, meeting_booked, meeting_completed, not_interested, not_now,
+  /// unresponsive, opted_out, send_failed, calendly_unmatched …
+  type       String
+  detail     String?
+  /// The WhatsAppMessage that carried it, so delivery and read receipts can be counted.
+  messageId  String?
+  createdAt  DateTime @default(now())
+
+  @@index([campaignId, type])
+  @@index([contactId])
+}
+
+/// Everyone who has said STOP. Checked before every promotional send, by every sender.
+model WaOptOut {
+  phone     String   @id
+  reason    String   @default("")
+  source    String   @default("whatsapp")
+  createdAt DateTime @default(now())
 }

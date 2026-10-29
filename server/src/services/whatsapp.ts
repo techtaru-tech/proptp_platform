@@ -511,7 +511,12 @@ export async function deleteTemplate(account: WhatsAppAccount, name: string): Pr
 export async function sendTemplateToNumber(
   account: WhatsAppAccount,
   contactPhone: string,
-  template: { name: string; language: string; params: string[]; body?: string; headerMedia?: { format: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; link: string } },
+  template: {
+    name: string; language: string; params: string[]; body?: string;
+    headerMedia?: { format: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; link: string };
+    /** One per quick-reply button, in order. What the tap reports back, so it can be told apart from the label. */
+    buttonPayloads?: string[];
+  },
   sentByUserId?: string | null
 ): Promise<SendResult & { conversationId: string; leadId: string | null }> {
   const conversation = await ensureConversation(account, contactPhone);
@@ -524,6 +529,9 @@ export async function sendTemplateToNumber(
   if (template.params.length > 0) {
     parts.push({ type: 'body', parameters: template.params.map((text) => ({ type: 'text', text })) });
   }
+  (template.buttonPayloads ?? []).forEach((payload, index) => {
+    parts.push({ type: 'button', sub_type: 'quick_reply', index: String(index), parameters: [{ type: 'payload', payload }] });
+  });
   const components = parts.length > 0 ? parts : undefined;
 
   const result = await deliver(account, conversation, {
@@ -575,7 +583,8 @@ async function deliver(
   let error: string | null = null;
 
   try {
-    providerMessageId = await postToGraph(account, input.payload);
+    // Only ever set on a developer's machine: it lets a whole flow be exercised without Meta.
+    providerMessageId = process.env.WHATSAPP_DRY_RUN === '1' ? `dry-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` : await postToGraph(account, input.payload);
   } catch (err) {
     status = 'failed';
     error = axios.isAxiosError(err)
@@ -648,7 +657,7 @@ export interface InboundMessage {
   audio?: { id?: string; mime_type?: string };
   video?: { id?: string; mime_type?: string; caption?: string };
   location?: { latitude?: number; longitude?: number; name?: string };
-  button?: { text?: string };
+  button?: { text?: string; payload?: string };
   interactive?: { button_reply?: { id?: string; title?: string }; list_reply?: { id?: string; title?: string } };
 }
 

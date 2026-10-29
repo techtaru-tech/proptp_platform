@@ -75,6 +75,7 @@ export const NAV_ITEMS: NavItem[] = [
       { label: 'Automation', to: '/crm/automation' },
       { label: 'Conversations', to: '/crm/conversations' },
       { label: 'Email Sequences', to: '/crm/email-sequences' },
+      { label: 'WhatsApp Campaigns', to: '/crm/wa-campaigns' },
       { label: 'WhatsApp Drips', to: '/crm/whatsapp-drips' },
       { label: 'WhatsApp Auto-Reply', to: '/crm/whatsapp-bots' },
       { label: 'WhatsApp AI', to: '/crm/whatsapp-ai' },

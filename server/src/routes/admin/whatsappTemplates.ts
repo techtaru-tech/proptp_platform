@@ -6,6 +6,7 @@ import { prisma } from '../../prisma';
 import { writeAudit } from '../../services/audit';
 import type { AuthedRequest } from '../../services/auth';
 import { UPLOAD_DIR } from '../../services/upload';
+import { normalizePhone, optedOutPhones } from '../../services/waCampaign';
 import { buildLeadWhere, type LeadFilter } from '../../services/leadFilters';
 import {
   createTemplate, deleteTemplate, type NewTemplate, type TemplateButton, fillPlaceholders, listAllTemplates, listApprovedTemplates, resolveTemplateParams, localPart, sendTemplateToNumber, toWaAddress,
@@ -126,7 +127,10 @@ async function resolveAudience(body: any): Promise<Recipient[]> {
     }
   }
 
-  return Array.from(byPhone.values());
+  // Anyone who has said STOP is dropped here, so neither the count nor the send includes them.
+  const all = Array.from(byPhone.values());
+  const stopped = await optedOutPhones(all.map((r) => normalizePhone(r.phone) ?? ''));
+  return all.filter((r) => !stopped.has(normalizePhone(r.phone) ?? ''));
 }
 
 /** How many people a filter reaches, before anyone commits to messaging them. */

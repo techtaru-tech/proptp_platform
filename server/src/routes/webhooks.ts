@@ -6,6 +6,7 @@ import { decrypt } from '../services/crypto';
 import { verifySignature, fetchLeadData, getFormName } from '../services/metaService';
 import { applyFormMapping, fetchOptionLabels, mappingForForm, saveCustomValues, unmappedNote } from '../services/leadFieldMapping';
 import { recordInbound, recordStatus } from '../services/whatsapp';
+import { handleCalendlyEvent, verifyCalendlySignature } from '../services/waCampaign';
 import { ingestWebhookLead } from '../services/webhookIngest';
 import { outsideBusinessHoursFlag } from '../services/businessHours';
 import { fireTrigger } from '../services/automationEngine';
@@ -472,4 +473,25 @@ webhookRouter.post('/:source/:token', async (req, res) => {
     leadId: result.leadId,
     leadsCreated: result.leadsCreated,
   });
+});
+
+// ---------------------------------------------------------------------------
+// Calendly — a consultation booked, canceled or rescheduled.
+// Signed with the key given to Calendly when the webhook was registered; unsigned or stale
+// requests are refused before anything is read.
+// ---------------------------------------------------------------------------
+
+webhookRouter.post('/calendly/:campaignId', async (req, res) => {
+  try {
+    const campaign = await prisma.waCampaign.findUnique({ where: { id: String(req.params.campaignId) } });
+    if (!campaign || !campaign.calendlySigningKey) return res.sendStatus(403);
+    const ok = verifyCalendlySignature((req as any).rawBody, req.header('calendly-webhook-signature'), decrypt(campaign.calendlySigningKey));
+    if (!ok) return res.sendStatus(403);
+    const outcome = await handleCalendlyEvent(campaign.id, req.body);
+    res.status(200).json({ ok: true, outcome });
+  } catch (err) {
+    console.error('[calendly] webhook failed:', err);
+    // A 5xx makes Calendly retry, which is safe: bookings are keyed by invitee.
+    res.sendStatus(500);
+  }
 });

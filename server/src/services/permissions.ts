@@ -66,6 +66,7 @@ const PATH_MODULE_ENTRIES = [
   { prefix: '/whatsapp-drips', module: 'crm' },
   { prefix: '/whatsapp-bots', module: 'crm' },
   { prefix: '/whatsapp-ai', module: 'crm' },
+  { prefix: '/wa-campaigns', module: 'crm' },
   { prefix: '/email-templates', module: 'crm' },
   { prefix: '/email-settings', module: 'crm' },
   { prefix: '/calls', module: 'crm' },

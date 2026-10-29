@@ -1,5 +1,6 @@
 import type { WhatsAppDripStep } from '@prisma/client';
 import { prisma } from '../prisma';
+import { isOptedOut } from './waCampaign';
 import {
   fillPlaceholders, listApprovedTemplates, localPart, resolveTemplateParams, sendTemplateToNumber,
   type ApprovedTemplate,
@@ -159,6 +160,7 @@ async function sendDueStep(enrollmentId: string, account: NonNullable<Awaited<Re
 
   const phone = localPart(enrollment.lead.phone);
   if (phone.length !== 10) return fail('Lead has no valid mobile number.');
+  if (await isOptedOut(phone)) return fail('The lead has opted out of WhatsApp messages (STOP).');
 
   const template = (await templates()).find((t) => t.name === step.templateName && t.language === step.language)
     ?? (await templates()).find((t) => t.name === step.templateName);
