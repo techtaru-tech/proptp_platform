@@ -12,7 +12,7 @@ export const createCampaign = (input: WaCampaignInput): Promise<WaCampaign> => a
 export const updateCampaign = (id: string, input: WaCampaignInput): Promise<WaCampaign> => api.patch(`/wa-campaigns/${id}`, input);
 export const setCampaignStatus = (id: string, status: WhatsAppDripStatus): Promise<WaCampaign> => api.patch(`/wa-campaigns/${id}/status`, { status });
 export const deleteCampaign = async (id: string): Promise<void> => void (await api.delete(`/wa-campaigns/${id}`));
-export const getDefaults = (): Promise<{ copy: Record<string, string>; demoVideos: { title: string; caption: string }[] }> => api.get('/wa-campaigns/defaults');
+export const getDefaults = (): Promise<{ copy: Record<string, string>; demoVideos: { language: 'en' | 'hi'; title: string; caption: string }[] }> => api.get('/wa-campaigns/defaults');
 
 export const importContacts = (id: string, rows: WaImportRow[], optInSource: string): Promise<WaImportResult> =>
   api.post(`/wa-campaigns/${id}/import`, { rows, optInSource, confirmConsent: true });

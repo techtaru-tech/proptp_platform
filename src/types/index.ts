@@ -2328,6 +2328,7 @@ export interface WaCampaign {
 }
 
 export interface WaDemoVideo {
+  language: 'en' | 'hi';
   title: string;
   caption: string;
   url: string;

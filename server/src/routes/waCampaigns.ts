@@ -26,8 +26,9 @@ function view(c: Prisma.WaCampaignGetPayload<{}>) {
   if (c.introParams.some((p) => p.includes('{terms_url}')) && !c.termsUrl) warnings.push('The first message uses the terms link, but none is set.');
   if (c.kind === 'flow') {
     if (!c.introHeaderVideoUrl) warnings.push('Add the video for the first message’s header.');
-    const demos = demoVideosOf(c);
-    if (demos.length === 0) warnings.push(c.demoVideoEn ? 'Add the Patient App, Phlebotomist App and Admin demo videos — until then only the older single demo video is sent.' : 'Add the demo videos.');
+    for (const [lang, name, single] of [['en', 'English', c.demoVideoEn], ['hi', 'Hindi', c.demoVideoHi]] as const) {
+      if (demoVideosOf(c, lang).length === 0) warnings.push(single ? `Upload the ${name} demo videos — until then only the older single ${name} video is sent.` : `Upload the ${name} demo videos.`);
+    }
     if (!c.calendlyUrl) warnings.push('Add the Calendly link.');
     if (!c.nudgeTemplate) warnings.push('No follow-up template: people who do not answer are not nudged.');
     if (!c.calendlySigningKey) warnings.push('Calendly is not connected, so bookings will not update the CRM.');
@@ -83,11 +84,11 @@ function fields(body: any): { error: string } | { data: Prisma.WaCampaignUncheck
         reminderTemplate: String(body.reminderTemplate ?? '').trim() || null,
         demoVideoEn: https(body.demoVideoEn, 'The English demo'),
         demoVideoHi: https(body.demoVideoHi, 'The Hindi demo'),
-        demoVideos: (Array.isArray(body.demoVideos) ? body.demoVideos : []).slice(0, 5).map((d: any, i: number) => {
+        demoVideos: (Array.isArray(body.demoVideos) ? body.demoVideos : []).slice(0, 10).map((d: any, i: number) => {
           const title = String(d?.title ?? '').trim().slice(0, 60);
           const caption = String(d?.caption ?? '').trim();
           if (caption.length > 1000) throw new Error(`Demo video ${i + 1}: the description is limited to 1000 characters.`);
-          return { title, caption, url: https(d?.url, `Demo video ${i + 1}`) ?? '' };
+          return { language: d?.language === 'hi' ? 'hi' : 'en', title, caption, url: https(d?.url, `Demo video ${i + 1}`) ?? '' };
         }).filter((d: { url: string; title: string }) => d.url || d.title) as Prisma.InputJsonValue,
         minSamples: Math.max(1, Math.floor(Number(body.minSamples) || 50)),
         minLabAgeYears: Math.max(0, Math.floor(Number(body.minLabAgeYears) || 3)),

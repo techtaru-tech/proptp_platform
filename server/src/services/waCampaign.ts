@@ -32,7 +32,7 @@ const HOUR = 60 * MIN;
 export const DEFAULT_COPY: Record<string, string> = {
   M02: 'Great, {name}! 🎉\nWould you like to watch the SmartLab product demo in English or Hindi?',
   M03: '🎬 Here is your SmartLab product demo!\nExplore online test bookings, patient reports, branded apps, home collection and lab CRM.\nPlease watch the videos below. We’ll ask for your feedback shortly.\nThe Diwali offer is available only to eligible labs, subject to approved terms.',
-  M04: '🎬 यह रहा SmartLab का हिंदी डेमो!\nदेखिए कैसे आपकी लैब के नाम से ऐप, ऑनलाइन टेस्ट बुकिंग, रिपोर्ट, होम कलेक्शन और CRM एक ही प्लेटफॉर्म पर काम कर सकते हैं।\nवीडियो देखने के बाद हमें बताइए कि क्या आप आगे बात करना चाहेंगे।\nदिवाली पहल पात्रता और स्वीकृत शर्तों के अधीन है।',
+  M04: '🎬 यह रहा SmartLab का हिंदी डेमो!\nदेखिए कैसे आपकी लैब के नाम से ऐप, ऑनलाइन टेस्ट बुकिंग, रिपोर्ट, होम कलेक्शन और CRM एक ही प्लेटफॉर्म पर काम कर सकते हैं।\nनीचे दिए वीडियो देखने के बाद हमें बताइए कि क्या आप आगे बात करना चाहेंगे।\nदिवाली ऑफ़र पात्रता और स्वीकृत शर्तों के अधीन है।',
   M05: 'Hi {name}! 😊\nWould you like to explore SmartLab for your lab and check your eligibility for our Diwali 50% initiative?',
   M05_hi: 'नमस्ते {name}! 😊\nक्या आप SmartLab के बारे में आगे बात करना और दिवाली की 50% पहल के लिए अपनी पात्रता चेक करना चाहेंगे?',
   M06: 'To check eligibility, approximately how many patient samples does your lab process per day?',
@@ -48,18 +48,25 @@ export const DEFAULT_COPY: Record<string, string> = {
   STOP_OK: 'You have been unsubscribed from SmartLab promotional messages. You will not receive any more of them.',
 };
 
-/** The three demo videos the owner asked for, with their default English descriptions. */
-export const DEFAULT_DEMO_VIDEOS = [
-  { title: 'Patient App', caption: '📱 *1/3 · Patient App*\nYour lab’s own branded app for patients: they book tests and packages, choose home sample collection, pay online and download their reports, all under your lab’s name.' },
-  { title: 'Phlebotomist App', caption: '🩺 *2/3 · Phlebotomist App*\nFor your sample collection team: see the day’s home visits, navigate to the patient, mark samples as collected and update the status live, so you always know where every sample is.' },
-  { title: 'Admin Dashboard', caption: '🖥️ *3/3 · Admin Dashboard & CRM*\nWhere you run the lab: every booking from the app and website lands here. Assign phlebotomists, track samples, upload reports, manage payments and follow up with leads, all from one place.' },
+/** The demo videos the owner asked for — user, phlebotomist and admin — in each language, with default descriptions. */
+export const DEFAULT_DEMO_VIDEOS: { language: 'en' | 'hi'; title: string; caption: string }[] = [
+  { language: 'en', title: 'Patient App', caption: '📱 *1/3 · Patient App*\nYour lab’s own branded app for patients: they book tests and packages, choose home sample collection, pay online and download their reports, all under your lab’s name.' },
+  { language: 'en', title: 'Phlebotomist App', caption: '🩺 *2/3 · Phlebotomist App*\nFor your sample collection team: see the day’s home visits, navigate to the patient, mark samples as collected and update the status live, so you always know where every sample is.' },
+  { language: 'en', title: 'Admin Dashboard', caption: '🖥️ *3/3 · Admin Dashboard & CRM*\nWhere you run the lab: every booking from the app and website lands here. Assign phlebotomists, track samples, upload reports, manage payments and follow up with leads, all from one place.' },
+  { language: 'hi', title: 'Patient App', caption: '📱 *1/3 · पेशेंट ऐप*\nआपकी लैब के नाम से अपना ऐप: मरीज़ टेस्ट और पैकेज बुक करते हैं, होम सैंपल कलेक्शन चुनते हैं, ऑनलाइन पेमेंट करते हैं और रिपोर्ट डाउनलोड करते हैं।' },
+  { language: 'hi', title: 'Phlebotomist App', caption: '🩺 *2/3 · फ्लेबोटोमिस्ट ऐप*\nसैंपल कलेक्शन टीम के लिए: दिन की होम विज़िट देखें, मरीज़ तक पहुँचें, सैंपल कलेक्ट होने पर मार्क करें और स्टेटस लाइव अपडेट करें।' },
+  { language: 'hi', title: 'Admin Dashboard', caption: '🖥️ *3/3 · एडमिन डैशबोर्ड और CRM*\nयहीं से लैब चलती है: ऐप और वेबसाइट की हर बुकिंग यहाँ आती है। फ्लेबोटोमिस्ट असाइन करें, सैंपल ट्रैक करें, रिपोर्ट अपलोड करें, पेमेंट और लीड्स एक ही जगह संभालें।' },
 ];
 
-export interface DemoVideo { title: string; caption: string; url: string }
+export interface DemoVideo { language: 'en' | 'hi'; title: string; caption: string; url: string }
 
-export function demoVideosOf(campaign: Pick<WaCampaign, 'demoVideos'>): DemoVideo[] {
+/** The campaign's demo videos that have a file. An entry saved without a language is English. */
+export function demoVideosOf(campaign: Pick<WaCampaign, 'demoVideos'>, language?: 'en' | 'hi'): DemoVideo[] {
   const raw = Array.isArray(campaign.demoVideos) ? (campaign.demoVideos as unknown as DemoVideo[]) : [];
-  return raw.filter((v) => v && typeof v.url === 'string' && v.url.trim());
+  return raw
+    .filter((v) => v && typeof v.url === 'string' && v.url.trim())
+    .map((v) => ({ ...v, language: v.language === 'hi' ? 'hi' : 'en' } as DemoVideo))
+    .filter((v) => !language || v.language === language);
 }
 
 function copyFor(campaign: Pick<WaCampaign, 'copy'>, key: string, language?: string | null): string {
@@ -345,25 +352,8 @@ async function act(campaign: WaCampaign, contact: WaContact, conv: Conv, action:
   switch (action) {
     case 'UGC_SHOW_DEMO': {
       await event(campaign.id, contact.id, 'demo_requested');
-      // No language question, and English throughout: a short note, then each demo video in turn.
-      let videos: { url: string; caption: string }[] = demoVideosOf(campaign).map((d) => ({ url: d.url, caption: fill(d.caption, v) }));
-      if (videos.length === 0 && campaign.demoVideoEn) videos = [{ url: campaign.demoVideoEn, caption: '' }];
-      if (videos.length === 0) {
-        // Never skip the demo silently: it goes to a person.
-        await event(campaign.id, contact.id, 'send_failed', 'No demo video is set');
-        await leadNote(contact, 'WhatsApp campaign: asked for the demo, but no demo video is set up — please send it.');
-        await move(contact, 'HUMAN', reset);
-        return;
-      }
-      await sendText(conv, say('M03'));
-      for (const video of videos) {
-        // Spaced out, so WhatsApp delivers them in order.
-        await new Promise((resolve) => setTimeout(resolve, DRY() ? 0 : 4000));
-        await sendVideo(conv, video.url, video.caption);
-      }
-      await event(campaign.id, contact.id, 'demo_sent', `${videos.length} video(s)`);
-      // The interest question follows a few minutes later, never claiming the videos were watched.
-      await move(contact, 'DEMO_SENT', { language: 'en', nextActionAt: new Date(Date.now() + 12 * MIN), nudgeCount: 0 });
+      await move(contact, 'LANGUAGE_PENDING', reset);
+      await sendButtons(conv, contact.id, say('M02'), [['LANG_EN', 'English'], ['LANG_HI', 'हिंदी']]);
       return;
     }
     case 'UGC_NOT_NOW':
@@ -384,18 +374,27 @@ async function act(campaign: WaCampaign, contact: WaContact, conv: Conv, action:
     case 'LANG_EN':
     case 'LANG_HI': {
       const language = action === 'LANG_HI' ? 'hi' : 'en';
-      const url = language === 'hi' ? campaign.demoVideoHi : campaign.demoVideoEn;
+      const name = language === 'hi' ? 'Hindi' : 'English';
+      // That language's demo videos; with none uploaded yet, its older single demo video.
+      let videos: { url: string; caption: string }[] = demoVideosOf(campaign, language).map((d) => ({ url: d.url, caption: fill(d.caption, v) }));
+      const single = language === 'hi' ? campaign.demoVideoHi : campaign.demoVideoEn;
+      if (videos.length === 0 && single) videos = [{ url: single, caption: '' }];
       const updated = await move(contact, 'LANGUAGE_PENDING', { language });
-      if (!url) {
+      if (videos.length === 0) {
         // Never skip the demo silently: it goes to a person.
-        await event(campaign.id, contact.id, 'send_failed', `No ${language === 'hi' ? 'Hindi' : 'English'} demo video is set`);
-        await leadNote(contact, `WhatsApp campaign: asked for the ${language === 'hi' ? 'Hindi' : 'English'} demo, but none is set up — please send it.`);
+        await event(campaign.id, contact.id, 'send_failed', `No ${name} demo video is set`);
+        await leadNote(contact, `WhatsApp campaign: asked for the ${name} demo, but none is set up — please send it.`);
         await move(updated, 'HUMAN', reset);
         return;
       }
-      await sendVideo(conv, url, fill(copyFor(campaign, language === 'hi' ? 'M04' : 'M03'), v));
-      await event(campaign.id, contact.id, 'demo_sent', language);
-      // The interest question follows a few minutes later, never claiming the video was watched.
+      await sendText(conv, fill(copyFor(campaign, language === 'hi' ? 'M04' : 'M03'), v));
+      for (const video of videos) {
+        // Spaced out, so WhatsApp delivers them in order.
+        await new Promise((resolve) => setTimeout(resolve, DRY() ? 0 : 4000));
+        await sendVideo(conv, video.url, video.caption);
+      }
+      await event(campaign.id, contact.id, 'demo_sent', `${language}: ${videos.length} video(s)`);
+      // The interest question follows a few minutes later, never claiming the videos were watched.
       await move(updated, 'DEMO_SENT', { nextActionAt: new Date(Date.now() + 12 * MIN), nudgeCount: 0 });
       return;
     }
