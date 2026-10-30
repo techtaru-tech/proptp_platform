@@ -331,8 +331,26 @@ async function act(campaign: WaCampaign, contact: WaContact, conv: Conv, action:
   switch (action) {
     case 'UGC_SHOW_DEMO': {
       await event(campaign.id, contact.id, 'demo_requested');
-      await move(contact, 'LANGUAGE_PENDING', reset);
-      await sendButtons(conv, contact.id, say('M02'), [['LANG_EN', 'English'], ['LANG_HI', 'हिंदी']]);
+      // No language question: the demo goes straight out, English first and then Hindi. The same
+      // link twice is sent once, so a campaign with a single video does not repeat itself.
+      const demos: [string, string, string][] = [];
+      for (const [lang, url, key] of [['en', campaign.demoVideoEn, 'M03'], ['hi', campaign.demoVideoHi, 'M04']] as const) {
+        if (url && !demos.some((d) => d[1] === url)) demos.push([lang, url, key]);
+      }
+      if (demos.length === 0) {
+        // Never skip the demo silently: it goes to a person.
+        await event(campaign.id, contact.id, 'send_failed', 'No demo video is set');
+        await leadNote(contact, 'WhatsApp campaign: asked for the demo, but no demo video is set up — please send it.');
+        await move(contact, 'HUMAN', reset);
+        return;
+      }
+      for (const [i, [, url, key]] of demos.entries()) {
+        if (i > 0) await new Promise((resolve) => setTimeout(resolve, DRY() ? 0 : 2500));
+        await sendVideo(conv, url, fill(copyFor(campaign, key, null), v));
+      }
+      await event(campaign.id, contact.id, 'demo_sent', demos.map((d) => d[0]).join(','));
+      // The interest question follows a few minutes later, never claiming the video was watched.
+      await move(contact, 'DEMO_SENT', { nextActionAt: new Date(Date.now() + 12 * MIN), nudgeCount: 0 });
       return;
     }
     case 'UGC_NOT_NOW':

@@ -15,7 +15,6 @@ import { createCampaign, getCampaign, getDefaultCopy, updateCampaign } from '../
 import type { ApprovedWhatsAppTemplate, WaCampaignInput, WaCampaignKind } from '../../../types';
 
 const COPY_LABELS: [string, string][] = [
-  ['M02', 'M02 — Which language for the demo?'],
   ['M03', 'M03 — English demo caption'],
   ['M04', 'M04 — Hindi demo caption'],
   ['M05', 'M05 — Interest after the demo (English)'],
@@ -176,7 +175,7 @@ export function WaCampaignBuilder() {
         {flow && (
           <>
             <Card>
-              <CardHeader title="Demo videos" subtitle="What is sent when someone picks a language. Without one, the person goes to your team instead of getting nothing." />
+              <CardHeader title="Demo videos" subtitle="Sent as soon as someone taps Show Demo — English first, then Hindi. With none set, the person goes to your team instead of getting nothing." />
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {videoField('English demo', 'demoVideoEn', 'Public https link.')}
                 {videoField('Hindi demo', 'demoVideoHi', 'Public https link.')}
