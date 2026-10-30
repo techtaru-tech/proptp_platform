@@ -2312,6 +2312,8 @@ export interface WaCampaign {
   reminderTemplate?: string;
   demoVideoEn?: string;
   demoVideoHi?: string;
+  /** Sent one after another on Show Demo. */
+  demoVideos: WaDemoVideo[];
   minSamples: number;
   minLabAgeYears: number;
   copy: Record<string, string>;
@@ -2323,6 +2325,12 @@ export interface WaCampaign {
   warnings: string[];
   createdAt: string;
   contactCount?: number;
+}
+
+export interface WaDemoVideo {
+  title: string;
+  caption: string;
+  url: string;
 }
 
 export type WaCampaignInput = Omit<WaCampaign, 'id' | 'hasCalendlyToken' | 'calendlyConnected' | 'calendlyWebhookUrl' | 'lastError' | 'warnings' | 'createdAt' | 'contactCount'>;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AlertTriangle, Upload } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowUp, Plus, Trash2, Upload } from 'lucide-react';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { Card, CardHeader } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
@@ -11,12 +11,11 @@ import { CardSkeleton } from '../../../components/ui/LoadingSkeleton';
 import { useToast } from '../../../context/ToastContext';
 import { fileUrl, uploadFiles } from '../../../services/apiClient';
 import { getBroadcastSource } from '../../../services/whatsappTemplateService';
-import { createCampaign, getCampaign, getDefaultCopy, updateCampaign } from '../../../services/waCampaignService';
-import type { ApprovedWhatsAppTemplate, WaCampaignInput, WaCampaignKind } from '../../../types';
+import { createCampaign, getCampaign, getDefaults, updateCampaign } from '../../../services/waCampaignService';
+import type { ApprovedWhatsAppTemplate, WaCampaignInput, WaCampaignKind, WaDemoVideo } from '../../../types';
 
 const COPY_LABELS: [string, string][] = [
-  ['M03', 'M03 — English demo caption'],
-  ['M04', 'M04 — Hindi demo caption'],
+  ['M03', 'M03 — The note sent before the demo videos'],
   ['M05', 'M05 — Interest after the demo (English)'],
   ['M05_hi', 'M05 — Interest after the demo (Hindi)'],
   ['M06', 'M06 — Eligibility question 1 (samples a day)'],
@@ -35,7 +34,7 @@ const COPY_LABELS: [string, string][] = [
 const blank = (kind: WaCampaignKind): WaCampaignInput => ({
   name: '', kind, status: 'draft', dailySendCap: 250, slotCap: 0,
   introLanguage: 'en', introParams: ['{first_name}', '{terms_url}'], nudgeLanguage: 'en', nudgeParams: ['{first_name}'],
-  minSamples: 50, minLabAgeYears: 3, copy: {},
+  minSamples: 50, minLabAgeYears: 3, copy: {}, demoVideos: [],
 });
 
 /** ISO ↔ the local value a datetime-local input wants. */
@@ -50,18 +49,24 @@ export function WaCampaignBuilder() {
   const [templates, setTemplates] = useState<ApprovedWhatsAppTemplate[]>([]);
   const [templateError, setTemplateError] = useState('');
   const [defaults, setDefaults] = useState<Record<string, string>>({});
+  const [demoDefaults, setDemoDefaults] = useState<{ title: string; caption: string }[]>([]);
   const [loading, setLoading] = useState(!!id);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState('');
 
   useEffect(() => {
     void getBroadcastSource().then((s) => setTemplates(s.templates)).catch((e) => setTemplateError(e instanceof Error ? e.message : 'Could not read the approved templates.'));
-    void getDefaultCopy().then(setDefaults).catch(() => undefined);
+    void getDefaults().then((d) => {
+      setDefaults(d.copy);
+      setDemoDefaults(d.demoVideos);
+      // A new campaign starts with the three demo slots, ready for their files.
+      if (!id) setForm((f) => (f.demoVideos.length ? f : { ...f, demoVideos: d.demoVideos.map((v) => ({ ...v, url: '' })) }));
+    }).catch(() => undefined);
     if (id) {
       void getCampaign(id).then((c) => {
         if (c) {
           const { id: _id, hasCalendlyToken: _t, calendlyConnected: _c, calendlyWebhookUrl: _w, lastError: _e, warnings: _wr, createdAt: _ca, contactCount: _cc, ...rest } = c;
-          setForm(rest);
+          setForm({ ...rest, demoVideos: rest.demoVideos ?? [] });
         }
         setLoading(false);
       });
@@ -85,34 +90,43 @@ export function WaCampaignBuilder() {
       <Input label={label} value={value ?? ''} onChange={(e) => onChange(e.target.value)} hint={hint ?? 'Type the template’s exact name.'} />
     );
 
+  const upload = async (key: string, file: File | undefined, done: (url: string) => void) => {
+    if (!file) return;
+    setUploading(key);
+    try {
+      const [url] = await uploadFiles([file]);
+      const link = fileUrl(url) ?? url;
+      done(/^https?:/i.test(link) ? link : `${window.location.origin}${link}`);
+    } catch (err) {
+      toast({ title: 'Upload failed', description: err instanceof Error ? err.message : undefined, variant: 'error' });
+    } finally {
+      setUploading('');
+    }
+  };
+
+  const uploadButton = (key: string, done: (url: string) => void) => (
+    <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-subtle">
+      <Upload size={14} />
+      {uploading === key ? 'Uploading…' : 'Upload an MP4 (up to 15 MB)'}
+      <input type="file" accept="video/mp4" className="hidden" onChange={(e) => void upload(key, e.target.files?.[0], done)} />
+    </label>
+  );
+
   const videoField = (label: string, field: 'introHeaderVideoUrl' | 'demoVideoEn' | 'demoVideoHi', hint: string) => (
     <div className="space-y-2">
       <Input label={label} value={form[field] ?? ''} onChange={(e) => set(field, e.target.value || undefined)} placeholder="https://…" hint={hint} />
-      <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-subtle">
-        <Upload size={14} />
-        {uploading === field ? 'Uploading…' : 'Upload an MP4 (up to 15 MB)'}
-        <input
-          type="file"
-          accept="video/mp4"
-          className="hidden"
-          onChange={async (e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            setUploading(field);
-            try {
-              const [url] = await uploadFiles([file]);
-              const link = fileUrl(url) ?? url;
-              set(field, /^https?:/i.test(link) ? link : `${window.location.origin}${link}`);
-            } catch (err) {
-              toast({ title: 'Upload failed', description: err instanceof Error ? err.message : undefined, variant: 'error' });
-            } finally {
-              setUploading('');
-            }
-          }}
-        />
-      </label>
+      {uploadButton(field, (url) => set(field, url))}
     </div>
   );
+
+  const patchDemo = (i: number, patch: Partial<WaDemoVideo>) => set('demoVideos', form.demoVideos.map((d, j) => (j === i ? { ...d, ...patch } : d)));
+  const moveDemo = (i: number, by: -1 | 1) => {
+    const list = [...form.demoVideos];
+    const to = i + by;
+    if (to < 0 || to >= list.length) return;
+    [list[i], list[to]] = [list[to], list[i]];
+    set('demoVideos', list);
+  };
 
   const save = async () => {
     setSaving(true);
@@ -175,11 +189,50 @@ export function WaCampaignBuilder() {
         {flow && (
           <>
             <Card>
-              <CardHeader title="Demo videos" subtitle="Sent as soon as someone taps Show Demo — English first, then Hindi. With none set, the person goes to your team instead of getting nothing." />
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {videoField('English demo', 'demoVideoEn', 'Public https link.')}
-                {videoField('Hindi demo', 'demoVideoHi', 'Public https link.')}
-              </div>
+              <CardHeader
+                title="Demo videos"
+                subtitle="Sent one after another as soon as someone taps Show Demo, after a short note (M03). Each goes with its description. Up to 5."
+                action={
+                  <Button variant="outline" size="sm" leftIcon={<Plus size={13} />} disabled={form.demoVideos.length >= 5} onClick={() => set('demoVideos', [...form.demoVideos, { title: '', caption: '', url: '' }])}>
+                    Add video
+                  </Button>
+                }
+              />
+              {form.demoVideos.length === 0 ? (
+                <div className="space-y-2 text-sm text-ink-faint">
+                  <p>No demo videos yet.{form.demoVideoEn ? ' Until you add them, the older single demo video is sent.' : ''}</p>
+                  {demoDefaults.length > 0 && (
+                    <Button variant="outline" size="sm" onClick={() => set('demoVideos', demoDefaults.map((v) => ({ ...v, url: '' })))}>
+                      Add the Patient App, Phlebotomist App and Admin slots
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {form.demoVideos.map((d, i) => (
+                    <div key={i} className="rounded-lg border border-line p-3">
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-ink-faint">Video {i + 1}</span>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" aria-label="Move up" disabled={i === 0} onClick={() => moveDemo(i, -1)}><ArrowUp size={14} /></Button>
+                          <Button variant="ghost" size="icon" aria-label="Move down" disabled={i === form.demoVideos.length - 1} onClick={() => moveDemo(i, 1)}><ArrowDown size={14} /></Button>
+                          <Button variant="ghost" size="icon" aria-label="Remove" className="text-danger-600" onClick={() => set('demoVideos', form.demoVideos.filter((_, j) => j !== i))}><Trash2 size={14} /></Button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <Input label="Name (for you)" value={d.title} onChange={(e) => patchDemo(i, { title: e.target.value })} placeholder="Patient App" />
+                        <div className="space-y-2">
+                          <Input label="Video" value={d.url} onChange={(e) => patchDemo(i, { url: e.target.value })} placeholder="https://…" hint={d.url ? undefined : 'Not set — this one is skipped until it has a video.'} />
+                          {uploadButton(`demo-${i}`, (url) => patchDemo(i, { url }))}
+                        </div>
+                        <div className="sm:col-span-2">
+                          <Textarea label="Description sent with it" rows={3} value={d.caption} onChange={(v) => patchDemo(i, { caption: v })} hint={`${d.caption.length}/1000. {name} becomes the person's first name.`} />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Card>
 
             <Card>

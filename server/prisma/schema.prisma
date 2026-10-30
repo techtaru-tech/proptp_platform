@@ -3515,6 +3515,9 @@ model WaCampaign {
 
   demoVideoEn String?
   demoVideoHi String?
+  /// The demo, as several short videos sent one after another when someone taps Show Demo:
+  /// [{ title, caption, url }]. When empty, the single demoVideoEn is sent instead.
+  demoVideos  Json    @default("[]")
 
   /// Eligibility thresholds — the owner's to approve, never hard-coded.
   minSamples     Int @default(50)
