@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { readSheet } from 'read-excel-file/browser';
-import { AlertTriangle, Check, CheckCircle2, Download, FileSpreadsheet, Link2, Pause, Pencil, Play, RefreshCw, X } from 'lucide-react';
+import { AlertTriangle, CalendarClock, Check, CheckCircle2, Download, ExternalLink, FileSpreadsheet, Link2, Pause, Pencil, Play, RefreshCw, X } from 'lucide-react';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { Card, CardHeader } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
@@ -17,11 +17,11 @@ import { DataTable, type DataTableColumn } from '../../../components/tables/Data
 import { useToast } from '../../../context/ToastContext';
 import { DRIP_STATUS_TONE } from '../../../services/whatsappDripService';
 import {
-  connectCalendly, getBoard, getCampaign, getDashboard, getReviewQueue, importContacts, listContacts, reviewContact,
+  connectCalendly, getBoard, listMeetings, getCampaign, getDashboard, getReviewQueue, importContacts, listContacts, reviewContact,
   runCampaignsNow, setCampaignStatus,
 } from '../../../services/waCampaignService';
 import { formatDateTime } from '../../../utils/format';
-import type { WaBoard, WaCampaign, WaContactRow, WaDashboard, WaImportResult, WaImportRow, WaReviewQueue } from '../../../types';
+import type { WaBoard, WaCampaign, WaContactRow, WaDashboard, WaImportResult, WaImportRow, WaMeetingRow, WaReviewQueue } from '../../../types';
 
 export function WaCampaignDetail() {
   const { id = '' } = useParams<{ id: string }>();
@@ -85,7 +85,7 @@ export function WaCampaignDetail() {
         items={[
           { key: 'dashboard', label: 'Dashboard' },
           { key: 'import', label: 'Import list' },
-          ...(flow ? [{ key: 'board', label: 'Board' }, { key: 'review', label: 'Review' }] : []),
+          ...(flow ? [{ key: 'board', label: 'Board' }, { key: 'meetings', label: 'Meetings' }, { key: 'review', label: 'Review' }] : []),
           { key: 'people', label: 'People' },
           ...(flow ? [{ key: 'calendly', label: 'Calendly' }] : []),
         ]}
@@ -95,6 +95,7 @@ export function WaCampaignDetail() {
             {active === 'dashboard' && <DashboardTab id={id} flow={flow} tick={tick} />}
             {active === 'import' && <ImportTab id={id} onDone={refresh} />}
             {active === 'board' && <BoardTab id={id} tick={tick} />}
+            {active === 'meetings' && <MeetingsTab id={id} tick={tick} />}
             {active === 'review' && <ReviewTab id={id} onChanged={refresh} />}
             {active === 'people' && <PeopleTab id={id} tick={tick} />}
             {active === 'calendly' && <CalendlyTab campaign={campaign} onChanged={refresh} />}
@@ -338,6 +339,7 @@ function BoardTab({ id, tick }: { id: string; tick: number }) {
               <div key={c.id} className="rounded-md border border-line bg-white p-2.5 text-sm shadow-card">
                 <p className="font-medium text-ink">{c.name || c.phone}</p>
                 <p className="text-xs text-ink-faint">{c.name ? c.phone : ''}{c.language ? ` · ${c.language === 'hi' ? 'Hindi' : 'English'}` : ''}</p>
+                {c.meetingAt && <p className="mt-1 flex items-center gap-1 text-xs font-medium text-success-700"><CalendarClock size={12} /> {formatDateTime(c.meetingAt)}</p>}
               </div>
             ))}
             {col.total > col.contacts.length && <p className="text-center text-xs text-ink-faint">+{col.total - col.contacts.length} more — see People</p>}
@@ -369,6 +371,46 @@ function PeopleTab({ id, tick }: { id: string; tick: number }) {
       <div className="flex justify-end border-b border-line p-3"><SearchInput value={search} onChange={setSearch} placeholder="Search name or number…" className="sm:w-72" /></div>
       <DataTable columns={columns} rows={rows ?? []} rowKey={(c) => c.id} isLoading={rows === null} emptyTitle="Nobody here yet" emptyDescription="Import a list to get started." />
     </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Meetings — every consultation booked through Calendly
+// ---------------------------------------------------------------------------
+
+const MEETING_TONE: Record<WaMeetingRow['status'], 'success' | 'neutral' | 'warning' | 'info'> = { booked: 'success', completed: 'info', canceled: 'neutral', rescheduled: 'warning' };
+const MEETING_LABEL: Record<WaMeetingRow['status'], string> = { booked: 'Booked', completed: 'Done', canceled: 'Canceled', rescheduled: 'Moved to a new time' };
+
+function MeetingsTab({ id, tick }: { id: string; tick: number }) {
+  const [rows, setRows] = useState<WaMeetingRow[] | null>(null);
+  useEffect(() => {
+    void listMeetings(id).then(setRows);
+  }, [id, tick]);
+
+  const now = Date.now();
+  const upcoming = (rows ?? []).filter((m) => m.status === 'booked' && new Date(m.startsAt).getTime() >= now - 30 * 60000);
+  const columns: DataTableColumn<WaMeetingRow>[] = [
+    { key: 'when', header: 'When (IST)', render: (m) => <div><p className="font-medium text-ink">{formatDateTime(m.startsAt)}</p>{m.endsAt && <p className="text-xs text-ink-faint">until {formatDateTime(m.endsAt).split(', ').pop()}</p>}</div> },
+    { key: 'who', header: 'Lab', render: (m) => <div><p className="font-medium text-ink">{m.name || m.phone}</p><p className="text-xs text-ink-faint">{m.phone}{m.labName ? ` · ${m.labName}` : ''}{m.language ? ` · ${m.language === 'hi' ? 'Hindi' : 'English'}` : ''}</p></div> },
+    { key: 'status', header: 'Status', render: (m) => <Badge tone={MEETING_TONE[m.status]}>{MEETING_LABEL[m.status]}</Badge> },
+    { key: 'link', header: 'Join link', render: (m) => (m.joinUrl ? <a href={m.joinUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm font-medium text-brand-700 underline"><ExternalLink size={13} /> Join</a> : <span className="text-xs text-ink-faint">In the Calendly email</span>) },
+    { key: 'reminder', header: '1-hour reminder', render: (m) => (m.reminderSentAt ? <span className="text-xs text-success-700">Sent {formatDateTime(m.reminderSentAt).split(', ').pop()}</span> : m.status === 'booked' ? <span className="text-xs text-ink-faint">Goes 1 hour before</span> : <span className="text-xs text-ink-faint">—</span>) },
+    { key: 'eligibility', header: 'Eligibility', render: (m) => <Badge tone={m.verification === 'verified' ? 'success' : m.verification === 'rejected' ? 'danger' : 'warning'}>{m.verification === 'verified' ? 'Verified' : m.verification === 'rejected' ? 'Not eligible' : 'To review'}</Badge> },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard label="Upcoming" value={upcoming.length} tone="success" />
+        <StatCard label="Next one" value={upcoming[0] ? formatDateTime(upcoming[0].startsAt) : '—'} />
+        <StatCard label="Done" value={(rows ?? []).filter((m) => m.status === 'completed').length} />
+        <StatCard label="Canceled" value={(rows ?? []).filter((m) => m.status === 'canceled').length} />
+      </div>
+      <Card padded={false}>
+        <DataTable columns={columns} rows={rows ?? []} rowKey={(m) => m.id} isLoading={rows === null} emptyTitle="No meetings booked yet" emptyDescription="When a lab books through the Calendly button, it appears here with its time and join link." />
+      </Card>
+      <p className="text-xs text-ink-faint">Times are India time. A booking, cancellation or new time made in Calendly shows here within seconds. The lab gets a WhatsApp confirmation at once and a reminder 1 hour before.</p>
+    </div>
   );
 }
 

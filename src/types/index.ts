@@ -2356,6 +2356,25 @@ export interface WaContactRow {
   nextActionAt?: string;
   lastError?: string;
   updatedAt: string;
+  /** On the board: the booked consultation, if any. */
+  meetingAt?: string;
+}
+
+export interface WaMeetingRow {
+  id: string;
+  status: 'booked' | 'canceled' | 'rescheduled' | 'completed';
+  startsAt: string;
+  endsAt?: string;
+  joinUrl?: string;
+  reminderSentAt?: string;
+  bookedAt: string;
+  contactId: string;
+  name: string;
+  phone: string;
+  leadId?: string;
+  language?: string;
+  labName?: string;
+  verification: 'none' | 'verified' | 'rejected';
 }
 
 export interface WaBoard {

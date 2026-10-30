@@ -295,8 +295,10 @@ waCampaignsRouter.get('/:id/contacts', async (req, res, next) => {
 waCampaignsRouter.get('/:id/board', async (req, res, next) => {
   try {
     const rows = await prisma.waContact.findMany({ where: { campaignId: String(req.params.id) }, orderBy: { updatedAt: 'desc' }, take: 2000 });
-    const columns: Record<string, ReturnType<typeof contactRow>[]> = Object.fromEntries(BOARD_COLUMNS.map((c) => [c, []]));
-    for (const r of rows) columns[boardColumn(r)].push(contactRow(r));
+    const meetings = await prisma.waMeeting.findMany({ where: { campaignId: String(req.params.id), status: 'booked' }, select: { contactId: true, startsAt: true } });
+    const nextMeeting = new Map(meetings.map((m) => [m.contactId, m.startsAt.toISOString()]));
+    const columns: Record<string, (ReturnType<typeof contactRow> & { meetingAt?: string })[]> = Object.fromEntries(BOARD_COLUMNS.map((c) => [c, []]));
+    for (const r of rows) columns[boardColumn(r)].push({ ...contactRow(r), meetingAt: nextMeeting.get(r.id) });
     res.json({ columns: BOARD_COLUMNS.map((name) => ({ name, total: columns[name].length, contacts: columns[name].slice(0, 40) })) });
   } catch (err) {
     next(err);
@@ -316,6 +318,26 @@ waCampaignsRouter.get('/:id/review', async (req, res, next) => {
       prisma.waContact.count({ where: { campaignId: String(req.params.id), verification: 'verified' } }),
     ]);
     res.json({ slotCap: campaign?.slotCap ?? 0, slotsTaken: taken, minSamples: campaign?.minSamples ?? 50, minLabAgeYears: campaign?.minLabAgeYears ?? 3, contacts: rows.map(contactRow) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Every consultation booked through the campaign: when, the join link, and whether the reminder went. */
+waCampaignsRouter.get('/:id/meetings', async (req, res, next) => {
+  try {
+    const rows = await prisma.waMeeting.findMany({
+      where: { campaignId: String(req.params.id) },
+      include: { contact: { select: { id: true, name: true, phone: true, leadId: true, language: true, labName: true, verification: true } } },
+      orderBy: { startsAt: 'asc' },
+      take: 500,
+    });
+    res.json(rows.map((m) => ({
+      id: m.id, status: m.status, startsAt: m.startsAt.toISOString(), endsAt: m.endsAt?.toISOString(), joinUrl: m.joinUrl ?? undefined,
+      reminderSentAt: m.reminderSentAt?.toISOString(), bookedAt: m.createdAt.toISOString(),
+      contactId: m.contact.id, name: m.contact.name, phone: m.contact.phone, leadId: m.contact.leadId ?? undefined,
+      language: m.contact.language ?? undefined, labName: m.contact.labName ?? undefined, verification: m.contact.verification,
+    })));
   } catch (err) {
     next(err);
   }

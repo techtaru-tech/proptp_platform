@@ -1,5 +1,5 @@
 import type {
-  WaBoard, WaCampaign, WaCampaignInput, WaContactRow, WaDashboard, WaImportResult, WaImportRow, WaOptOutRow, WaReviewQueue,
+  WaBoard, WaCampaign, WaMeetingRow, WaCampaignInput, WaContactRow, WaDashboard, WaImportResult, WaImportRow, WaOptOutRow, WaReviewQueue,
   WhatsAppDripStatus,
 } from '../types';
 import { api } from './apiClient';
@@ -39,3 +39,5 @@ export const runCampaignsNow = async (): Promise<void> => void (await api.post('
 export const listOptOuts = (): Promise<WaOptOutRow[]> => api.get('/wa-campaigns/opt-outs');
 export const addOptOut = (phone: string, reason: string): Promise<unknown> => api.post('/wa-campaigns/opt-outs', { phone, reason });
 export const removeOptOut = async (phone: string): Promise<void> => void (await api.delete(`/wa-campaigns/opt-outs/${phone}`));
+
+export const listMeetings = (id: string): Promise<WaMeetingRow[]> => api.get(`/wa-campaigns/${id}/meetings`);
