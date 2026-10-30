@@ -15,18 +15,16 @@ import { createCampaign, getCampaign, getDefaults, updateCampaign } from '../../
 import type { ApprovedWhatsAppTemplate, WaCampaignInput, WaCampaignKind, WaDemoVideo } from '../../../types';
 
 const COPY_LABELS: [string, string][] = [
-  ['M02', 'M02 — Which language for the demo?'],
-  ['M03', 'M03 — Note before the English demo videos'],
-  ['M04', 'M04 — Note before the Hindi demo videos'],
-  ['M05', 'M05 — Interest after the demo (English)'],
-  ['M05_hi', 'M05 — Interest after the demo (Hindi)'],
-  ['M06', 'M06 — Eligibility question 1 (samples a day)'],
-  ['M07', 'M07 — Eligibility question 2 (the lab)'],
-  ['M08', 'M08 — Eligible / under review, with the booking button'],
-  ['M09', 'M09 — Does not meet the criteria'],
+  ['M02', 'M02 — Note sent before the demo videos'],
+  ['M04', 'M04 — Interest after the demo'],
+  ['M05', 'M05 — Eligibility: samples a day'],
+  ['M06', 'M06 — Eligibility: specialist led or running 3+ years'],
+  ['M07', 'M07 — Eligibility: B2C'],
+  ['M08', 'M08 — Under review, with the booking button'],
+  ['M09', 'M09 — Not currently eligible'],
   ['M10', 'M10 — Not now'],
   ['M11', 'M11 — Not interested'],
-  ['M13', 'M13 — Booking still pending'],
+  ['M13', 'M13 — Consultation not booked yet'],
   ['M14', 'M14 — Booking confirmed'],
   ['M15', 'M15 — Reminder, 1 hour before'],
   ['M16', 'M16 — Handed to the team'],
@@ -51,7 +49,7 @@ export function WaCampaignBuilder() {
   const [templates, setTemplates] = useState<ApprovedWhatsAppTemplate[]>([]);
   const [templateError, setTemplateError] = useState('');
   const [defaults, setDefaults] = useState<Record<string, string>>({});
-  const [demoDefaults, setDemoDefaults] = useState<{ language: 'en' | 'hi'; title: string; caption: string }[]>([]);
+  const [demoDefaults, setDemoDefaults] = useState<{ title: string; caption: string }[]>([]);
   const [loading, setLoading] = useState(!!id);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState('');
@@ -121,6 +119,7 @@ export function WaCampaignBuilder() {
     </div>
   );
 
+  const rows = form.demoVideos.map((d, i) => ({ d, i })).filter(({ d }) => d.language !== 'hi');
   const patchDemo = (i: number, patch: Partial<WaDemoVideo>) => set('demoVideos', form.demoVideos.map((d, j) => (j === i ? { ...d, ...patch } : d)));
   // Older entries were saved without a language; they are English.
   const langOf = (d: WaDemoVideo) => (d.language === 'hi' ? 'hi' : 'en');
@@ -165,7 +164,7 @@ export function WaCampaignBuilder() {
         <Card>
           <CardHeader title="Basics" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input label="Name" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="SmartLab Diwali Initiative 2026" required />
+            <Input label="Name" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Tag Through Diwali 50% Initiative 2026" required />
             <Select
               label="Type"
               value={form.kind}
@@ -184,70 +183,63 @@ export function WaCampaignBuilder() {
         </Card>
 
         <Card>
-          <CardHeader title="First message" subtitle={flow ? 'An approved marketing template with a video header and three buttons: Show Demo, Not Now, Not Interested.' : 'The approved template everyone on the list is sent.'} />
+          <CardHeader title="First message" subtitle={flow ? 'An approved marketing template with a video header and three buttons: Watch Demo, Check Eligibility, Not Interested.' : 'The approved template everyone on the list is sent.'} />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {templateField('Template', form.introTemplate, (v) => set('introTemplate', v || undefined))}
             <Input label="Language code" value={form.introLanguage} onChange={(e) => set('introLanguage', e.target.value)} hint="As on the template, e.g. en or hi." />
-            <Textarea label="Template variables, in order (one per line)" rows={3} value={form.introParams.join('\n')} onChange={(v) => set('introParams', v.split('\n').map((x) => x.trim()).filter(Boolean))} hint="Tokens: {first_name}, {terms_url}. A person with no name is greeted as “there”." />
+            <Textarea label="Template variables, in order (one per line)" rows={3} value={form.introParams.join('\n')} onChange={(v) => set('introParams', v.split('\n').map((x) => x.trim()).filter(Boolean))} hint="Tokens: {first_name}, {terms_url}. A person with no name is greeted as “Doctor”." />
             <div>{videoField('Header video', 'introHeaderVideoUrl', 'Public https link. Needed when the template has a video header.')}</div>
           </div>
         </Card>
 
         {flow && (
           <>
-            {(['en', 'hi'] as const).map((lang) => {
-              const name = lang === 'hi' ? 'Hindi' : 'English';
-              const rows = form.demoVideos.map((d, i) => ({ d, i })).filter(({ d }) => langOf(d) === lang);
-              const single = lang === 'hi' ? form.demoVideoHi : form.demoVideoEn;
-              return (
-                <Card key={lang}>
-                  <CardHeader
-                    title={`${name} demo videos`}
-                    subtitle={`Sent one after another when someone taps Show Demo and picks ${name}, after a short note (${lang === 'hi' ? 'M04' : 'M03'}). Each goes with its description.`}
-                    action={
-                      <Button variant="outline" size="sm" leftIcon={<Plus size={13} />} disabled={rows.length >= 5} onClick={() => set('demoVideos', [...form.demoVideos, { language: lang, title: '', caption: '', url: '' }])}>
-                        Add video
-                      </Button>
-                    }
-                  />
-                  {rows.length === 0 ? (
-                    <div className="space-y-2 text-sm text-ink-faint">
-                      <p>No {name} demo videos yet.{single ? ` Until you add them, the older single ${name} video is sent.` : ''}</p>
-                      {demoDefaults.some((v) => v.language === lang) && (
-                        <Button variant="outline" size="sm" onClick={() => set('demoVideos', [...form.demoVideos, ...demoDefaults.filter((v) => v.language === lang).map((v) => ({ ...v, url: '' }))])}>
-                          Add the Patient App, Phlebotomist App and Admin slots
-                        </Button>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {rows.map(({ d, i }, n) => (
-                        <div key={i} className="rounded-lg border border-line p-3">
-                          <div className="mb-2 flex items-center justify-between">
-                            <span className="text-xs font-semibold uppercase tracking-wide text-ink-faint">{name} video {n + 1}</span>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" aria-label="Move up" disabled={n === 0} onClick={() => moveDemo(i, -1)}><ArrowUp size={14} /></Button>
-                              <Button variant="ghost" size="icon" aria-label="Move down" disabled={n === rows.length - 1} onClick={() => moveDemo(i, 1)}><ArrowDown size={14} /></Button>
-                              <Button variant="ghost" size="icon" aria-label="Remove" className="text-danger-600" onClick={() => set('demoVideos', form.demoVideos.filter((_, j) => j !== i))}><Trash2 size={14} /></Button>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            <Input label="Name (for you)" value={d.title} onChange={(e) => patchDemo(i, { title: e.target.value })} placeholder="Patient App" />
-                            <div className="space-y-2">
-                              <Input label="Video" value={d.url} onChange={(e) => patchDemo(i, { url: e.target.value })} placeholder="https://…" hint={d.url ? undefined : 'Not set — this one is skipped until it has a video.'} />
-                              {uploadButton(`demo-${i}`, (url) => patchDemo(i, { url }))}
-                            </div>
-                            <div className="sm:col-span-2">
-                              <Textarea label="Description sent with it" rows={3} value={d.caption} onChange={(val) => patchDemo(i, { caption: val })} hint={`${d.caption.length}/1000. {name} becomes the person's first name.`} />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+            <Card>
+              <CardHeader
+                title="Demo videos"
+                subtitle="Sent one after another as soon as someone taps Watch Demo, after a short note (M02). Each goes with its description. English only."
+                action={
+                  <Button variant="outline" size="sm" leftIcon={<Plus size={13} />} disabled={rows.length >= 5} onClick={() => set('demoVideos', [...form.demoVideos, { language: 'en', title: '', caption: '', url: '' }])}>
+                    Add video
+                  </Button>
+                }
+              />
+              {rows.length === 0 ? (
+                <div className="space-y-2 text-sm text-ink-faint">
+                  <p>No demo videos yet.{form.demoVideoEn ? ' Until you add them, the older single demo video is sent.' : ''}</p>
+                  {demoDefaults.length > 0 && (
+                    <Button variant="outline" size="sm" onClick={() => set('demoVideos', [...form.demoVideos, ...demoDefaults.map((v) => ({ ...v, language: 'en' as const, url: '' }))])}>
+                      Add the User App, Phlebo App and Backend and CRM slots
+                    </Button>
                   )}
-                </Card>
-              );
-            })}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {rows.map(({ d, i }, n) => (
+                    <div key={i} className="rounded-lg border border-line p-3">
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-ink-faint">Video {n + 1}</span>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" aria-label="Move up" disabled={n === 0} onClick={() => moveDemo(i, -1)}><ArrowUp size={14} /></Button>
+                          <Button variant="ghost" size="icon" aria-label="Move down" disabled={n === rows.length - 1} onClick={() => moveDemo(i, 1)}><ArrowDown size={14} /></Button>
+                          <Button variant="ghost" size="icon" aria-label="Remove" className="text-danger-600" onClick={() => set('demoVideos', form.demoVideos.filter((_, j) => j !== i))}><Trash2 size={14} /></Button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <Input label="Name (for you)" value={d.title} onChange={(e) => patchDemo(i, { title: e.target.value })} placeholder="Tag Through User App" />
+                        <div className="space-y-2">
+                          <Input label="Video" value={d.url} onChange={(e) => patchDemo(i, { url: e.target.value })} placeholder="https://…" hint={d.url ? undefined : 'Not set — this one is skipped until it has a video.'} />
+                          {uploadButton(`demo-${i}`, (url) => patchDemo(i, { url }))}
+                        </div>
+                        <div className="sm:col-span-2">
+                          <Textarea label="Description sent with it" rows={3} value={d.caption} onChange={(val) => patchDemo(i, { caption: val })} hint={`${d.caption.length}/1000. {name} becomes the person's first name.`} />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
 
             <Card>
               <CardHeader title="Follow-ups and reminders" subtitle="Approved templates, used when the 24-hour chat window is closed. Nobody is nudged more than twice." />

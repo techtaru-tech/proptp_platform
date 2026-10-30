@@ -26,9 +26,7 @@ function view(c: Prisma.WaCampaignGetPayload<{}>) {
   if (c.introParams.some((p) => p.includes('{terms_url}')) && !c.termsUrl) warnings.push('The first message uses the terms link, but none is set.');
   if (c.kind === 'flow') {
     if (!c.introHeaderVideoUrl) warnings.push('Add the video for the first message’s header.');
-    for (const [lang, name, single] of [['en', 'English', c.demoVideoEn], ['hi', 'Hindi', c.demoVideoHi]] as const) {
-      if (demoVideosOf(c, lang).length === 0) warnings.push(single ? `Upload the ${name} demo videos — until then only the older single ${name} video is sent.` : `Upload the ${name} demo videos.`);
-    }
+    if (demoVideosOf(c).length === 0) warnings.push(c.demoVideoEn ? 'Upload the demo videos — until then only the older single demo video is sent.' : 'Upload the demo videos.');
     if (!c.calendlyUrl) warnings.push('Add the Calendly link.');
     if (!c.nudgeTemplate) warnings.push('No follow-up template: people who do not answer are not nudged.');
     if (!c.calendlySigningKey) warnings.push('Calendly is not connected, so bookings will not update the CRM.');

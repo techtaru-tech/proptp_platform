@@ -238,6 +238,8 @@ export interface ApprovedTemplate {
   headerFormat?: 'IMAGE' | 'VIDEO' | 'DOCUMENT';
   /** A header with its own {{1}} variable, which is not filled — such templates are flagged. */
   unsupported?: string;
+  /** The quick-reply button labels, in order. */
+  quickReplies?: string[];
 }
 
 /**
@@ -286,6 +288,7 @@ function readTemplate(raw: any): ApprovedTemplate {
     body: text,
     variableCount: placeholders.length,
     headerFormat,
+    quickReplies: buttons.filter((b) => String(b?.type).toUpperCase() === 'QUICK_REPLY').map((b) => String(b?.text ?? '')),
     unsupported: headerHasVariables
       ? 'This template has a header with its own variable, which this screen cannot fill yet.'
       : buttonNeedsValue

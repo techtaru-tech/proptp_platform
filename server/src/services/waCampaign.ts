@@ -30,52 +30,48 @@ const HOUR = 60 * MIN;
 // ---------------------------------------------------------------------------
 
 export const DEFAULT_COPY: Record<string, string> = {
-  M02: 'Great, {name}! 🎉\nWould you like to watch the SmartLab product demo in English or Hindi?',
-  M03: '🎬 Here is your SmartLab product demo!\nExplore online test bookings, patient reports, branded apps, home collection and lab CRM.\nPlease watch the videos below. We’ll ask for your feedback shortly.\nThe Diwali offer is available only to eligible labs, subject to approved terms.',
-  M04: '🎬 यह रहा SmartLab का हिंदी डेमो!\nदेखिए कैसे आपकी लैब के नाम से ऐप, ऑनलाइन टेस्ट बुकिंग, रिपोर्ट, होम कलेक्शन और CRM एक ही प्लेटफॉर्म पर काम कर सकते हैं।\nनीचे दिए वीडियो देखने के बाद हमें बताइए कि क्या आप आगे बात करना चाहेंगे।\nदिवाली ऑफ़र पात्रता और स्वीकृत शर्तों के अधीन है।',
-  M05: 'Hi {name}! 😊\nWould you like to explore SmartLab for your lab and check your eligibility for our Diwali 50% initiative?',
-  M05_hi: 'नमस्ते {name}! 😊\nक्या आप SmartLab के बारे में आगे बात करना और दिवाली की 50% पहल के लिए अपनी पात्रता चेक करना चाहेंगे?',
-  M06: 'To check eligibility, approximately how many patient samples does your lab process per day?',
-  M07: 'Which best describes your lab?',
-  M08: 'Thanks, {name}! 🙌\nYour lab may qualify for the SmartLab Diwali initiative. Our specialist will verify the details and explain the applicable offer.\n\n📅 Book a 20-minute consultation using the button below.\n*Final eligibility, pricing and availability will be confirmed by our team.*',
-  M09: 'Thanks for sharing the details. The special Diwali funding initiative may not apply to your lab under the current criteria.\nYou can still explore SmartLab at standard commercial terms. Would you like our team to contact you?',
-  M10: 'No problem, {name}. 😊\nWhen you are ready, reply DEMO to explore SmartLab. We will pause this promotional sequence.',
-  M11: 'Thank you for your time, {name}. We will stop this SmartLab promotional sequence. Wishing your lab continued success!',
-  M13: 'Hi {name}, your SmartLab consultation is still pending.\nYou can choose a convenient time with the button below.\nOur team will explain eligibility, the product and next steps.',
-  M14: 'Your SmartLab consultation is confirmed! 🎉\nDate: {date}\nTime: {time} ({tz})\nMeeting link: {join_url}\nPlease keep any relevant lab details handy.',
-  M15: 'Reminder: your SmartLab consultation starts in 1 hour.\nTime: {time}\nJoin: {join_url}\nSee you soon!',
-  M16: 'Thanks! A SmartLab specialist will help with your question. Our team will reply as soon as possible.',
-  STOP_OK: 'You have been unsubscribed from SmartLab promotional messages. You will not receive any more of them.',
+  M02: 'Great, {name}! 🎬 Here is the English product demo. Watch how the Tag Through solution can connect lab bookings, customer experience, collection workflows and CRM operations.',
+  M04: 'Hi {name}! 😊 Would you like to explore Tag Through for your lab and check your eligibility for Techtaru’s 50% initiative at ₹2.99 lakh?',
+  M05: 'Approximately how many patient samples does your lab process per day?',
+  M06: 'Which best describes your lab?',
+  M07: 'Does your lab serve individual patients (B2C)?',
+  M08: 'Thanks, {name}! 🙌 Your lab may qualify for the Techtaru 50% initiative. Our specialist will verify eligibility, the ₹2.99 lakh offer and slot availability.\n\n📅 Book a 20-minute consultation using the button below.\n\n*Final approval, pricing and availability will be confirmed by our team.*',
+  M09: 'Thanks for sharing your details. The special initiative may not apply under the current criteria. Would you like our team to discuss the standard solution options?',
+  M10: 'No problem, {name}. 😊 Reply DEMO whenever you would like to explore Tag Through. We will pause this promotional sequence.',
+  M11: 'Thank you for your time, {name}. We will stop this promotional sequence. Wishing your lab continued success!',
+  M13: 'Hi {name}, your Tag Through consultation is still pending. Choose a convenient time with the button below. Our team will explain eligibility, the solution and next steps.',
+  M14: 'Your Tag Through consultation is confirmed! 🎉\nDate: {date}\nTime: {time} ({tz})\nMeeting link: {join_url}',
+  M15: 'Reminder: your Tag Through consultation starts in 1 hour.\nTime: {time}\nJoin: {join_url}',
+  M16: 'Thanks! A Tag Through specialist will help with your question. Our team will reply as soon as possible.',
+  STOP_OK: 'You have been unsubscribed from Techtaru promotional messages. You will not receive any more of them.',
 };
 
-/** The demo videos the owner asked for — user, phlebotomist and admin — in each language, with default descriptions. */
-export const DEFAULT_DEMO_VIDEOS: { language: 'en' | 'hi'; title: string; caption: string }[] = [
-  { language: 'en', title: 'Patient App', caption: '📱 *1/3 · Patient App*\nYour lab’s own branded app for patients: they book tests and packages, choose home sample collection, pay online and download their reports, all under your lab’s name.' },
-  { language: 'en', title: 'Phlebotomist App', caption: '🩺 *2/3 · Phlebotomist App*\nFor your sample collection team: see the day’s home visits, navigate to the patient, mark samples as collected and update the status live, so you always know where every sample is.' },
-  { language: 'en', title: 'Admin Dashboard', caption: '🖥️ *3/3 · Admin Dashboard & CRM*\nWhere you run the lab: every booking from the app and website lands here. Assign phlebotomists, track samples, upload reports, manage payments and follow up with leads, all from one place.' },
-  { language: 'hi', title: 'Patient App', caption: '📱 *1/3 · पेशेंट ऐप*\nआपकी लैब के नाम से अपना ऐप: मरीज़ टेस्ट और पैकेज बुक करते हैं, होम सैंपल कलेक्शन चुनते हैं, ऑनलाइन पेमेंट करते हैं और रिपोर्ट डाउनलोड करते हैं।' },
-  { language: 'hi', title: 'Phlebotomist App', caption: '🩺 *2/3 · फ्लेबोटोमिस्ट ऐप*\nसैंपल कलेक्शन टीम के लिए: दिन की होम विज़िट देखें, मरीज़ तक पहुँचें, सैंपल कलेक्ट होने पर मार्क करें और स्टेटस लाइव अपडेट करें।' },
-  { language: 'hi', title: 'Admin Dashboard', caption: '🖥️ *3/3 · एडमिन डैशबोर्ड और CRM*\nयहीं से लैब चलती है: ऐप और वेबसाइट की हर बुकिंग यहाँ आती है। फ्लेबोटोमिस्ट असाइन करें, सैंपल ट्रैक करें, रिपोर्ट अपलोड करें, पेमेंट और लीड्स एक ही जगह संभालें।' },
+/**
+ * The demo, as short videos sent one after another on Watch Demo, with the product labels the
+ * client approved (exact strings). The Website has no video yet. English only.
+ */
+export const DEFAULT_DEMO_VIDEOS: { language: 'en'; title: string; caption: string }[] = [
+  { language: 'en', title: 'Tag Through User App', caption: '📱 *1/3 · Tag Through User App*\nYour lab’s own branded app for patients: they book tests and packages, choose home sample collection, pay online and download their reports, all under your lab’s name.' },
+  { language: 'en', title: 'Tag Through Phlebo App', caption: '🩺 *2/3 · Tag Through Phlebo App*\nFor your sample collection team: see the day’s home visits, navigate to the patient, mark samples as collected and update the status live, so you always know where every sample is.' },
+  { language: 'en', title: 'Tag Through Backend and CRM', caption: '🖥️ *3/3 · Tag Through Backend and CRM*\nWhere you run the lab: every booking from the app and website lands here. Assign phlebotomists, track samples, upload reports, manage payments and follow up with leads, all from one place.' },
 ];
 
 export interface DemoVideo { language: 'en' | 'hi'; title: string; caption: string; url: string }
 
-/** The campaign's demo videos that have a file. An entry saved without a language is English. */
-export function demoVideosOf(campaign: Pick<WaCampaign, 'demoVideos'>, language?: 'en' | 'hi'): DemoVideo[] {
+/** The campaign's English demo videos that have a file. An entry saved without a language is English. */
+export function demoVideosOf(campaign: Pick<WaCampaign, 'demoVideos'>): DemoVideo[] {
   const raw = Array.isArray(campaign.demoVideos) ? (campaign.demoVideos as unknown as DemoVideo[]) : [];
-  return raw
-    .filter((v) => v && typeof v.url === 'string' && v.url.trim())
-    .map((v) => ({ ...v, language: v.language === 'hi' ? 'hi' : 'en' } as DemoVideo))
-    .filter((v) => !language || v.language === language);
+  return raw.filter((v) => v && typeof v.url === 'string' && v.url.trim() && v.language !== 'hi');
 }
 
-function copyFor(campaign: Pick<WaCampaign, 'copy'>, key: string, language?: string | null): string {
+/** A message's wording: the campaign's own, else the standard copy. English only. */
+function copyFor(campaign: Pick<WaCampaign, 'copy'>, key: string, _language?: string | null): string {
   const custom = (campaign.copy ?? {}) as Record<string, string>;
-  const lang = language === 'hi' ? 'hi' : 'en';
-  return custom[`${key}_${lang}`] || (lang === 'hi' ? DEFAULT_COPY[`${key}_hi`] : '') || custom[key] || DEFAULT_COPY[key] || '';
+  return custom[key] || DEFAULT_COPY[key] || '';
 }
 
-const firstName = (name: string) => name.trim().split(/\s+/)[0] || 'there';
+// The client's fallback when a contact has no name: "Hi Doctor".
+const firstName = (name: string) => name.trim().split(/\s+/)[0] || 'Doctor';
 
 function fill(text: string, vars: Record<string, string>): string {
   return text.replace(/\{(\w+)\}/g, (whole, k: string) => (k in vars ? vars[k] : whole));
@@ -218,8 +214,8 @@ interface Ctx {
 
 async function sendTemplateStep(ctx: Ctx, campaign: WaCampaign, contact: WaContact, step: 'intro' | 'nudge' | 'confirm' | 'reminder', extra: Record<string, string> = {}) {
   const spec = {
-    intro: { name: campaign.introTemplate, language: campaign.introLanguage, params: campaign.introParams, payloads: campaign.kind === 'flow' ? ['UGC_SHOW_DEMO', 'UGC_NOT_NOW', 'UGC_NOT_INTERESTED'] : [] },
-    nudge: { name: campaign.nudgeTemplate, language: campaign.nudgeLanguage, params: campaign.nudgeParams, payloads: ['UGC_SHOW_DEMO', 'UGC_NOT_INTERESTED'] },
+    intro: { name: campaign.introTemplate, language: campaign.introLanguage, params: campaign.introParams, payloads: campaign.kind === 'flow' ? ['UGC_WATCH_DEMO', 'UGC_CHECK_ELIGIBILITY', 'UGC_NOT_INTERESTED'] : [] },
+    nudge: { name: campaign.nudgeTemplate, language: campaign.nudgeLanguage, params: campaign.nudgeParams, payloads: ['UGC_WATCH_DEMO', 'UGC_NOT_INTERESTED'] },
     confirm: { name: campaign.confirmTemplate, language: campaign.introLanguage, params: ['{date}', '{time}', '{tz}', '{join_url}'], payloads: [] },
     reminder: { name: campaign.reminderTemplate, language: campaign.introLanguage, params: ['{time}', '{join_url}'], payloads: [] },
   }[step];
@@ -239,10 +235,13 @@ async function sendTemplateStep(ctx: Ctx, campaign: WaCampaign, contact: WaConta
     headerMedia = { format: template.headerFormat, link: campaign.introHeaderVideoUrl };
   }
 
+  // Each quick-reply button reports back the action its label stands for, so the flow follows the
+  // template's own buttons, in their own order, whatever they are.
+  const payloads = template.quickReplies?.length ? template.quickReplies.map((label) => LABEL_ACTIONS[label.trim().toLowerCase()] ?? 'UNKNOWN') : spec.payloads;
   try {
     const sent = await sendTemplateToNumber(
       ctx.account, contact.phone,
-      { name: template.name, language: template.language, params, body: fillPlaceholders(template.body, params), headerMedia, buttonPayloads: spec.payloads.map((a) => `wac:${contact.id}:${a}`) },
+      { name: template.name, language: template.language, params, body: fillPlaceholders(template.body, params), headerMedia, buttonPayloads: payloads.map((a) => `wac:${contact.id}:${a}`) },
       null
     );
     return { ok: true as const, messageId: sent.messageId, conversationId: sent.conversationId };
@@ -257,28 +256,38 @@ async function sendTemplateStep(ctx: Ctx, campaign: WaCampaign, contact: WaConta
 
 const TERMINAL = new Set(['OPTED_OUT', 'MEETING_COMPLETED', 'FAILED']);
 
-/** The button labels, for templates whose taps arrive without our payload. */
+/** What each button label means — for template buttons, and for taps that arrive without our payload. */
 const LABEL_ACTIONS: Record<string, string> = {
-  'show demo': 'UGC_SHOW_DEMO', 'not now': 'UGC_NOT_NOW', 'not interested': 'UGC_NOT_INTERESTED',
-  'english': 'LANG_EN', 'हिंदी': 'LANG_HI',
-  'yes, interested': 'DEMO_INTERESTED', 'हाँ, इच्छुक हूँ': 'DEMO_INTERESTED', 'रुचि नहीं': 'DEMO_NOT_INTERESTED',
-  'ask a question': 'DEMO_QUESTION', 'सवाल पूछें': 'DEMO_QUESTION',
-  '50 or more': 'ELIG_SAMPLES_50PLUS', 'below 50': 'ELIG_SAMPLES_BELOW50', 'not sure': 'ELIG_UNSURE',
-  'pathologist-led': 'ELIG_PATH', '3+ years running': 'ELIG_3YRS', 'other / unsure': 'ELIG_OTHER',
+  'watch demo': 'UGC_WATCH_DEMO', 'show demo': 'UGC_WATCH_DEMO', 'send demo': 'UGC_WATCH_DEMO',
+  'check eligibility': 'UGC_CHECK_ELIGIBILITY', 'not now': 'UGC_NOT_NOW', 'not interested': 'UGC_NOT_INTERESTED',
+  'yes, interested': 'DEMO_INTERESTED', 'ask a question': 'DEMO_QUESTION',
+  '50 or more': 'ELIG_SAMPLES_50PLUS', 'below 50': 'ELIG_SAMPLES_BELOW50',
+  'specialist led': 'ELIG_SPECIALIST', 'pathologist-led': 'ELIG_SPECIALIST', 'running 3+ years': 'ELIG_3YRS', '3+ years running': 'ELIG_3YRS', 'other / unsure': 'ELIG_OTHER',
   'talk to team': 'TEAM_TALK',
 };
+
+/** Labels that mean different things depending on the question just asked. */
+function labelAction(state: string, label: string): string | null {
+  if (state === 'ELIG_Q3') {
+    if (label === 'yes') return 'ELIG_B2C_YES';
+    if (label === 'no') return 'ELIG_B2C_NO';
+    if (label === 'not sure') return 'ELIG_B2C_UNSURE';
+  }
+  if (label === 'not sure') return 'ELIG_UNSURE';
+  return LABEL_ACTIONS[label] ?? null;
+}
 
 /** A typed answer, read as the tap it stands for — only where the question is unambiguous. */
 function textAction(state: string, text: string): string | null {
   const t = text.trim().toLowerCase();
-  if (/^demo\b/.test(t)) return 'UGC_SHOW_DEMO';
-  if (state === 'LANGUAGE_PENDING') {
-    if (/english|angrezi|अंग्रेज/.test(t)) return 'LANG_EN';
-    if (/hindi|हिंदी|हिन्दी/.test(t)) return 'LANG_HI';
-  }
+  if (/^demo\b/.test(t)) return 'UGC_WATCH_DEMO';
   if (state === 'INTEREST_PENDING' || state === 'UGC_SENT') {
-    if (/^(yes|yeah|yep|haan|han|ha|हाँ|हां|interested|ok|okay)\b/.test(t)) return state === 'UGC_SENT' ? 'UGC_SHOW_DEMO' : 'DEMO_INTERESTED';
-    if (/^(no|nahi|nahin|नहीं|not interested)\b/.test(t)) return 'DEMO_NOT_INTERESTED';
+    if (/^(yes|yeah|yep|haan|han|ha|interested|ok|okay)\b/.test(t)) return state === 'UGC_SENT' ? 'UGC_WATCH_DEMO' : 'DEMO_INTERESTED';
+    if (/^(no|nahi|nahin|not interested)\b/.test(t)) return 'DEMO_NOT_INTERESTED';
+  }
+  if (state === 'ELIG_Q3') {
+    if (/^(yes|haan|han|ha)\b/.test(t)) return 'ELIG_B2C_YES';
+    if (/^(no|nahi|nahin)\b/.test(t)) return 'ELIG_B2C_NO';
   }
   return null;
 }
@@ -290,7 +299,8 @@ function actionFrom(message: InboundMessage, contact: WaContact, text: string): 
     return contactId === contact.id ? action : null;
   }
   const label = (message.button?.text ?? message.interactive?.button_reply?.title ?? message.interactive?.list_reply?.title ?? '').trim().toLowerCase();
-  if (label && LABEL_ACTIONS[label]) return LABEL_ACTIONS[label];
+  const byLabel = label ? labelAction(contact.state, label) : null;
+  if (byLabel) return byLabel;
   return text ? textAction(contact.state, text) : null;
 }
 
@@ -349,11 +359,48 @@ async function act(campaign: WaCampaign, contact: WaContact, conv: Conv, action:
   const say = (key: string) => fill(copyFor(campaign, key, contact.language), v);
   const reset = { nextActionAt: null, nudgeCount: 0 };
 
+  const askSamples = () => sendButtons(conv, contact.id, say('M05'), [['ELIG_SAMPLES_50PLUS', '50 or More'], ['ELIG_SAMPLES_BELOW50', 'Below 50'], ['ELIG_UNSURE', 'Not Sure']]);
+  const notEligible = async (why: string) => {
+    await event(campaign.id, contact.id, 'ineligible', `${why} (self-reported)`);
+    await move(contact, 'INELIGIBLE', reset);
+    await sendButtons(conv, contact.id, say('M09'), [['TEAM_TALK', 'Talk to Team'], ['TEAM_NOT_NOW', 'Not Now']]);
+  };
+
   switch (action) {
-    case 'UGC_SHOW_DEMO': {
+    // Older buttons (Show Demo, and the language choice that has since been removed) do the same.
+    case 'UGC_SHOW_DEMO':
+    case 'LANG_EN':
+    case 'LANG_HI':
+    case 'UGC_WATCH_DEMO': {
       await event(campaign.id, contact.id, 'demo_requested');
-      await move(contact, 'LANGUAGE_PENDING', reset);
-      await sendButtons(conv, contact.id, say('M02'), [['LANG_EN', 'English'], ['LANG_HI', 'हिंदी']]);
+      // No language question: the English demo goes straight out — a short note, then each video.
+      let videos: { url: string; caption: string }[] = demoVideosOf(campaign).map((d) => ({ url: d.url, caption: fill(d.caption, v) }));
+      if (videos.length === 0 && campaign.demoVideoEn) videos = [{ url: campaign.demoVideoEn, caption: '' }];
+      if (videos.length === 0) {
+        // Never skip the demo silently: it goes to a person.
+        await event(campaign.id, contact.id, 'send_failed', 'No demo video is set');
+        await leadNote(contact, 'WhatsApp campaign: asked for the demo, but no demo video is set up — please send it.');
+        await move(contact, 'HUMAN', reset);
+        return;
+      }
+      const updated = await move(contact, 'LANGUAGE_PENDING', { language: 'en', ...reset });
+      await sendText(conv, say('M02'));
+      for (const video of videos) {
+        // Spaced out, so WhatsApp delivers them in order.
+        await new Promise((resolve) => setTimeout(resolve, DRY() ? 0 : 4000));
+        await sendVideo(conv, video.url, video.caption);
+      }
+      await event(campaign.id, contact.id, 'demo_sent', `${videos.length} video(s)`);
+      // The interest question follows 5 minutes later, never claiming the videos were watched.
+      await move(updated, 'DEMO_SENT', { nextActionAt: new Date(Date.now() + 5 * MIN), nudgeCount: 0 });
+      return;
+    }
+    case 'UGC_CHECK_ELIGIBILITY': {
+      // Straight to the eligibility questions, without the demo.
+      await event(campaign.id, contact.id, 'interested', 'Asked to check eligibility');
+      await leadNote(contact, 'WhatsApp campaign: asked to check eligibility for the 50% initiative.');
+      await move(contact, 'ELIG_Q1', reset);
+      await askSamples();
       return;
     }
     case 'UGC_NOT_NOW':
@@ -371,38 +418,11 @@ async function act(campaign: WaCampaign, contact: WaContact, conv: Conv, action:
       await sendText(conv, say('M11'));
       return;
     }
-    case 'LANG_EN':
-    case 'LANG_HI': {
-      const language = action === 'LANG_HI' ? 'hi' : 'en';
-      const name = language === 'hi' ? 'Hindi' : 'English';
-      // That language's demo videos; with none uploaded yet, its older single demo video.
-      let videos: { url: string; caption: string }[] = demoVideosOf(campaign, language).map((d) => ({ url: d.url, caption: fill(d.caption, v) }));
-      const single = language === 'hi' ? campaign.demoVideoHi : campaign.demoVideoEn;
-      if (videos.length === 0 && single) videos = [{ url: single, caption: '' }];
-      const updated = await move(contact, 'LANGUAGE_PENDING', { language });
-      if (videos.length === 0) {
-        // Never skip the demo silently: it goes to a person.
-        await event(campaign.id, contact.id, 'send_failed', `No ${name} demo video is set`);
-        await leadNote(contact, `WhatsApp campaign: asked for the ${name} demo, but none is set up — please send it.`);
-        await move(updated, 'HUMAN', reset);
-        return;
-      }
-      await sendText(conv, fill(copyFor(campaign, language === 'hi' ? 'M04' : 'M03'), v));
-      for (const video of videos) {
-        // Spaced out, so WhatsApp delivers them in order.
-        await new Promise((resolve) => setTimeout(resolve, DRY() ? 0 : 4000));
-        await sendVideo(conv, video.url, video.caption);
-      }
-      await event(campaign.id, contact.id, 'demo_sent', `${language}: ${videos.length} video(s)`);
-      // The interest question follows a few minutes later, never claiming the videos were watched.
-      await move(updated, 'DEMO_SENT', { nextActionAt: new Date(Date.now() + 12 * MIN), nudgeCount: 0 });
-      return;
-    }
     case 'DEMO_INTERESTED': {
       await event(campaign.id, contact.id, 'interested');
-      await leadNote(contact, 'WhatsApp campaign: interested in SmartLab after the demo.');
+      await leadNote(contact, 'WhatsApp campaign: interested in Tag Through after the demo.');
       await move(contact, 'ELIG_Q1', reset);
-      await sendButtons(conv, contact.id, say('M06'), [['ELIG_SAMPLES_50PLUS', '50 or more'], ['ELIG_SAMPLES_BELOW50', 'Below 50'], ['ELIG_UNSURE', 'Not sure']]);
+      await askSamples();
       return;
     }
     case 'DEMO_QUESTION':
@@ -418,27 +438,37 @@ async function act(campaign: WaCampaign, contact: WaContact, conv: Conv, action:
     case 'ELIG_UNSURE': {
       const band = action === 'ELIG_SAMPLES_50PLUS' ? '50plus' : action === 'ELIG_SAMPLES_BELOW50' ? 'below50' : 'unsure';
       const updated = await move(contact, 'ELIG_Q1', { sampleBand: band });
-      if (band === 'below50') {
-        await event(campaign.id, contact.id, 'ineligible', 'Under 50 samples a day (self-reported)');
-        await move(updated, 'INELIGIBLE', reset);
-        await sendButtons(conv, contact.id, say('M09'), [['TEAM_TALK', 'Talk to Team'], ['TEAM_NOT_NOW', 'Not Now']]);
-        return;
-      }
+      if (band === 'below50') return notEligible('Under 50 samples a day');
       await move(updated, 'ELIG_Q2', reset);
-      await sendButtons(conv, contact.id, say('M07'), [['ELIG_PATH', 'Pathologist-led'], ['ELIG_3YRS', '3+ years running'], ['ELIG_OTHER', 'Other / Unsure']]);
+      await sendButtons(conv, contact.id, say('M06'), [['ELIG_SPECIALIST', 'Specialist Led'], ['ELIG_3YRS', 'Running 3+ Years'], ['ELIG_OTHER', 'Other / Unsure']]);
       return;
     }
+    case 'ELIG_SPECIALIST':
     case 'ELIG_PATH':
     case 'ELIG_3YRS':
     case 'ELIG_OTHER': {
-      const type = action === 'ELIG_PATH' ? 'pathologist' : action === 'ELIG_3YRS' ? '3yrs' : 'other';
-      // What a lab says about itself is never enough: this goes to a person to verify.
+      const type = action === 'ELIG_3YRS' ? '3yrs' : action === 'ELIG_OTHER' ? 'other' : 'specialist';
+      await move(contact, 'ELIG_Q3', { professionalType: type, ...(type === '3yrs' ? { labAgeYears: campaign.minLabAgeYears } : {}), ...reset });
+      await sendButtons(conv, contact.id, say('M07'), [['ELIG_B2C_YES', 'Yes'], ['ELIG_B2C_NO', 'No'], ['ELIG_B2C_UNSURE', 'Not Sure']]);
+      return;
+    }
+    case 'ELIG_B2C_YES':
+    case 'ELIG_B2C_NO':
+    case 'ELIG_B2C_UNSURE': {
+      if (action === 'ELIG_B2C_NO') {
+        await move(contact, 'ELIG_Q3', { b2c: false });
+        return notEligible('No B2C patients');
+      }
+      // What a lab says about itself is never enough: this goes to a person to verify. An unsure
+      // B2C answer stays unset, so the reviewer has to confirm it.
       const updated = await move(contact, 'CALENDLY_LINK_SENT', {
-        professionalType: type, verification: 'none', nextActionAt: new Date(Date.now() + 5 * HOUR), nudgeCount: 0,
-        ...(type === '3yrs' ? { labAgeYears: campaign.minLabAgeYears } : {}),
+        b2c: action === 'ELIG_B2C_YES' ? true : null, verification: 'none', nextActionAt: new Date(Date.now() + 5 * HOUR), nudgeCount: 0,
       });
-      await event(campaign.id, contact.id, 'review_required', `${updated.sampleBand ?? '?'} samples, ${type}`);
-      await leadNote(contact, `WhatsApp campaign: self-reported ${updated.sampleBand === '50plus' ? '50+ samples a day' : 'sample count unsure'}, ${type === 'pathologist' ? 'pathologist-led' : type === '3yrs' ? '3+ years running' : 'other / unsure'}. Needs verification before the offer is confirmed.`);
+      const pro = updated.professionalType === '3yrs' ? 'running 3+ years' : updated.professionalType === 'other' ? 'other / unsure' : 'specialist led';
+      const samples = updated.sampleBand === '50plus' ? '50+ samples a day' : 'sample count unsure';
+      const b2c = action === 'ELIG_B2C_YES' ? 'serves B2C patients' : 'B2C unsure';
+      await event(campaign.id, contact.id, 'review_required', `${samples}, ${pro}, ${b2c}`);
+      await leadNote(contact, `WhatsApp campaign: self-reported ${samples}, ${pro}, ${b2c}. Needs verification before the offer is confirmed.`);
       await sendConsultation(campaign, updated, conv, 'M08');
       return;
     }
@@ -687,6 +717,8 @@ async function sendIntros(campaign: WaCampaign, ctx: Ctx) {
   if (campaign.lastError) await prisma.waCampaign.update({ where: { id: campaign.id }, data: { lastError: null } });
 }
 
+const INTEREST_BUTTONS: [string, string][] = [['DEMO_INTERESTED', 'Yes, Interested'], ['DEMO_NOT_INTERESTED', 'Not Interested'], ['DEMO_QUESTION', 'Ask a Question']];
+
 async function runDueStep(campaign: WaCampaign, contact: WaContact, ctx: Ctx) {
   const conversation = await ensureConversation(ctx.account, contact.phone, contact.name);
   // A person has taken the chat over: the timed steps stop.
@@ -710,11 +742,7 @@ async function runDueStep(campaign: WaCampaign, contact: WaContact, ctx: Ctx) {
     }
     case 'DEMO_SENT': {
       // Asked, never assumed watched.
-      const lang = contact.language;
-      const yes = lang === 'hi' ? 'हाँ, इच्छुक हूँ' : 'Yes, Interested';
-      const no = lang === 'hi' ? 'रुचि नहीं' : 'Not Interested';
-      const ask = lang === 'hi' ? 'सवाल पूछें' : 'Ask a Question';
-      await sendButtons(conversation, contact.id, say('M05'), [['DEMO_INTERESTED', yes], ['DEMO_NOT_INTERESTED', no], ['DEMO_QUESTION', ask]]);
+      await sendButtons(conversation, contact.id, say('M04'), INTEREST_BUTTONS);
       await move(contact, 'INTEREST_PENDING', { nextActionAt: new Date(Date.now() + 24 * HOUR), nudgeCount: 0 });
       return;
     }
@@ -725,7 +753,7 @@ async function runDueStep(campaign: WaCampaign, contact: WaContact, ctx: Ctx) {
         return;
       }
       if (open) {
-        await sendButtons(conversation, contact.id, say('M05'), [['DEMO_INTERESTED', contact.language === 'hi' ? 'हाँ, इच्छुक हूँ' : 'Yes, Interested'], ['DEMO_NOT_INTERESTED', contact.language === 'hi' ? 'रुचि नहीं' : 'Not Interested'], ['DEMO_QUESTION', contact.language === 'hi' ? 'सवाल पूछें' : 'Ask a Question']]);
+        await sendButtons(conversation, contact.id, say('M04'), INTEREST_BUTTONS);
       } else {
         const r = await sendTemplateStep(ctx, campaign, contact, 'nudge');
         if (!r.ok) return void (await event(campaign.id, contact.id, 'send_failed', `Reminder: ${r.reason}`));
@@ -844,7 +872,8 @@ export function boardColumn(c: Pick<WaContact, 'state' | 'verification'>): strin
     case 'DEMO_SENT':
     case 'INTEREST_PENDING': return 'Demo Sent';
     case 'ELIG_Q1':
-    case 'ELIG_Q2': return 'Interested';
+    case 'ELIG_Q2':
+    case 'ELIG_Q3': return 'Interested';
     case 'CALENDLY_LINK_SENT': return c.verification === 'verified' ? 'Booking Pending' : c.verification === 'rejected' ? 'Not Eligible' : 'Eligibility Review';
     case 'MEETING_BOOKED': return 'Meeting Booked';
     case 'MEETING_COMPLETED': return 'Meeting Completed';

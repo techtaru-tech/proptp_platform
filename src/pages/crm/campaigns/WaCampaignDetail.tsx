@@ -131,7 +131,7 @@ function DashboardTab({ id, flow, tick }: { id: string; flow: boolean; tick: num
         <StatCard label="Opted out" value={d.optedOut} tone={d.optedOut > 0 ? 'warning' : 'neutral'} />
         {flow && <StatCard label="Meetings booked" value={d.meetingsBooked} tone="success" />}
         {flow && <StatCard label="Meetings attended" value={d.meetingsCompleted} />}
-        {flow && <StatCard label="Hindi / English" value={`${d.hindi} / ${d.english}`} />}
+        {flow && <StatCard label="Asked for the demo" value={d.demoRequested} />}
         <StatCard label="Failed" value={d.failed} tone={d.failed > 0 ? 'danger' : 'neutral'} />
       </div>
 
@@ -338,7 +338,7 @@ function BoardTab({ id, tick }: { id: string; tick: number }) {
             {col.contacts.map((c) => (
               <div key={c.id} className="rounded-md border border-line bg-white p-2.5 text-sm shadow-card">
                 <p className="font-medium text-ink">{c.name || c.phone}</p>
-                <p className="text-xs text-ink-faint">{c.name ? c.phone : ''}{c.language ? ` · ${c.language === 'hi' ? 'Hindi' : 'English'}` : ''}</p>
+                <p className="text-xs text-ink-faint">{c.name ? c.phone : ''}</p>
                 {c.meetingAt && <p className="mt-1 flex items-center gap-1 text-xs font-medium text-success-700"><CalendarClock size={12} /> {formatDateTime(c.meetingAt)}</p>}
               </div>
             ))}
@@ -361,7 +361,6 @@ function PeopleTab({ id, tick }: { id: string; tick: number }) {
   const columns: DataTableColumn<WaContactRow>[] = [
     { key: 'name', header: 'Person', render: (c) => <div><p className="font-medium text-ink">{c.name || '—'}</p><p className="text-xs text-ink-faint">{c.phone}</p></div> },
     { key: 'stage', header: 'Stage', render: (c) => <Badge tone={c.state === 'OPTED_OUT' || c.state === 'FAILED' ? 'danger' : 'info'}>{c.column}</Badge> },
-    { key: 'lang', header: 'Language', render: (c) => (c.language === 'hi' ? 'Hindi' : c.language === 'en' ? 'English' : '—') },
     { key: 'consent', header: 'Consent from', render: (c) => <span className="text-xs text-ink-muted">{c.optInSource}</span> },
     { key: 'updated', header: 'Updated', render: (c) => formatDateTime(c.updatedAt) },
     { key: 'err', header: '', render: (c) => (c.lastError ? <span className="text-xs text-danger-600">{c.lastError}</span> : null) },
@@ -391,7 +390,7 @@ function MeetingsTab({ id, tick }: { id: string; tick: number }) {
   const upcoming = (rows ?? []).filter((m) => m.status === 'booked' && new Date(m.startsAt).getTime() >= now - 30 * 60000);
   const columns: DataTableColumn<WaMeetingRow>[] = [
     { key: 'when', header: 'When (IST)', render: (m) => <div><p className="font-medium text-ink">{formatDateTime(m.startsAt)}</p>{m.endsAt && <p className="text-xs text-ink-faint">until {formatDateTime(m.endsAt).split(', ').pop()}</p>}</div> },
-    { key: 'who', header: 'Lab', render: (m) => <div><p className="font-medium text-ink">{m.name || m.phone}</p><p className="text-xs text-ink-faint">{m.phone}{m.labName ? ` · ${m.labName}` : ''}{m.language ? ` · ${m.language === 'hi' ? 'Hindi' : 'English'}` : ''}</p></div> },
+    { key: 'who', header: 'Lab', render: (m) => <div><p className="font-medium text-ink">{m.name || m.phone}</p><p className="text-xs text-ink-faint">{m.phone}{m.labName ? ` · ${m.labName}` : ''}</p></div> },
     { key: 'status', header: 'Status', render: (m) => <Badge tone={MEETING_TONE[m.status]}>{MEETING_LABEL[m.status]}</Badge> },
     { key: 'link', header: 'Join link', render: (m) => (m.joinUrl ? <a href={m.joinUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm font-medium text-brand-700 underline"><ExternalLink size={13} /> Join</a> : <span className="text-xs text-ink-faint">In the Calendly email</span>) },
     { key: 'reminder', header: '1-hour reminder', render: (m) => (m.reminderSentAt ? <span className="text-xs text-success-700">Sent {formatDateTime(m.reminderSentAt).split(', ').pop()}</span> : m.status === 'booked' ? <span className="text-xs text-ink-faint">Goes 1 hour before</span> : <span className="text-xs text-ink-faint">—</span>) },
@@ -419,7 +418,7 @@ function MeetingsTab({ id, tick }: { id: string; tick: number }) {
 // ---------------------------------------------------------------------------
 
 const SAMPLES: Record<string, string> = { '50plus': '50 or more a day', below50: 'Under 50 a day', unsure: 'Not sure' };
-const PRO: Record<string, string> = { pathologist: 'Pathologist-led', '3yrs': '3+ years running', other: 'Other / unsure' };
+const PRO: Record<string, string> = { specialist: 'Specialist led', pathologist: 'Specialist led', '3yrs': 'Running 3+ years', other: 'Other / unsure' };
 
 function ReviewTab({ id, onChanged }: { id: string; onChanged: () => void }) {
   const [status, setStatus] = useState<'pending' | 'verified' | 'rejected'>('pending');
@@ -435,7 +434,7 @@ function ReviewTab({ id, onChanged }: { id: string; onChanged: () => void }) {
         <div className="max-w-xs"><Select label="Show" value={status} onChange={(e) => setStatus(e.target.value as typeof status)} options={[{ value: 'pending', label: 'Waiting for review' }, { value: 'verified', label: 'Verified eligible' }, { value: 'rejected', label: 'Rejected' }]} /></div>
         {queue && <p className="text-sm text-ink-muted">{queue.slotCap > 0 ? <>Offer slots: <strong className="text-ink">{queue.slotsTaken} of {queue.slotCap}</strong> taken</> : <>{queue.slotsTaken} verified · no slot limit</>}</p>}
       </div>
-      <p className="text-xs text-ink-faint">A lab’s own answers are recorded here, but nothing is confirmed until you verify it — check the lab’s details, that it does B2C work, and your own criteria ({queue?.minSamples ?? 50}+ samples a day, and a pathologist-led lab or {queue?.minLabAgeYears ?? 3}+ years running).</p>
+      <p className="text-xs text-ink-faint">A lab’s own answers are recorded here, but nothing is confirmed until you verify it — check the lab’s details, that it does B2C work, and your own criteria ({queue?.minSamples ?? 50}+ samples a day, B2C patients, and a specialist-led lab or {queue?.minLabAgeYears ?? 3}+ years running).</p>
       {!queue ? <CardSkeleton /> : queue.contacts.length === 0 ? (
         <Card><p className="text-sm text-ink-faint">Nobody here.</p></Card>
       ) : (
@@ -474,6 +473,7 @@ function ReviewCard({ c, readOnly, onDone }: { c: WaContactRow; readOnly: boolea
         <div className="flex flex-wrap gap-1.5">
           <Badge tone="info">Said: {SAMPLES[c.sampleBand ?? ''] ?? '—'}</Badge>
           <Badge tone="info">Said: {PRO[c.professionalType ?? ''] ?? '—'}</Badge>
+          <Badge tone="info">Said: {c.b2c === true ? 'Serves B2C' : c.b2c === false ? 'No B2C' : 'B2C unsure'}</Badge>
         </div>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
