@@ -226,7 +226,7 @@ export function WaCampaignBuilder() {
                       <p>No {name} demo videos yet.</p>
                       {demoDefaults.some((v) => v.language === lang) && (
                         <Button variant="outline" size="sm" onClick={() => set('demoVideos', [...form.demoVideos, ...demoDefaults.filter((v) => v.language === lang).map((v) => ({ ...v, url: '' }))])}>
-                          Add the User App, Phlebo App and Backend and CRM slots
+                          Add the User App, Phlebo App, Website and Backend and CRM slots
                         </Button>
                       )}
                     </div>

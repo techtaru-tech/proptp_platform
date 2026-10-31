@@ -64,16 +64,18 @@ export const DEFAULT_COPY: Record<string, string> = {
 
 /**
  * The demo videos, in English and in Hinglish, sent one after another once a language is picked.
- * The labels are the client's approved product names (exact strings); the Website has no video yet.
+ * The labels are the client's approved product names (exact strings). A slot with no file is skipped.
  * Hinglish is stored as language 'hi'.
  */
 export const DEFAULT_DEMO_VIDEOS: { language: 'en' | 'hi'; title: string; caption: string }[] = [
-  { language: 'en', title: 'Techtaru User App', caption: '📱 *1/3 · Techtaru User App*\nYour lab’s own branded app for patients: they book tests and packages, choose home sample collection, pay online and download their reports, all under your lab’s name.' },
-  { language: 'en', title: 'Techtaru Phlebo App', caption: '🩺 *2/3 · Techtaru Phlebo App*\nFor your sample collection team: see the day’s home visits, navigate to the patient, mark samples as collected and update the status live, so you always know where every sample is.' },
-  { language: 'en', title: 'Techtaru Backend and CRM', caption: '🖥️ *3/3 · Techtaru Backend and CRM*\nWhere you run the lab: every booking from the app and website lands here. Assign phlebotomists, track samples, upload reports, manage payments and follow up with leads, all from one place.' },
-  { language: 'hi', title: 'Techtaru User App', caption: '📱 *1/3 · Techtaru User App*\nAapki lab ke naam se apna app: patient test aur package book karte hain, home sample collection chunte hain, online payment karte hain aur report download karte hain.' },
-  { language: 'hi', title: 'Techtaru Phlebo App', caption: '🩺 *2/3 · Techtaru Phlebo App*\nSample collection team ke liye: din ki home visits dekhein, patient tak pahunchein, sample collect hone par mark karein aur status live update karein, taaki har sample ki jaankari rahe.' },
-  { language: 'hi', title: 'Techtaru Backend and CRM', caption: '🖥️ *3/3 · Techtaru Backend and CRM*\nYahin se lab chalti hai: app aur website ki har booking yahan aati hai. Phlebotomist assign karein, sample track karein, report upload karein, payment aur leads ek hi jagah sambhalein.' },
+  { language: 'en', title: 'Techtaru User App', caption: '📱 *1/4 · Techtaru User App*\nYour lab’s own branded app for patients: they book tests and packages, choose home sample collection, pay online and download their reports, all under your lab’s name.' },
+  { language: 'en', title: 'Techtaru Phlebo App', caption: '🩺 *2/4 · Techtaru Phlebo App*\nFor your sample collection team: see the day’s home visits, navigate to the patient, mark samples as collected and update the status live, so you always know where every sample is.' },
+  { language: 'en', title: 'Techtaru Website', caption: '🌐 *3/4 · Techtaru Website*\nYour lab’s own website: patients find your tests and packages, see prices and book online or ask for a home collection, and every booking goes straight into your CRM.' },
+  { language: 'en', title: 'Techtaru Backend and CRM', caption: '🖥️ *4/4 · Techtaru Backend and CRM*\nWhere you run the lab: every booking from the app and website lands here. Assign phlebotomists, track samples, upload reports, manage payments and follow up with leads, all from one place.' },
+  { language: 'hi', title: 'Techtaru User App', caption: '📱 *1/4 · Techtaru User App*\nAapki lab ke naam se apna app: patient test aur package book karte hain, home sample collection chunte hain, online payment karte hain aur report download karte hain.' },
+  { language: 'hi', title: 'Techtaru Phlebo App', caption: '🩺 *2/4 · Techtaru Phlebo App*\nSample collection team ke liye: din ki home visits dekhein, patient tak pahunchein, sample collect hone par mark karein aur status live update karein, taaki har sample ki jaankari rahe.' },
+  { language: 'hi', title: 'Techtaru Website', caption: '🌐 *3/4 · Techtaru Website*\nAapki lab ki apni website: patient tests aur packages dekhte hain, price dekhte hain aur online booking ya home collection request karte hain, aur har booking seedhe aapke CRM mein aati hai.' },
+  { language: 'hi', title: 'Techtaru Backend and CRM', caption: '🖥️ *4/4 · Techtaru Backend and CRM*\nYahin se lab chalti hai: app aur website ki har booking yahan aati hai. Phlebotomist assign karein, sample track karein, report upload karein, payment aur leads ek hi jagah sambhalein.' },
 ];
 
 export interface DemoVideo { language: 'en' | 'hi'; title: string; caption: string; url: string }
@@ -423,10 +425,11 @@ async function act(campaign: WaCampaign, contact: WaContact, conv: Conv, action:
         return;
       }
       await sendText(conv, fill(copyFor(campaign, 'M02', language), v));
-      for (const video of videos) {
+      for (const [i, video] of videos.entries()) {
         // Spaced out, so WhatsApp delivers them in order.
         await new Promise((resolve) => setTimeout(resolve, DRY() ? 0 : 4000));
-        await sendVideo(conv, video.url, video.caption);
+        // "2/4" is counted from the videos actually sent, so a slot with no file never leaves a gap.
+        await sendVideo(conv, video.url, video.caption.replace(/\b\d+\/\d+ · /, `${i + 1}/${videos.length} · `));
       }
       await event(campaign.id, contact.id, 'demo_sent', `${language}: ${videos.length} video(s)`);
       // The interest question follows 5 minutes later, never claiming the videos were watched.
