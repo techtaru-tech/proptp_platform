@@ -131,7 +131,7 @@ function DashboardTab({ id, flow, tick }: { id: string; flow: boolean; tick: num
         <StatCard label="Opted out" value={d.optedOut} tone={d.optedOut > 0 ? 'warning' : 'neutral'} />
         {flow && <StatCard label="Meetings booked" value={d.meetingsBooked} tone="success" />}
         {flow && <StatCard label="Meetings attended" value={d.meetingsCompleted} />}
-        {flow && <StatCard label="Asked for the demo" value={d.demoRequested} />}
+        {flow && <StatCard label="Hinglish / English" value={`${d.hindi} / ${d.english}`} />}
         <StatCard label="Failed" value={d.failed} tone={d.failed > 0 ? 'danger' : 'neutral'} />
       </div>
 
@@ -338,7 +338,7 @@ function BoardTab({ id, tick }: { id: string; tick: number }) {
             {col.contacts.map((c) => (
               <div key={c.id} className="rounded-md border border-line bg-white p-2.5 text-sm shadow-card">
                 <p className="font-medium text-ink">{c.name || c.phone}</p>
-                <p className="text-xs text-ink-faint">{c.name ? c.phone : ''}</p>
+                <p className="text-xs text-ink-faint">{c.name ? c.phone : ''}{c.language ? ` · ${c.language === 'hi' ? 'Hinglish' : 'English'}` : ''}</p>
                 {c.meetingAt && <p className="mt-1 flex items-center gap-1 text-xs font-medium text-success-700"><CalendarClock size={12} /> {formatDateTime(c.meetingAt)}</p>}
               </div>
             ))}
@@ -361,6 +361,7 @@ function PeopleTab({ id, tick }: { id: string; tick: number }) {
   const columns: DataTableColumn<WaContactRow>[] = [
     { key: 'name', header: 'Person', render: (c) => <div><p className="font-medium text-ink">{c.name || '—'}</p><p className="text-xs text-ink-faint">{c.phone}</p></div> },
     { key: 'stage', header: 'Stage', render: (c) => <Badge tone={c.state === 'OPTED_OUT' || c.state === 'FAILED' ? 'danger' : 'info'}>{c.column}</Badge> },
+    { key: 'lang', header: 'Language', render: (c) => (c.language === 'hi' ? 'Hinglish' : c.language === 'en' ? 'English' : '—') },
     { key: 'consent', header: 'Consent from', render: (c) => <span className="text-xs text-ink-muted">{c.optInSource}</span> },
     { key: 'updated', header: 'Updated', render: (c) => formatDateTime(c.updatedAt) },
     { key: 'err', header: '', render: (c) => (c.lastError ? <span className="text-xs text-danger-600">{c.lastError}</span> : null) },
@@ -390,7 +391,7 @@ function MeetingsTab({ id, tick }: { id: string; tick: number }) {
   const upcoming = (rows ?? []).filter((m) => m.status === 'booked' && new Date(m.startsAt).getTime() >= now - 30 * 60000);
   const columns: DataTableColumn<WaMeetingRow>[] = [
     { key: 'when', header: 'When (IST)', render: (m) => <div><p className="font-medium text-ink">{formatDateTime(m.startsAt)}</p>{m.endsAt && <p className="text-xs text-ink-faint">until {formatDateTime(m.endsAt).split(', ').pop()}</p>}</div> },
-    { key: 'who', header: 'Lab', render: (m) => <div><p className="font-medium text-ink">{m.name || m.phone}</p><p className="text-xs text-ink-faint">{m.phone}{m.labName ? ` · ${m.labName}` : ''}</p></div> },
+    { key: 'who', header: 'Lab', render: (m) => <div><p className="font-medium text-ink">{m.name || m.phone}</p><p className="text-xs text-ink-faint">{m.phone}{m.labName ? ` · ${m.labName}` : ''}{m.language ? ` · ${m.language === 'hi' ? 'Hinglish' : 'English'}` : ''}</p></div> },
     { key: 'status', header: 'Status', render: (m) => <Badge tone={MEETING_TONE[m.status]}>{MEETING_LABEL[m.status]}</Badge> },
     { key: 'link', header: 'Join link', render: (m) => (m.joinUrl ? <a href={m.joinUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm font-medium text-brand-700 underline"><ExternalLink size={13} /> Join</a> : <span className="text-xs text-ink-faint">In the Calendly email</span>) },
     { key: 'reminder', header: '1-hour reminder', render: (m) => (m.reminderSentAt ? <span className="text-xs text-success-700">Sent {formatDateTime(m.reminderSentAt).split(', ').pop()}</span> : m.status === 'booked' ? <span className="text-xs text-ink-faint">Goes 1 hour before</span> : <span className="text-xs text-ink-faint">—</span>) },

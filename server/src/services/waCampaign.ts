@@ -30,43 +30,70 @@ const HOUR = 60 * MIN;
 // ---------------------------------------------------------------------------
 
 export const DEFAULT_COPY: Record<string, string> = {
-  M02: 'Great, {name}! 🎬 Here is the English product demo. Watch how the Tag Through solution can connect lab bookings, customer experience, collection workflows and CRM operations.',
-  M04: 'Hi {name}! 😊 Would you like to explore Tag Through for your lab and check your eligibility for Techtaru’s 50% initiative at ₹2.99 lakh?',
+  M02: 'Great, {name}! 🎬 Here is the English product demo. Watch how the Techtaru solution can connect lab bookings, customer experience, collection workflows and CRM operations.',
+  M04: 'Hi {name}! 😊 Would you like to explore the Techtaru solution for your lab and check your eligibility for our 50% initiative at ₹2.99 lakh?',
   M05: 'Approximately how many patient samples does your lab process per day?',
   M06: 'Which best describes your lab?',
   M07: 'Does your lab serve individual patients (B2C)?',
   M08: 'Thanks, {name}! 🙌 Your lab may qualify for the Techtaru 50% initiative. Our specialist will verify eligibility, the ₹2.99 lakh offer and slot availability.\n\n📅 Book a 20-minute consultation using the button below.\n\n*Final approval, pricing and availability will be confirmed by our team.*',
   M09: 'Thanks for sharing your details. The special initiative may not apply under the current criteria. Would you like our team to discuss the standard solution options?',
-  M10: 'No problem, {name}. 😊 Reply DEMO whenever you would like to explore Tag Through. We will pause this promotional sequence.',
+  M10: 'No problem, {name}. 😊 Reply DEMO whenever you would like to explore Techtaru. We will pause this promotional sequence.',
   M11: 'Thank you for your time, {name}. We will stop this promotional sequence. Wishing your lab continued success!',
-  M13: 'Hi {name}, your Tag Through consultation is still pending. Choose a convenient time with the button below. Our team will explain eligibility, the solution and next steps.',
-  M14: 'Your Tag Through consultation is confirmed! 🎉\nDate: {date}\nTime: {time} ({tz})\nMeeting link: {join_url}',
-  M15: 'Reminder: your Tag Through consultation starts in 1 hour.\nTime: {time}\nJoin: {join_url}',
-  M16: 'Thanks! A Tag Through specialist will help with your question. Our team will reply as soon as possible.',
+  M13: 'Hi {name}, your Techtaru consultation is still pending. Choose a convenient time with the button below. Our team will explain eligibility, the solution and next steps.',
+  M14: 'Your Techtaru consultation is confirmed! 🎉\nDate: {date}\nTime: {time} ({tz})\nMeeting link: {join_url}',
+  M15: 'Reminder: your Techtaru consultation starts in 1 hour.\nTime: {time}\nJoin: {join_url}',
+  M16: 'Thanks! A Techtaru specialist will help with your question. Our team will reply as soon as possible.',
   STOP_OK: 'You have been unsubscribed from Techtaru promotional messages. You will not receive any more of them.',
+
+  // The language question, and the same journey in Hinglish (Hindi in Roman letters, never Devanagari).
+  LANG_Q: 'Great, {name}! 🎉 Would you like to watch the Techtaru product demo in English or Hinglish?',
+  M02_hi: 'Great, {name}! 🎬 Ye raha Techtaru ka product demo. Dekhiye kaise Techtaru aapki lab ki bookings, customer experience, sample collection aur CRM ko ek saath jodta hai.',
+  M04_hi: 'Hi {name}! 😊 Kya aap apni lab ke liye Techtaru solution ke baare mein aage baat karna aur hamare 50% initiative (₹2.99 lakh) ke liye apni eligibility check karna chahenge?',
+  M05_hi: 'Aapki lab mein roz lagbhag kitne patient samples aate hain?',
+  M06_hi: 'Aapki lab ke liye sabse sahi kya hai?',
+  M07_hi: 'Kya aapki lab mein patient seedhe aate hain (B2C)?',
+  M08_hi: 'Thanks, {name}! 🙌 Aapki lab Techtaru 50% initiative ke liye qualify kar sakti hai. Hamare specialist eligibility, ₹2.99 lakh offer aur slot availability verify karenge.\n\n📅 Neeche diye button se 20 minute ki consultation book karein.\n\n*Final approval, pricing aur availability hamari team confirm karegi.*',
+  M09_hi: 'Details share karne ke liye thanks. Abhi ke criteria mein ye special initiative shayad aapki lab par lagu na ho. Kya hamari team aapse standard solution ke options par baat kare?',
+  M10_hi: 'Koi baat nahi, {name}. 😊 Jab bhi Techtaru dekhna ho, DEMO likh kar bhej dijiye. Hum ye promotional messages abhi rok rahe hain.',
+  M11_hi: 'Aapke time ke liye thanks, {name}. Hum ye promotional messages band kar rahe hain. Aapki lab ko aage bhi safalta mile!',
+  M13_hi: 'Hi {name}, aapki Techtaru consultation abhi book nahi hui hai. Neeche diye button se apna sahi time chuniye. Hamari team eligibility, solution aur aage ke steps samjhayegi.',
+  M14_hi: 'Aapki Techtaru consultation confirm ho gayi hai! 🎉\nDate: {date}\nTime: {time} ({tz})\nMeeting link: {join_url}',
+  M15_hi: 'Reminder: aapki Techtaru consultation 1 ghante mein shuru hogi.\nTime: {time}\nJoin: {join_url}',
+  M16_hi: 'Thanks! Techtaru ke specialist aapke sawaal mein madad karenge. Hamari team jaldi reply karegi.',
 };
 
 /**
- * The demo, as short videos sent one after another on Watch Demo, with the product labels the
- * client approved (exact strings). The Website has no video yet. English only.
+ * The demo videos, in English and in Hinglish, sent one after another once a language is picked.
+ * The labels are the client's approved product names (exact strings); the Website has no video yet.
+ * Hinglish is stored as language 'hi'.
  */
-export const DEFAULT_DEMO_VIDEOS: { language: 'en'; title: string; caption: string }[] = [
-  { language: 'en', title: 'Tag Through User App', caption: '📱 *1/3 · Tag Through User App*\nYour lab’s own branded app for patients: they book tests and packages, choose home sample collection, pay online and download their reports, all under your lab’s name.' },
-  { language: 'en', title: 'Tag Through Phlebo App', caption: '🩺 *2/3 · Tag Through Phlebo App*\nFor your sample collection team: see the day’s home visits, navigate to the patient, mark samples as collected and update the status live, so you always know where every sample is.' },
-  { language: 'en', title: 'Tag Through Backend and CRM', caption: '🖥️ *3/3 · Tag Through Backend and CRM*\nWhere you run the lab: every booking from the app and website lands here. Assign phlebotomists, track samples, upload reports, manage payments and follow up with leads, all from one place.' },
+export const DEFAULT_DEMO_VIDEOS: { language: 'en' | 'hi'; title: string; caption: string }[] = [
+  { language: 'en', title: 'Techtaru User App', caption: '📱 *1/3 · Techtaru User App*\nYour lab’s own branded app for patients: they book tests and packages, choose home sample collection, pay online and download their reports, all under your lab’s name.' },
+  { language: 'en', title: 'Techtaru Phlebo App', caption: '🩺 *2/3 · Techtaru Phlebo App*\nFor your sample collection team: see the day’s home visits, navigate to the patient, mark samples as collected and update the status live, so you always know where every sample is.' },
+  { language: 'en', title: 'Techtaru Backend and CRM', caption: '🖥️ *3/3 · Techtaru Backend and CRM*\nWhere you run the lab: every booking from the app and website lands here. Assign phlebotomists, track samples, upload reports, manage payments and follow up with leads, all from one place.' },
+  { language: 'hi', title: 'Techtaru User App', caption: '📱 *1/3 · Techtaru User App*\nAapki lab ke naam se apna app: patient test aur package book karte hain, home sample collection chunte hain, online payment karte hain aur report download karte hain.' },
+  { language: 'hi', title: 'Techtaru Phlebo App', caption: '🩺 *2/3 · Techtaru Phlebo App*\nSample collection team ke liye: din ki home visits dekhein, patient tak pahunchein, sample collect hone par mark karein aur status live update karein, taaki har sample ki jaankari rahe.' },
+  { language: 'hi', title: 'Techtaru Backend and CRM', caption: '🖥️ *3/3 · Techtaru Backend and CRM*\nYahin se lab chalti hai: app aur website ki har booking yahan aati hai. Phlebotomist assign karein, sample track karein, report upload karein, payment aur leads ek hi jagah sambhalein.' },
 ];
 
 export interface DemoVideo { language: 'en' | 'hi'; title: string; caption: string; url: string }
 
-/** The campaign's English demo videos that have a file. An entry saved without a language is English. */
-export function demoVideosOf(campaign: Pick<WaCampaign, 'demoVideos'>): DemoVideo[] {
+/** The campaign's demo videos that have a file, in one language. An entry saved without a language is English. */
+export function demoVideosOf(campaign: Pick<WaCampaign, 'demoVideos'>, language?: 'en' | 'hi'): DemoVideo[] {
   const raw = Array.isArray(campaign.demoVideos) ? (campaign.demoVideos as unknown as DemoVideo[]) : [];
-  return raw.filter((v) => v && typeof v.url === 'string' && v.url.trim() && v.language !== 'hi');
+  return raw
+    .filter((v) => v && typeof v.url === 'string' && v.url.trim())
+    .map((v) => ({ ...v, language: v.language === 'hi' ? 'hi' : 'en' } as DemoVideo))
+    .filter((v) => !language || v.language === language);
 }
 
-/** A message's wording: the campaign's own, else the standard copy. English only. */
-function copyFor(campaign: Pick<WaCampaign, 'copy'>, key: string, _language?: string | null): string {
+/** A message's wording in the person's language: the campaign's own, else the standard copy. */
+function copyFor(campaign: Pick<WaCampaign, 'copy'>, key: string, language?: string | null): string {
   const custom = (campaign.copy ?? {}) as Record<string, string>;
+  if (language === 'hi') {
+    const hinglish = custom[`${key}_hi`] || DEFAULT_COPY[`${key}_hi`];
+    if (hinglish) return hinglish;
+  }
   return custom[key] || DEFAULT_COPY[key] || '';
 }
 
@@ -259,6 +286,8 @@ const TERMINAL = new Set(['OPTED_OUT', 'MEETING_COMPLETED', 'FAILED']);
 /** What each button label means — for template buttons, and for taps that arrive without our payload. */
 const LABEL_ACTIONS: Record<string, string> = {
   'watch demo': 'UGC_WATCH_DEMO', 'show demo': 'UGC_WATCH_DEMO', 'send demo': 'UGC_WATCH_DEMO',
+  'english': 'LANG_EN', 'hinglish': 'LANG_HI',
+  'haan, interested': 'DEMO_INTERESTED', 'interest nahi hai': 'DEMO_NOT_INTERESTED', 'sawaal poochna hai': 'DEMO_QUESTION',
   'check eligibility': 'UGC_CHECK_ELIGIBILITY', 'not now': 'UGC_NOT_NOW', 'not interested': 'UGC_NOT_INTERESTED',
   'yes, interested': 'DEMO_INTERESTED', 'ask a question': 'DEMO_QUESTION',
   '50 or more': 'ELIG_SAMPLES_50PLUS', 'below 50': 'ELIG_SAMPLES_BELOW50',
@@ -281,6 +310,10 @@ function labelAction(state: string, label: string): string | null {
 function textAction(state: string, text: string): string | null {
   const t = text.trim().toLowerCase();
   if (/^demo\b/.test(t)) return 'UGC_WATCH_DEMO';
+  if (state === 'LANGUAGE_PENDING') {
+    if (/english|angrezi/.test(t)) return 'LANG_EN';
+    if (/hinglish|hindi/.test(t)) return 'LANG_HI';
+  }
   if (state === 'INTEREST_PENDING' || state === 'UGC_SENT') {
     if (/^(yes|yeah|yep|haan|han|ha|interested|ok|okay)\b/.test(t)) return state === 'UGC_SENT' ? 'UGC_WATCH_DEMO' : 'DEMO_INTERESTED';
     if (/^(no|nahi|nahin|not interested)\b/.test(t)) return 'DEMO_NOT_INTERESTED';
@@ -367,30 +400,35 @@ async function act(campaign: WaCampaign, contact: WaContact, conv: Conv, action:
   };
 
   switch (action) {
-    // Older buttons (Show Demo, and the language choice that has since been removed) do the same.
     case 'UGC_SHOW_DEMO':
-    case 'LANG_EN':
-    case 'LANG_HI':
     case 'UGC_WATCH_DEMO': {
       await event(campaign.id, contact.id, 'demo_requested');
-      // No language question: the English demo goes straight out — a short note, then each video.
-      let videos: { url: string; caption: string }[] = demoVideosOf(campaign).map((d) => ({ url: d.url, caption: fill(d.caption, v) }));
+      await move(contact, 'LANGUAGE_PENDING', reset);
+      await sendButtons(conv, contact.id, say('LANG_Q'), [['LANG_EN', 'English'], ['LANG_HI', 'Hinglish']]);
+      return;
+    }
+    case 'LANG_EN':
+    case 'LANG_HI': {
+      const language = action === 'LANG_HI' ? 'hi' : 'en';
+      // That language's demo videos; with none uploaded, the English ones, and then the older single video.
+      const pick = demoVideosOf(campaign, language).length ? demoVideosOf(campaign, language) : demoVideosOf(campaign, 'en');
+      let videos: { url: string; caption: string }[] = pick.map((d) => ({ url: d.url, caption: fill(d.caption, v) }));
       if (videos.length === 0 && campaign.demoVideoEn) videos = [{ url: campaign.demoVideoEn, caption: '' }];
+      const updated = await move(contact, 'LANGUAGE_PENDING', { language });
       if (videos.length === 0) {
         // Never skip the demo silently: it goes to a person.
         await event(campaign.id, contact.id, 'send_failed', 'No demo video is set');
         await leadNote(contact, 'WhatsApp campaign: asked for the demo, but no demo video is set up — please send it.');
-        await move(contact, 'HUMAN', reset);
+        await move(updated, 'HUMAN', reset);
         return;
       }
-      const updated = await move(contact, 'LANGUAGE_PENDING', { language: 'en', ...reset });
-      await sendText(conv, say('M02'));
+      await sendText(conv, fill(copyFor(campaign, 'M02', language), v));
       for (const video of videos) {
         // Spaced out, so WhatsApp delivers them in order.
         await new Promise((resolve) => setTimeout(resolve, DRY() ? 0 : 4000));
         await sendVideo(conv, video.url, video.caption);
       }
-      await event(campaign.id, contact.id, 'demo_sent', `${videos.length} video(s)`);
+      await event(campaign.id, contact.id, 'demo_sent', `${language}: ${videos.length} video(s)`);
       // The interest question follows 5 minutes later, never claiming the videos were watched.
       await move(updated, 'DEMO_SENT', { nextActionAt: new Date(Date.now() + 5 * MIN), nudgeCount: 0 });
       return;
@@ -420,7 +458,7 @@ async function act(campaign: WaCampaign, contact: WaContact, conv: Conv, action:
     }
     case 'DEMO_INTERESTED': {
       await event(campaign.id, contact.id, 'interested');
-      await leadNote(contact, 'WhatsApp campaign: interested in Tag Through after the demo.');
+      await leadNote(contact, 'WhatsApp campaign: interested in Techtaru after the demo.');
       await move(contact, 'ELIG_Q1', reset);
       await askSamples();
       return;
@@ -717,7 +755,10 @@ async function sendIntros(campaign: WaCampaign, ctx: Ctx) {
   if (campaign.lastError) await prisma.waCampaign.update({ where: { id: campaign.id }, data: { lastError: null } });
 }
 
-const INTEREST_BUTTONS: [string, string][] = [['DEMO_INTERESTED', 'Yes, Interested'], ['DEMO_NOT_INTERESTED', 'Not Interested'], ['DEMO_QUESTION', 'Ask a Question']];
+/** The interest question's buttons, in the person's language. Each fits WhatsApp's 20 characters. */
+const interestButtons = (language?: string | null): [string, string][] => language === 'hi'
+  ? [['DEMO_INTERESTED', 'Haan, interested'], ['DEMO_NOT_INTERESTED', 'Interest nahi hai'], ['DEMO_QUESTION', 'Sawaal poochna hai']]
+  : [['DEMO_INTERESTED', 'Yes, Interested'], ['DEMO_NOT_INTERESTED', 'Not Interested'], ['DEMO_QUESTION', 'Ask a Question']];
 
 async function runDueStep(campaign: WaCampaign, contact: WaContact, ctx: Ctx) {
   const conversation = await ensureConversation(ctx.account, contact.phone, contact.name);
@@ -742,7 +783,7 @@ async function runDueStep(campaign: WaCampaign, contact: WaContact, ctx: Ctx) {
     }
     case 'DEMO_SENT': {
       // Asked, never assumed watched.
-      await sendButtons(conversation, contact.id, say('M04'), INTEREST_BUTTONS);
+      await sendButtons(conversation, contact.id, say('M04'), interestButtons(contact.language));
       await move(contact, 'INTEREST_PENDING', { nextActionAt: new Date(Date.now() + 24 * HOUR), nudgeCount: 0 });
       return;
     }
@@ -753,7 +794,7 @@ async function runDueStep(campaign: WaCampaign, contact: WaContact, ctx: Ctx) {
         return;
       }
       if (open) {
-        await sendButtons(conversation, contact.id, say('M04'), INTEREST_BUTTONS);
+        await sendButtons(conversation, contact.id, say('M04'), interestButtons(contact.language));
       } else {
         const r = await sendTemplateStep(ctx, campaign, contact, 'nudge');
         if (!r.ok) return void (await event(campaign.id, contact.id, 'send_failed', `Reminder: ${r.reason}`));
