@@ -177,7 +177,7 @@ export function WaCampaignBuilder() {
         <Card>
           <CardHeader title="Basics" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input label="Name" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Techtaru Diwali 50% Initiative 2026" required />
+            <Input label="Name" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Propto Diwali Offer 2026" required />
             <Select
               label="Type"
               value={form.kind}
@@ -243,7 +243,7 @@ export function WaCampaignBuilder() {
                             </div>
                           </div>
                           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            <Input label="Name (for you)" value={d.title} onChange={(e) => patchDemo(i, { title: e.target.value })} placeholder="Techtaru User App" />
+                            <Input label="Name (for you)" value={d.title} onChange={(e) => patchDemo(i, { title: e.target.value })} placeholder="Propto CRM demo" />
                             <div className="space-y-2">
                               <Input label="Video" value={d.url} onChange={(e) => patchDemo(i, { url: e.target.value })} placeholder="https://…" hint={d.url ? undefined : 'Not set — this one is skipped until it has a video.'} />
                               {uploadButton(`demo-${i}`, (url) => patchDemo(i, { url }))}

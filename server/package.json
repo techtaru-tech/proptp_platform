@@ -1,7 +1,7 @@
 {
-  "name": "techtaru-portal-server",
+  "name": "propto-crm-server",
   "version": "1.0.0",
-  "description": "TechTaru portal backend — CRM, operations and HRMS (Express + Prisma + PostgreSQL)",
+  "description": "Propto portal backend — CRM, operations and HRMS (Express + Prisma + PostgreSQL)",
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",

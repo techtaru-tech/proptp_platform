@@ -76,8 +76,8 @@ emailSettingsRouter.post('/test', async (req, res, next) => {
     if (!to.includes('@')) return res.status(400).json({ error: 'A valid recipient address is required.' });
     await sendRawEmail(
       to,
-      'Test email from TechTaru',
-      '<p>This is a test from TechTaru.</p><p>If it reached your inbox and not spam, sending is configured correctly.</p>'
+      'Test email from Propto',
+      '<p>This is a test from Propto.</p><p>If it reached your inbox and not spam, sending is configured correctly.</p>'
     );
     res.json({ ok: true, message: `Test email sent to ${to}.` });
   } catch (err) {

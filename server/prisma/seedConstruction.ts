@@ -35,7 +35,7 @@ export async function seedConstruction(prisma: PrismaClient) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
   const worker =
-    (await prisma.user.findFirst({ where: { email: 'gaurav@techtaru.com' } })) ??
+    (await prisma.user.findFirst({ where: { email: 'gaurav@proptocrm.com' } })) ??
     (await prisma.user.findFirst({ where: { role: 'employee', status: 'active' } }));
   const reviewer = await prisma.user.findFirst({ where: { role: 'admin' } });
   const projects = await prisma.project.findMany({ orderBy: { id: 'asc' }, take: 3 });

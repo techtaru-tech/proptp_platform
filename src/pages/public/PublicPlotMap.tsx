@@ -7,7 +7,7 @@ import { Toggle } from '../../components/ui/Toggle';
 import { useAsync } from '../../hooks/useAsync';
 import { cn } from '../../utils/cn';
 import { getPublicPlotMap } from '../../services/plotMapService';
-import techtaruLockup from '../../assets/brand/techtaru-lockup.png';
+import proptoLockup from '../../assets/brand/propto-lockup.png';
 
 /** Outside the panel, a plot is open or it is not — held, booked and sold all read the same. */
 const OPEN = { fill: '#12b76a', stroke: '#027a48', text: '#05492f', halo: '#ffffff' };
@@ -58,7 +58,7 @@ export function PublicPlotMap() {
     <div className="min-h-screen bg-surface-subtle">
       <header className="border-b border-line bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
-          <img src={techtaruLockup} alt="TechTaru Digital" className="h-8 w-auto" />
+          <img src={proptoLockup} alt="Propto CRM" className="h-10 w-auto" />
           <span className="text-xs text-ink-faint">Plot availability</span>
         </div>
       </header>
@@ -82,7 +82,7 @@ export function PublicPlotMap() {
           <MapPinOff size={22} />
         </span>
         <p className="text-sm font-semibold text-ink">This map is not available</p>
-        <p className="text-sm text-ink-muted">The link may have been turned off or replaced. Ask your TechTaru contact for a fresh one.</p>
+        <p className="text-sm text-ink-muted">The link may have been turned off or replaced. Ask your Propto contact for a fresh one.</p>
       </div>
     );
   }
@@ -138,7 +138,7 @@ export function PublicPlotMap() {
         )}
       </section>
 
-      <p className="text-center text-xs text-ink-faint">Availability is shown as of now and can change. Contact TechTaru Digital to book a plot.</p>
+      <p className="text-center text-xs text-ink-faint">Availability is shown as of now and can change. Contact Propto CRM to book a plot.</p>
     </div>
   );
 }

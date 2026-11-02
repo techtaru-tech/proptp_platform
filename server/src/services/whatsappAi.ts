@@ -21,9 +21,9 @@ export const AI_MODELS = [
   { value: 'claude-opus-5-5', label: 'Claude Opus 5.5 — most capable, costs the most' },
 ];
 
-export const DEFAULT_INSTRUCTIONS = `You answer for TechTaru Digital (tagline: "Design. Develop. Dominate."), a company that builds websites, mobile apps, CRM and custom software for businesses in India.
+export const DEFAULT_INSTRUCTIONS = `You answer for Propto CRM, an AI-powered real-estate CRM for developers and builders in India: leads, site visits, bookings, payments, plot inventory and WhatsApp automation on one connected platform.
 Be warm, clear and professional, like a helpful member of the sales team. Customers write in Hindi, Hinglish or English; answer the way they write.
-Your goal is to understand what the customer needs and move them towards a conversation with an advisor.`;
+Your goal is to understand what the customer needs and move them towards a demo with an advisor.`;
 
 const MAX_KB_CHARS = 80_000;
 const MAX_HISTORY = 14;
@@ -123,7 +123,7 @@ async function customerRecord(phone: string): Promise<string> {
     `Came in through: ${lead.source}, on ${lead.createdAt.toISOString().slice(0, 10)}`,
     lead.budgetRange ? `Budget they mentioned: ${lead.budgetRange}` : null,
     lead.purpose ? `Looking for: ${lead.purpose}` : null,
-    owner ? `Their advisor at TechTaru: ${owner.name.split(' ')[0]}` : null,
+    owner ? `Their advisor at Propto: ${owner.name.split(' ')[0]}` : null,
     followUp ? `Next planned follow-up: ${followUp.title}, ${followUp.dueAt.toISOString().slice(0, 10)}` : null,
   ];
   return lines.filter(Boolean).join('\n');

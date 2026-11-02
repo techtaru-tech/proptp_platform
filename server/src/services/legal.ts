@@ -115,23 +115,23 @@ export const GENERATED_KINDS: LegalDocKind[] = ['cost_sheet', 'allotment_letter'
 const DEFAULT_TEMPLATES: Record<string, { title: string; body: string }> = {
   cost_sheet: {
     title: 'Cost Sheet',
-    body: `COST SHEET\n\nDate: {{date}}\nBooking reference: {{booking_reference}}\nBuyer: {{buyer_name}} ({{phone}})\n\nProject: {{project_name}}, {{project_location}}\nPlot: {{unit_number}}   Area: {{area}}\n\nRate per unit area ............ {{rate}}\nBasic cost of plot ............ {{base_amount}}\nOther applicable charges ...... {{other_charges}}\nGST and registration .......... {{gst_registration}}\n--------------------------------------------\nTOTAL COST .................... {{grand_total}}\n\nToken / booking amount ........ {{token_amount}}\nBalance after token ........... {{balance_after_token}}\n\nThe balance is payable as per the payment plan agreed with you. Charges shown are as recorded for this plot at the time of booking.\n\nFor TechTaru Digital`,
+    body: `COST SHEET\n\nDate: {{date}}\nBooking reference: {{booking_reference}}\nBuyer: {{buyer_name}} ({{phone}})\n\nProject: {{project_name}}, {{project_location}}\nPlot: {{unit_number}}   Area: {{area}}\n\nRate per unit area ............ {{rate}}\nBasic cost of plot ............ {{base_amount}}\nOther applicable charges ...... {{other_charges}}\nGST and registration .......... {{gst_registration}}\n--------------------------------------------\nTOTAL COST .................... {{grand_total}}\n\nToken / booking amount ........ {{token_amount}}\nBalance after token ........... {{balance_after_token}}\n\nThe balance is payable as per the payment plan agreed with you. Charges shown are as recorded for this plot at the time of booking.\n\nFor Propto CRM`,
   },
   allotment_letter: {
     title: 'Allotment Letter',
-    body: `Date: {{date}}\nBooking reference: {{booking_reference}}\n\nTo,\n{{buyer_name}}\nPhone: {{phone}}\n\nSubject: Allotment of plot {{unit_number}}, {{project_name}}\n\nDear {{buyer_name}},\n\nWe are pleased to confirm the allotment of plot {{unit_number}}, admeasuring {{area}}, in {{project_name}}, {{project_location}}, against your booking amount of {{booking_amount}}. The agreed total value of the plot is {{agreed_value}}.\n\nThe balance shall be payable as per the payment plan agreed with you. This letter is subject to the terms of the agreement to be executed between us.\n\nFor TechTaru Digital\n\nAuthorised Signatory`,
+    body: `Date: {{date}}\nBooking reference: {{booking_reference}}\n\nTo,\n{{buyer_name}}\nPhone: {{phone}}\n\nSubject: Allotment of plot {{unit_number}}, {{project_name}}\n\nDear {{buyer_name}},\n\nWe are pleased to confirm the allotment of plot {{unit_number}}, admeasuring {{area}}, in {{project_name}}, {{project_location}}, against your booking amount of {{booking_amount}}. The agreed total value of the plot is {{agreed_value}}.\n\nThe balance shall be payable as per the payment plan agreed with you. This letter is subject to the terms of the agreement to be executed between us.\n\nFor Propto CRM\n\nAuthorised Signatory`,
   },
   agreement: {
     title: 'Agreement for Sale',
-    body: `AGREEMENT FOR SALE\n\nThis agreement is made on {{date}} between TechTaru Digital (the "Developer") and {{buyer_name}} (the "Buyer"), contact {{phone}}.\n\n1. Subject matter. The Developer agrees to sell and the Buyer agrees to purchase plot {{unit_number}}, admeasuring {{area}}, in the project {{project_name}}, {{project_location}}.\n\n2. Consideration. The total consideration is {{agreed_value}}, of which {{booking_amount}} has been received as booking amount (reference {{booking_reference}}). The balance is payable in accordance with the payment plan forming part of this agreement.\n\n3. Remaining terms. The remaining terms and conditions are to be settled by the Developer's legal counsel before execution.\n\nSigned for the Developer: ______________________\n\nSigned by the Buyer: ______________________`,
+    body: `AGREEMENT FOR SALE\n\nThis agreement is made on {{date}} between Propto CRM (the "Developer") and {{buyer_name}} (the "Buyer"), contact {{phone}}.\n\n1. Subject matter. The Developer agrees to sell and the Buyer agrees to purchase plot {{unit_number}}, admeasuring {{area}}, in the project {{project_name}}, {{project_location}}.\n\n2. Consideration. The total consideration is {{agreed_value}}, of which {{booking_amount}} has been received as booking amount (reference {{booking_reference}}). The balance is payable in accordance with the payment plan forming part of this agreement.\n\n3. Remaining terms. The remaining terms and conditions are to be settled by the Developer's legal counsel before execution.\n\nSigned for the Developer: ______________________\n\nSigned by the Buyer: ______________________`,
   },
   receipt: {
     title: 'Payment Receipt',
-    body: `PAYMENT RECEIPT\n\nDate: {{date}}\nReceived with thanks from {{buyer_name}} a sum of {{paid_amount}} on {{paid_on}} towards plot {{unit_number}}, {{project_name}} (booking {{booking_reference}}).\n\nPayment reference: {{payment_reference}}\n\nFor TechTaru Digital`,
+    body: `PAYMENT RECEIPT\n\nDate: {{date}}\nReceived with thanks from {{buyer_name}} a sum of {{paid_amount}} on {{paid_on}} towards plot {{unit_number}}, {{project_name}} (booking {{booking_reference}}).\n\nPayment reference: {{payment_reference}}\n\nFor Propto CRM`,
   },
   demand_note: {
     title: 'Demand Note',
-    body: `DEMAND NOTE\n\nDate: {{date}}\nTo: {{buyer_name}}\nPlot {{unit_number}}, {{project_name}} (booking {{booking_reference}})\n\nAs per the agreed payment plan, the instalment "{{milestone_name}}" of {{milestone_amount}} falls due on {{milestone_due}}. The amount outstanding against it is {{outstanding}}.\n\nYou are requested to make the payment on or before the due date.\n\nFor TechTaru Digital`,
+    body: `DEMAND NOTE\n\nDate: {{date}}\nTo: {{buyer_name}}\nPlot {{unit_number}}, {{project_name}} (booking {{booking_reference}})\n\nAs per the agreed payment plan, the instalment "{{milestone_name}}" of {{milestone_amount}} falls due on {{milestone_due}}. The amount outstanding against it is {{outstanding}}.\n\nYou are requested to make the payment on or before the due date.\n\nFor Propto CRM`,
   },
 };
 
@@ -244,8 +244,8 @@ export function writePdf(title: string, text: string, footer: string): Promise<s
     const doc = new PDFDocument({ size: 'A4', margin: 60 });
     const stream = fs.createWriteStream(target);
     doc.pipe(stream);
-    doc.fontSize(10).fillColor('#007d7d').text('TECHTARU DIGITAL', { align: 'left' });
-    doc.moveDown(0.3).strokeColor('#007d7d').lineWidth(1.2).moveTo(60, doc.y).lineTo(535, doc.y).stroke();
+    doc.fontSize(10).fillColor('#0e7f51').text('PROPTO CRM', { align: 'left' });
+    doc.moveDown(0.3).strokeColor('#0e7f51').lineWidth(1.2).moveTo(60, doc.y).lineTo(535, doc.y).stroke();
     doc.moveDown(1).fontSize(16).fillColor('#1a1a1a').text(title, { align: 'left' });
     doc.moveDown(1).fontSize(11).fillColor('#222222').text(text, { align: 'left', lineGap: 4 });
     doc.fontSize(8).fillColor('#888888').text(footer, 60, 770, { align: 'left', width: 475 });

@@ -1,8 +1,8 @@
 @import 'tailwindcss';
 @config '../tailwind.config.js';
 
-/* Self-hosted, the same files techtaru.com serves — no text waits on a third-party origin.
-   Inter is one variable file for every weight; Clash Display is one file per weight. */
+/* Self-hosted — no text waits on a third-party origin. Inter (body) and Plus Jakarta Sans
+   (headings) are the two faces proptocrm.com uses; each is one variable file for every weight. */
 @font-face {
   font-family: 'Inter';
   font-style: normal;
@@ -11,25 +11,11 @@
   src: url('/fonts/inter-variable.woff2') format('woff2');
 }
 @font-face {
-  font-family: 'Clash Display';
+  font-family: 'Plus Jakarta Sans';
   font-style: normal;
-  font-weight: 500;
+  font-weight: 500 800;
   font-display: swap;
-  src: url('/fonts/clash-display-500.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Clash Display';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/fonts/clash-display-600.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Clash Display';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/clash-display-700.woff2') format('woff2');
+  src: url('/fonts/plus-jakarta-sans-variable.woff2') format('woff2');
 }
 
 :root {
@@ -44,10 +30,10 @@ body {
   @apply bg-surface-subtle text-ink font-sans antialiased;
 }
 
-/* Page and section titles take TechTaru's display face, as on techtaru.com. */
+/* Page and section titles take Propto's display face, as on proptocrm.com. */
 @layer base {
   h1, h2 {
-    @apply font-display tracking-[0.01em];
+    @apply font-display tracking-[-0.02em];
   }
 }
 
@@ -56,7 +42,7 @@ body {
 }
 
 ::selection {
-  background: rgba(0, 201, 201, 0.25);
+  background: rgba(43, 178, 101, 0.25);
 }
 
 ::-webkit-scrollbar {
@@ -71,7 +57,7 @@ body {
   border-radius: 8px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #00a3a3;
+  background: #2bb265;
 }
 
 .focus-ring {

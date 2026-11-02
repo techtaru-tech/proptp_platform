@@ -137,7 +137,7 @@ export function WhatsAppSettingsPage() {
         }
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Label" required value={form.label} onChange={(e) => patchForm({ label: e.target.value })} placeholder="TechTaru Sales" />
+          <Input label="Label" required value={form.label} onChange={(e) => patchForm({ label: e.target.value })} placeholder="Propto Sales" />
           <Select
             label="Provider"
             value={form.provider ?? 'meta'}

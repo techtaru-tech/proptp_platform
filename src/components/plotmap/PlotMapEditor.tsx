@@ -362,7 +362,7 @@ export function PlotMapEditor({ projectId, imageUrl, width, height, initialShape
                     points={toSvgPoints(shape.points, width, height)}
                     fill={linked ? '#2596BE' : '#f79009'}
                     fillOpacity={isSelected ? 0.55 : 0.38}
-                    stroke={isSelected ? '#007d7d' : linked ? '#1d6581' : '#b54708'}
+                    stroke={isSelected ? '#0e7f51' : linked ? '#1d6581' : '#b54708'}
                     strokeWidth={isSelected ? 3.5 : strokeBase}
                     strokeDasharray={linked ? undefined : '6 4'}
                     vectorEffect="non-scaling-stroke"
@@ -397,7 +397,7 @@ export function PlotMapEditor({ projectId, imageUrl, width, height, initialShape
                   cy={y * height}
                   r={handleR}
                   fill="#fff"
-                  stroke="#007d7d"
+                  stroke="#0e7f51"
                   strokeWidth={2}
                   vectorEffect="non-scaling-stroke"
                   className="cursor-grab"
@@ -411,9 +411,9 @@ export function PlotMapEditor({ projectId, imageUrl, width, height, initialShape
                 y={Math.min(draftRect.a[1], draftRect.b[1]) * height}
                 width={Math.abs(draftRect.b[0] - draftRect.a[0]) * width}
                 height={Math.abs(draftRect.b[1] - draftRect.a[1]) * height}
-                fill="#007d7d"
+                fill="#0e7f51"
                 fillOpacity={0.2}
-                stroke="#007d7d"
+                stroke="#0e7f51"
                 strokeWidth={2}
                 strokeDasharray="5 3"
                 vectorEffect="non-scaling-stroke"
@@ -426,13 +426,13 @@ export function PlotMapEditor({ projectId, imageUrl, width, height, initialShape
                 <polyline
                   points={toSvgPoints(cursor ? [...draftPoly, cursor] : draftPoly, width, height)}
                   fill="none"
-                  stroke="#007d7d"
+                  stroke="#0e7f51"
                   strokeWidth={2}
                   strokeDasharray="5 3"
                   vectorEffect="non-scaling-stroke"
                 />
                 {draftPoly.map(([x, y], i) => (
-                  <circle key={i} cx={x * width} cy={y * height} r={i === 0 ? handleR * 1.3 : handleR * 0.8} fill={i === 0 ? '#007d7d' : '#fff'} stroke="#007d7d" strokeWidth={2} vectorEffect="non-scaling-stroke" />
+                  <circle key={i} cx={x * width} cy={y * height} r={i === 0 ? handleR * 1.3 : handleR * 0.8} fill={i === 0 ? '#0e7f51' : '#fff'} stroke="#0e7f51" strokeWidth={2} vectorEffect="non-scaling-stroke" />
                 ))}
               </g>
             )}

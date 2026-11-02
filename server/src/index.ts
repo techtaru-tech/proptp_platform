@@ -269,7 +269,7 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 const HOST = process.env.HOST || (process.env.NODE_ENV === 'production' ? '127.0.0.1' : '0.0.0.0');
 
 app.listen(PORT, HOST, () => {
-  console.log(`TechTaru platform server listening on http://${HOST}:${PORT}`);
+  console.log(`Propto platform server listening on http://${HOST}:${PORT}`);
   console.log(`  admin API  ->  /api/*`);
   console.log(`  app API    ->  /api/v1/app/*`);
   startAutomationPoller();

@@ -20,7 +20,7 @@ const PEOPLE: { key: string; name: string; role: UserRole; manager?: string; pho
 ];
 
 export async function seedHierarchy(prisma: PrismaClient) {
-  if (await prisma.user.findFirst({ where: { email: 'arpit@techtaru.com' } })) {
+  if (await prisma.user.findFirst({ where: { email: 'arpit@proptocrm.com' } })) {
     console.log('  sales hierarchy already present — skipping.');
     return;
   }
@@ -30,7 +30,7 @@ export async function seedHierarchy(prisma: PrismaClient) {
     update: {},
     create: { name: 'Sales Team', description: 'CRM and tasks; sees only their own team.', modules: ['dashboard', 'crm', 'tasks'] },
   });
-  const passwordHash = await bcrypt.hash(process.env.SEED_TEAM_PASSWORD || 'TechTaru@2026', 10);
+  const passwordHash = await bcrypt.hash(process.env.SEED_TEAM_PASSWORD || 'Propto@2026', 10);
 
   const ids = new Map<string, string>();
   for (const p of PEOPLE) {
@@ -38,7 +38,7 @@ export async function seedHierarchy(prisma: PrismaClient) {
     const user = await prisma.user.create({
       data: {
         name: p.name,
-        email: `${p.key}@techtaru.com`,
+        email: `${p.key}@proptocrm.com`,
         phone: p.phone,
         role: p.role,
         status: 'active',
@@ -64,5 +64,5 @@ export async function seedHierarchy(prisma: PrismaClient) {
   for (const [owner, leadIds] of buckets) {
     await prisma.lead.updateMany({ where: { id: { in: leadIds } }, data: { assignedUserId: owner } });
   }
-  console.log(`  sales hierarchy: ${PEOPLE.length} people, ${leads.length} leads dealt (password: SEED_TEAM_PASSWORD or TechTaru@2026)`);
+  console.log(`  sales hierarchy: ${PEOPLE.length} people, ${leads.length} leads dealt (password: SEED_TEAM_PASSWORD or Propto@2026)`);
 }

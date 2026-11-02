@@ -237,7 +237,7 @@ adminAuthRouter.post('/sessions/revoke-others', requireAuth, async (req: AuthedR
 // would lock the account out on the next sign-in.
 // ---------------------------------------------------------------------------
 
-const TOTP_ISSUER = 'TechTaru Digital';
+const TOTP_ISSUER = 'Propto CRM';
 
 adminAuthRouter.get('/2fa', requireAuth, async (req: AuthedRequest, res, next) => {
   try {

@@ -5,8 +5,8 @@ import { NAV_ITEMS, NAV_SECTIONS, type NavItem } from '../../app/navConfig';
 import { usePermissions } from '../../app/usePermissions';
 import { useUI } from '../../context/UIContext';
 import { cn } from '../../utils/cn';
-import techtaruLockup from '../../assets/brand/techtaru-lockup.png';
-import techtaruMark from '../../assets/brand/techtaru-mark.png';
+import proptoLockupWhite from '../../assets/brand/propto-lockup-white.png';
+import proptoMark from '../../assets/brand/propto-mark.png';
 
 function ChildLink({ to, label }: { to: string; label: string }) {
   return (
@@ -55,16 +55,15 @@ export function Sidebar() {
   const content = (
     <div className="flex h-full flex-col bg-shell-900 text-white">
       <div className={cn('flex items-center border-b border-white/10 px-4 py-4', sidebarCollapsed ? 'justify-center' : 'justify-between')}>
-        {/* The logo's own plum is close to the sidebar's, and "Developers" is set in near-black,
-            so it sits on a white chip rather than directly on the dark surface. */}
+        {/* The sidebar is Propto's own navy, so the white-text lockup sits on it directly — the
+            way proptocrm.com shows it on dark. The mark alone keeps a white chip: its navy road
+            would vanish into the sidebar. */}
         {sidebarCollapsed ? (
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white p-1.5 shadow-card">
-            <img src={techtaruMark} alt="TechTaru Digital" className="h-full w-auto" />
+            <img src={proptoMark} alt="Propto CRM" className="h-full w-auto" />
           </span>
         ) : (
-          <span className="inline-flex rounded-lg bg-white px-2.5 py-1.5 shadow-card">
-            <img src={techtaruLockup} alt="TechTaru Digital" className="h-6 w-auto" />
-          </span>
+          <img src={proptoLockupWhite} alt="Propto CRM" className="h-9 w-auto" />
         )}
         <button
           type="button"

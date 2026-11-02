@@ -235,7 +235,7 @@ adminOpsReportsRouter.get('/suite/:key/export.xlsx', async (req, res, next) => {
     if (!hasReport(key)) return res.status(404).json({ error: 'No such report.' });
     const report = await buildReport(key, { projectId: req.query.projectId ? String(req.query.projectId) : undefined });
     const wb = new ExcelJS.Workbook();
-    wb.creator = 'TechTaru Digital';
+    wb.creator = 'Propto CRM';
     const used = new Set<string>();
     for (const t of report.tables) {
       // Sheet names are capped at 31 characters and must be unique.

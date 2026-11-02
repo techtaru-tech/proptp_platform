@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-TechTaru camera uploader.
+Propto camera uploader.
 
 Run this on the PC where the camera's pictures are saved, on a schedule (see README.md). Each run
 looks in the folder for pictures it has not sent yet and pushes them to the CRM with the camera's
 own key. It uses only the Python standard library, so there is nothing to install.
 
-  python3 upload_photos.py --folder "D:/CameraPhotos" --url http://localhost:4400 --key rck_...
+  python3 upload_photos.py --folder "D:/CameraPhotos" --url http://localhost:4700 --key rck_...
 
 A picture that fails to send (no internet, server busy) is simply left for the next run. Sending
 the same picture twice is harmless: the CRM stores it once.
@@ -29,10 +29,10 @@ SETTLE_SECONDS = 30                  # skip a file still being written by the ca
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Push new camera pictures to the TechTaru CRM.")
-    p.add_argument("--folder", default=os.environ.get("TECHTARU_FOLDER"), help="Folder the pictures are saved in (searched recursively).")
-    p.add_argument("--url", default=os.environ.get("TECHTARU_URL", "http://localhost:4400"), help="CRM address.")
-    p.add_argument("--key", default=os.environ.get("TECHTARU_CAMERA_KEY"), help="This camera's key (starts with rck_).")
+    p = argparse.ArgumentParser(description="Push new camera pictures to the Propto CRM.")
+    p.add_argument("--folder", default=os.environ.get("PROPTO_FOLDER"), help="Folder the pictures are saved in (searched recursively).")
+    p.add_argument("--url", default=os.environ.get("PROPTO_URL", "http://localhost:4700"), help="CRM address.")
+    p.add_argument("--key", default=os.environ.get("PROPTO_CAMERA_KEY"), help="This camera's key (starts with rck_).")
     p.add_argument("--state", default=None, help="Where to remember what was sent (default: next to the folder's name in your home directory).")
     p.add_argument("--newer-than-days", type=float, default=7, help="Ignore pictures older than this on the first run (default 7).")
     p.add_argument("--dry-run", action="store_true", help="List what would be sent, send nothing.")
@@ -93,7 +93,7 @@ def batches(items):
 
 
 def encode(batch):
-    boundary = "----techtaru" + uuid.uuid4().hex
+    boundary = "----propto" + uuid.uuid4().hex
     parts = []
     for full, st, _sig in batch:
         taken = datetime.fromtimestamp(st.st_mtime, tz=timezone.utc).isoformat()
@@ -123,12 +123,12 @@ def send(url, key, batch):
 def main():
     a = parse_args()
     if not a.folder or not a.key:
-        print("Both --folder and --key are required (or set TECHTARU_FOLDER and TECHTARU_CAMERA_KEY).", file=sys.stderr)
+        print("Both --folder and --key are required (or set PROPTO_FOLDER and PROPTO_CAMERA_KEY).", file=sys.stderr)
         return 2
     if not os.path.isdir(a.folder):
         print(f"Folder not found: {a.folder}", file=sys.stderr)
         return 2
-    state_path = a.state or os.path.join(os.path.expanduser("~"), ".techtaru-camera-state-" + hashlib.sha1(os.path.abspath(a.folder).encode()).hexdigest()[:10] + ".json")
+    state_path = a.state or os.path.join(os.path.expanduser("~"), ".propto-camera-state-" + hashlib.sha1(os.path.abspath(a.folder).encode()).hexdigest()[:10] + ".json")
     state = load_state(state_path)
     new = find_new(a.folder, state, a.newer_than_days)
     print(f"{len(new)} new picture(s) in {a.folder}")

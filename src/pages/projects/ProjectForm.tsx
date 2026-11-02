@@ -99,7 +99,7 @@ export function ProjectBasicInfoFields({ values, errors, onChange }: FieldsProps
         value={values.projectName}
         onChange={(e) => onChange({ projectName: e.target.value })}
         error={errors.projectName}
-        placeholder="e.g. TechTaru Elysium"
+        placeholder="e.g. Propto Elysium"
         wrapperClassName="sm:col-span-2"
       />
       <Select

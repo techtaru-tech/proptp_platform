@@ -68,7 +68,7 @@ export function renderPlaceholders(text: string, lead: PlaceholderLead): string 
 // Unsubscribe
 // ---------------------------------------------------------------------------
 
-const UNSUBSCRIBE_SECRET = process.env.JWT_SECRET || 'techtaru-dev-jwt-secret-change-me';
+const UNSUBSCRIBE_SECRET = process.env.JWT_SECRET || 'propto-dev-jwt-secret-change-me';
 
 /**
  * Signed rather than stored: the link is an HMAC of the address, so it cannot be guessed for
@@ -135,7 +135,7 @@ async function transport(
       subject: input.subject,
       htmlContent: input.html,
       // Brevo returns this on the inbound/event webhooks, which is how a reply is tied back.
-      headers: { 'X-Mailer': 'TechTaru' },
+      headers: { 'X-Mailer': 'Propto' },
     },
     {
       headers: { 'api-key': decrypt(settings.apiKey!), 'Content-Type': 'application/json' },

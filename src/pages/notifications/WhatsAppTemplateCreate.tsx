@@ -282,13 +282,13 @@ export function WhatsAppTemplateCreate() {
                           label="Link"
                           value={b.url}
                           onChange={(e) => patchButton(i, { url: e.target.value })}
-                          placeholder="https://techtaru.com/digital-lab"
+                          placeholder="https://proptocrm.com/demo"
                           hint="Add {{1}} at the very end to make part of the link change per person."
                           required
                         />
                       )}
                       {b.type === 'URL' && /\{\{1\}\}$/.test(b.url) && (
-                        <Input label="Example full link" value={b.example ?? ''} onChange={(e) => patchButton(i, { example: e.target.value })} placeholder="https://techtaru.com/digital-lab/jaipur" required />
+                        <Input label="Example full link" value={b.example ?? ''} onChange={(e) => patchButton(i, { example: e.target.value })} placeholder="https://proptocrm.com/demo/jaipur" required />
                       )}
                       {b.type === 'PHONE_NUMBER' && (
                         <Input label="Phone number" value={b.phone} onChange={(e) => patchButton(i, { phone: e.target.value })} placeholder="+919829822983" hint="With country code." required />

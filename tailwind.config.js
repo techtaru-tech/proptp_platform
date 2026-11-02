@@ -6,80 +6,80 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        // TechTaru's headline face (techtaru.com) — headings only, body stays Inter.
-        display: ['"Clash Display"', 'Inter', 'system-ui', 'sans-serif'],
+        // Propto's headline face (proptocrm.com) — headings only, body stays Inter.
+        display: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
       },
       colors: {
-        // The app shell — TechTaru's deep ink neutrals (the techtaru.com page background is
-        // 950), so the sidebar and every dark surface sit in the website's own family.
+        // The app shell — Propto's navy (the logo's road and the proptocrm.com header ink is
+        // 900, its darkest footer navy is 950), so the sidebar and every dark surface sit in the
+        // website's own family.
         shell: {
-          50: '#f5f6f7',
-          100: '#e8eaed',
-          200: '#cbd0d6',
-          300: '#a3acb6',
-          400: '#717c89',
-          500: '#525c6b',
-          600: '#3d4654',
-          700: '#2b333f',
-          800: '#1a1f29',
-          900: '#0f131a',
-          950: '#070a0f',
+          50: '#f5f8fb',
+          100: '#e2e8ef',
+          200: '#c5d1dd',
+          300: '#9fb3c8',
+          400: '#6f86a0',
+          500: '#4f6177',
+          600: '#2f4a68',
+          700: '#1b4470',
+          800: '#0c3560',
+          900: '#062645',
+          950: '#041a31',
         },
-        // TechTaru primary — the "taru" teal of techtaru.com (#00c9c9 is 400 here).
-        // The scale is shifted one step darker than the website's so that 600 — what solid
-        // buttons and active nav use, always with white text — is #007d7d, which passes
-        // contrast; the website's own 600 (#00a3a3) does not under white text.
+        // Propto primary — the green of proptocrm.com's buttons (#0e7f51 is 600, its hover
+        // #0a6a43 is 700, the logo's field green #2bb265 is 500). White on 600 passes contrast,
+        // which is what solid buttons and the active nav use.
         brand: {
-          50: '#e6fbfb',
-          100: '#ccf6f6',
-          200: '#99eded',
-          300: '#4fdede',
-          400: '#00c9c9',
-          500: '#00a3a3',
-          600: '#007d7d',
-          700: '#006a6a',
-          800: '#005757',
-          900: '#003d3d',
-          950: '#002626',
+          50: '#edf9f2',
+          100: '#dff5e9',
+          200: '#b9e8cc',
+          300: '#86d6a7',
+          400: '#4fc27f',
+          500: '#2bb265',
+          600: '#0e7f51',
+          700: '#0a6a43',
+          800: '#0a5537',
+          900: '#08432c',
+          950: '#04271a',
         },
-        // TechTaru secondary — the saffron of techtaru.com (#f97316 is 500). White on 500
-        // is too low-contrast for a filled control, so anything with text on it uses 600
+        // Propto secondary — the amber highlight of proptocrm.com (#d98e04 is 500). White on
+        // 500 is too low-contrast for a filled control, so anything with text on it uses 600
         // or darker.
         accent: {
-          50: '#fff8eb',
-          100: '#ffeec6',
-          200: '#ffd98c',
-          300: '#ffba53',
-          400: '#ff9a2e',
-          500: '#f97316',
-          600: '#c2410c',
-          700: '#9a3412',
-          800: '#7c2d12',
-          900: '#5c210d',
-          950: '#3b1508',
+          50: '#fef8e7',
+          100: '#fdeec4',
+          200: '#fad98a',
+          300: '#f5c04f',
+          400: '#eba620',
+          500: '#d98e04',
+          600: '#9a6203',
+          700: '#7d4f06',
+          800: '#653f0a',
+          900: '#52340d',
+          950: '#2e1c05',
         },
-        // The leaf green of the logo's "taru" half and its crown (#64b975 is 500). Not a UI
-        // colour — it is here so charts, gradients and illustrations can reach for the logo.
+        // The lime of the logo's field stripes (#7ab32e is 500). Not a UI colour — it is here
+        // so charts, gradients and illustrations can reach for the logo.
         blossom: {
-          50: '#f0f8f2',
-          100: '#e0f1e4',
-          200: '#c1e3c8',
-          300: '#a2d5ac',
-          400: '#83c791',
-          500: '#64b975',
-          600: '#50945e',
-          700: '#3c6f46',
-          800: '#2f5737',
-          900: '#23412a',
+          50: '#f4f9ec',
+          100: '#e7f2d6',
+          200: '#cfe5ad',
+          300: '#b2d47e',
+          400: '#95c455',
+          500: '#7ab32e',
+          600: '#628f25',
+          700: '#4a6c1c',
+          800: '#3a5516',
+          900: '#2b3f10',
         },
-        // The steel blue of the logo's "Tech" half (#428797 is 500).
+        // A lighter step of the logo's navy (#2d6294 is 500), for a cool second neutral.
         steel: {
-          200: '#b3cfd5',
-          300: '#8eb7c1',
-          400: '#689fac',
-          500: '#428797',
-          600: '#356c79',
-          700: '#28515b',
+          200: '#b4c8dc',
+          300: '#87a6c4',
+          400: '#5a84ac',
+          500: '#2d6294',
+          600: '#1f4c78',
+          700: '#0c3560',
         },
         surface: {
           DEFAULT: '#ffffff',
@@ -87,8 +87,8 @@ export default {
           muted: '#eef0f3',
         },
         ink: {
-          DEFAULT: '#101828',
-          muted: '#475467',
+          DEFAULT: '#0b1f35',
+          muted: '#4f6177',
           subtle: '#667085',
           faint: '#98a2b3',
         },
