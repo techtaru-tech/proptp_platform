@@ -1,44 +1,37 @@
-# Deploying to portal.techtaru.in
+# Deploying to demo.proptocrm.com
 
 GitHub → `git pull` → `./deploy.sh`. This repo holds **both** halves — the React frontend and
 the Express API — so one deploy builds and ships both.
 
 | | |
 |---|---|
-| URL | https://portal.techtaru.in |
+| URL | https://demo.proptocrm.com |
 | Server | `ec2-user@65.2.106.176` (Amazon Linux 2023) |
-| App directory | `/home/ec2-user/techtaru-portal` |
-| Backend port | `127.0.0.1:4600` (never exposed publicly) |
-| Process manager | pm2, app name `techtaru-portal-backend` |
-| Web server | nginx, `/etc/nginx/conf.d/techtaru-portal.conf` |
-| Database | local PostgreSQL, database `techtaru_portal` |
+| App directory | `/home/ec2-user/propto-crm` |
+| Backend port | `127.0.0.1:4700` (never exposed publicly) |
+| Process manager | pm2, app name `propto-crm-backend` |
+| Web server | nginx, `/etc/nginx/conf.d/propto-crm.conf` |
+| Database | local PostgreSQL, database `propto_crm` |
 | Frontend | built to `dist/`, served as static files by nginx |
 
 **This box is shared.** Other apps already run on it, each on its own port and database
-(4100, 4300, 4400, 4500). TechTaru portal is one more, which is why it has its own port (4600),
+(4100, 4300, 4400, 4500, 4600). Propto CRM is one more, which is why it has its own port (4700),
 its own database, its own pm2 process and its own nginx server block — nothing here touches the
 neighbours. The box has well under 1 GB of RAM, so a 2 GB swap file is required for the builds.
 
 ## First time
 
 ```bash
-# 1. DNS — an A record for portal.techtaru.in pointing at 65.2.106.176
-# 2. GitHub → repo → Settings → Deploy keys → add the box's public key (read-only is enough).
-#    Give this repo its own host alias in ~/.ssh/config on the box:
-#
-#      Host github-techtaru-portal
-#        HostName github.com
-#        User git
-#        IdentityFile ~/.ssh/techtaru_portal_deploy
-#        IdentitiesOnly yes
+# 1. DNS — an A record for demo.proptocrm.com pointing at 65.2.106.176
+# 2. The repo is public, so the box clones it over HTTPS — no deploy key needed.
 
 # 3. On the server
 ssh -i ~/.ssh/taskflow-backend-key.pem ec2-user@65.2.106.176
-git clone git@github-techtaru-portal:techtaru-tech/techtaru-portal.git ~/techtaru-portal
-cd ~/techtaru-portal && ./deploy/server-setup.sh   # swap, database, server/.env, nginx
+git clone https://github.com/techtaru-tech/proptp_platform.git ~/propto-crm
+cd ~/propto-crm && ./deploy/server-setup.sh   # swap, database, server/.env, nginx
 ./deploy.sh                                        # install, migrate, build, start
 cd server && npx ts-node --transpile-only prisma/seed.ts   # once: reference data + the admin
-sudo certbot --nginx -d portal.techtaru.in         # TLS
+sudo certbot --nginx -d demo.proptocrm.com         # TLS
 pm2 save
 ```
 
@@ -54,7 +47,7 @@ email) unreadable. Keep a copy of `server/.env` somewhere safe.
 
 ```bash
 ssh -i ~/.ssh/taskflow-backend-key.pem ec2-user@65.2.106.176
-cd ~/techtaru-portal && ./deploy.sh
+cd ~/propto-crm && ./deploy.sh
 ```
 
 It pulls, installs, applies migrations, builds both halves, restarts pm2 and checks `/api/health`.
@@ -67,17 +60,17 @@ swap. If a build is killed ("Killed" / exit 137), check `free -m` and `swapon --
 ## Rolling back
 
 ```bash
-cd ~/techtaru-portal && git log --oneline | head     # pick the last good commit
+cd ~/propto-crm && git log --oneline | head     # pick the last good commit
 git checkout <commit> && ./deploy.sh
 ```
 
 Migrations only move forward. Take a dump first if a deploy includes a destructive one:
-`pg_dump techtaru_portal | gzip > ~/backups/techtaru_portal_$(date +%F).sql.gz`.
+`pg_dump propto_crm | gzip > ~/backups/propto_crm_$(date +%F).sql.gz`.
 
 ## Useful
 
 ```bash
-pm2 logs techtaru-portal-backend --lines 100
+pm2 logs propto-crm-backend --lines 100
 pm2 status
 sudo nginx -t && sudo systemctl reload nginx
 tail -f /var/log/nginx/error.log

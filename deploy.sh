@@ -1,14 +1,14 @@
 #!/bin/bash
-# TechTaru portal — pull, build, migrate, restart. Run on the server: ./deploy.sh
+# Propto CRM — pull, build, migrate, restart. Run on the server: ./deploy.sh
 #
 # Both halves live in this one repo:
 #   frontend  -> built to dist/ and served as static files by nginx
 #   backend   -> built to server/dist/ and run by pm2, proxied at /api
 set -euo pipefail
 
-APP_DIR="/home/ec2-user/techtaru-portal"
-PM2_NAME="techtaru-portal-backend"
-PORT=4600
+APP_DIR="/home/ec2-user/propto-crm"
+PM2_NAME="propto-crm-backend"
+PORT=4700
 
 cd "$APP_DIR"
 

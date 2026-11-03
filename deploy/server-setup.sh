@@ -2,16 +2,16 @@
 # One-time setup on the EC2 box. Run once, as ec2-user, after cloning the repo and before the
 # first ./deploy.sh. Safe to re-run: every step checks before acting.
 #
-#   git clone git@github-techtaru-portal:techtaru-tech/techtaru-portal.git ~/techtaru-portal
-#   cd ~/techtaru-portal && ./deploy/server-setup.sh
+#   git clone https://github.com/techtaru-tech/proptp_platform.git ~/propto-crm
+#   cd ~/propto-crm && ./deploy/server-setup.sh
 set -euo pipefail
 
-APP_DIR="/home/ec2-user/techtaru-portal"
-DOMAIN="portal.techtaru.in"
-PORT=4600
-DB_NAME="techtaru_portal"
-DB_USER="techtaru_portal"
-ADMIN_EMAIL="${ADMIN_EMAIL:-admin@techtaru.in}"
+APP_DIR="/home/ec2-user/propto-crm"
+DOMAIN="demo.proptocrm.com"
+PORT=4700
+DB_NAME="propto_crm"
+DB_USER="propto_crm"
+ADMIN_EMAIL="${ADMIN_EMAIL:-admin@proptocrm.com}"
 
 cd "$APP_DIR"
 
@@ -79,8 +79,8 @@ else
 fi
 
 echo "==> nginx"
-if [ ! -f /etc/nginx/conf.d/techtaru-portal.conf ]; then
-  sudo cp "$APP_DIR/deploy/nginx-portal.conf" /etc/nginx/conf.d/techtaru-portal.conf
+if [ ! -f /etc/nginx/conf.d/propto-crm.conf ]; then
+  sudo cp "$APP_DIR/deploy/nginx-propto.conf" /etc/nginx/conf.d/propto-crm.conf
   sudo nginx -t && sudo systemctl reload nginx
   echo "    installed"
 else

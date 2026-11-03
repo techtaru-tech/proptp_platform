@@ -1,13 +1,13 @@
 /**
- * pm2 process definition. The backend listens on 127.0.0.1:4600 — nginx is the only thing that
- * talks to it, so it is never exposed directly. 4600 because this box already runs other apps
- * on 4100, 4300, 4400 and 4500.
+ * pm2 process definition. The backend listens on 127.0.0.1:4700 — nginx is the only thing that
+ * talks to it, so it is never exposed directly. 4700 because this box already runs other apps
+ * on 4100, 4300, 4400, 4500 and 4600.
  */
 module.exports = {
   apps: [
     {
-      name: 'techtaru-portal-backend',
-      cwd: '/home/ec2-user/techtaru-portal/server',
+      name: 'propto-crm-backend',
+      cwd: '/home/ec2-user/propto-crm/server',
       script: 'dist/index.js',
       instances: 1,
       exec_mode: 'fork',
@@ -15,8 +15,8 @@ module.exports = {
       // swap the host to death and take the neighbours with it.
       max_memory_restart: '250M',
       env: { NODE_ENV: 'production' },
-      error_file: '/home/ec2-user/logs/techtaru-portal-error.log',
-      out_file: '/home/ec2-user/logs/techtaru-portal-out.log',
+      error_file: '/home/ec2-user/logs/propto-crm-error.log',
+      out_file: '/home/ec2-user/logs/propto-crm-out.log',
       time: true,
     },
   ],
