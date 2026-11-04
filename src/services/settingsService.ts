@@ -54,3 +54,15 @@ export async function getAdminProfile(): Promise<AdminProfile> {
 export async function updateAdminProfile(next: Partial<AdminProfile> & { password?: string }): Promise<AdminProfile> {
   return api.patch<AdminProfile>('/platform-settings/profile', next);
 }
+
+export interface DemoRefreshResult {
+  shiftedByHours: number;
+  tables: number;
+  freshLeads: string[];
+  freshBookings: number;
+  visitsToday: number;
+}
+
+export const getDemoDataStatus = () => api.get<{ enabled: boolean }>('/demo-data/status');
+
+export const refreshDemoData = () => api.post<DemoRefreshResult>('/demo-data/refresh');

@@ -317,6 +317,7 @@ export const NAV_ITEMS: NavItem[] = [
       { label: 'Referral Commission', to: '/settings/referral-commission' },
       { label: 'Badges / Ranks', to: '/settings/badges' },
       { label: 'Audit Log', to: '/settings/audit-log' },
+      { label: 'Demo Data', to: '/settings/demo-data' },
     ],
   },
 ];

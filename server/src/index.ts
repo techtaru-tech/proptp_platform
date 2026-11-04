@@ -76,6 +76,7 @@ import { adminOpsReportsRouter } from './routes/admin/reports';
 import { adminSettingsRouter } from './routes/admin/platformSettings';
 import { panelRolesRouter, panelUsersRouter } from './routes/admin/panelAccess';
 import { adminAuditRouter } from './routes/admin/audit';
+import { adminDemoDataRouter } from './routes/admin/demoData';
 import { adminUploadsRouter } from './routes/admin/uploads';
 
 // --- Flutter partner app ---
@@ -250,6 +251,7 @@ app.use('/api/platform-settings', adminSettingsRouter);
 app.use('/api/panel-roles', panelRolesRouter);
 app.use('/api/panel-users', panelUsersRouter);
 app.use('/api/audit', adminAuditRouter);
+app.use('/api/demo-data', adminDemoDataRouter);
 app.use('/api/uploads', adminUploadsRouter);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

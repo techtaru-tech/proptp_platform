@@ -163,6 +163,7 @@ import { SecuritySettings } from './pages/settings/SecuritySettings';
 import { ScheduleManage } from './pages/settings/ScheduleManage';
 import { ReferralCommissionSettings } from './pages/settings/ReferralCommissionSettings';
 import { BadgeSettings } from './pages/settings/BadgeSettings';
+import { DemoDataSettings } from './pages/settings/DemoDataSettings';
 import { AuditLogPage } from './pages/audit/AuditLogPage';
 
 import { NotFound } from './pages/NotFound';
@@ -369,6 +370,7 @@ function App() {
                 <Route path="/settings/sales-policy" element={<SalesPolicySettings />} />
                 <Route path="/bookings/cancellations" element={<Cancellations />} />
                 <Route path="/settings/badges" element={<BadgeSettings />} />
+                <Route path="/settings/demo-data" element={<DemoDataSettings />} />
                 <Route path="/settings/audit-log" element={<AuditLogPage />} />
               </Route>
 
