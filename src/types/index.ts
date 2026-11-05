@@ -1184,6 +1184,8 @@ export interface AdminSession {
   isFullAccess?: boolean;
   /** Module keys this user may open — mirrors what the server enforces. */
   modules?: ModuleKey[];
+  /** Set on a temporary client login: the moment its access ends. */
+  accessExpiresAt?: string | null;
   /** What this account is (`User.role`) — where they sit in the CRM hierarchy. */
   accountRole?: AccountRole;
   managerId?: string | null;

@@ -291,7 +291,7 @@ function ThreadDrawer({
             value={body}
             onChange={(e) => setBody(e.target.value)}
             placeholder="Paste what was actually sent or received…"
-            className="w-full rounded-lg border border-line-strong bg-white px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus-ring"
+            className="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus-ring"
           />
           <Button variant="primary" size="sm" leftIcon={<Send size={13} />} onClick={submit} isLoading={isSaving} disabled={!body.trim()}>
             Log message

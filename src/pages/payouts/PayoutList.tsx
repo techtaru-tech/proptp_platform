@@ -1,3 +1,4 @@
+import { RecordRef } from '../../components/ui/RecordRef';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileSpreadsheet, Plus } from 'lucide-react';
@@ -87,7 +88,7 @@ export function PayoutList() {
   };
 
   const columns: DataTableColumn<PayoutRequest>[] = [
-    { key: 'id', header: 'Request ID', render: (p) => <span className="font-medium text-ink">{p.id}</span> },
+    { key: 'id', header: 'Request ID', render: (p) => <RecordRef row={p} /> },
     { key: 'user', header: 'User', render: (p) => p.userName },
     { key: 'role', header: 'Role', render: (p) => roleLabel(p.role) },
     { key: 'amount', header: 'Amount', align: 'right', sortable: true, render: (p) => formatCurrency(p.amount) },
@@ -153,7 +154,7 @@ export function PayoutList() {
         isOpen={createOpen}
         onClose={() => setCreateOpen(false)}
         title="Create Payout"
-        description="Manually create a payout on a partner's behalf, mirroring the real admin's manual payout entry."
+        description="Create a payout on a partner's behalf."
         size="sm"
         footer={
           <>

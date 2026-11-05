@@ -84,13 +84,13 @@ export function DataTable<T>({
                 key={col.key}
                 scope="col"
                 style={col.width ? { width: col.width } : undefined}
-                className={cn('whitespace-nowrap px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink-faint', ALIGN_CLASSES[col.align ?? 'left'])}
+                className={cn('whitespace-nowrap px-3 py-2 text-2xs font-semibold uppercase tracking-wider text-ink-subtle', ALIGN_CLASSES[col.align ?? 'left'])}
               >
                 {col.sortable && onSortChange ? (
                   <button
                     type="button"
                     onClick={() => onSortChange(col.key)}
-                    className="inline-flex items-center gap-1 hover:text-ink-muted focus-ring rounded"
+                    className="inline-flex items-center gap-1 rounded uppercase tracking-wider hover:text-ink focus-ring"
                   >
                     {col.header}
                     {sortBy === col.key ? sortDir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} /> : <ArrowUpDown size={12} className="opacity-40" />}
@@ -123,10 +123,10 @@ export function DataTable<T>({
                     openInNewTab(row);
                   }
                 }}
-                className={cn('border-b border-line last:border-0', onRowClick && 'cursor-pointer hover:bg-surface-subtle')}
+                className={cn('border-b border-line transition-colors duration-100 last:border-0', onRowClick && 'cursor-pointer hover:bg-surface-subtle')}
               >
                 {columns.map((col) => (
-                  <td key={col.key} className={cn('px-4 py-3 align-middle text-ink', ALIGN_CLASSES[col.align ?? 'left'], col.className)}>
+                  <td key={col.key} className={cn('px-3 py-2 align-middle text-ink', ALIGN_CLASSES[col.align ?? 'left'], col.className)}>
                     {col.render(row)}
                   </td>
                 ))}

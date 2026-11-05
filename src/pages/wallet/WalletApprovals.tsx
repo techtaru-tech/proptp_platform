@@ -1,3 +1,4 @@
+import { RecordRef } from '../../components/ui/RecordRef';
 import { useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
@@ -78,7 +79,7 @@ export function WalletApprovals() {
   };
 
   const columns: DataTableColumn<FundRequest>[] = [
-    { key: 'id', header: 'Fund ID', render: (f) => <span className="font-medium text-ink">{f.id}</span> },
+    { key: 'id', header: 'Fund ID', render: (f) => <RecordRef row={f} /> },
     { key: 'user', header: 'User', render: (f) => userDisplayName(f.userId) },
     { key: 'gateway', header: 'Method', render: (f) => f.gatewayName },
     { key: 'trxId', header: 'Transaction Ref', render: (f) => f.trxId },
@@ -177,7 +178,7 @@ export function WalletApprovals() {
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
             placeholder="e.g. Bank reference number could not be verified."
-            className="w-full rounded-lg border border-line-strong bg-white px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink-faint focus-ring"
+            className="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink-faint focus-ring"
           />
         </div>
       </Modal>

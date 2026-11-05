@@ -184,7 +184,7 @@ function Editor({ settings, onSaved }: { settings: TelephonySettings; onSaved: (
               <li>Create a <strong>Post</strong> template and add these fields to its <strong>Body</strong>.</li>
               <li>Under <strong>Push-Report Webhook</strong>, add the URL above, set the data source to <strong>Report</strong> and link that template.</li>
             </ol>
-            <pre className="overflow-auto rounded bg-white p-2 text-[11px] leading-relaxed">{TEMPLATE_FIELDS.map(([k, v]) => `${k}  →  ${v}`).join('\n')}</pre>
+            <pre className="overflow-auto rounded bg-surface p-2 text-[11px] leading-relaxed">{TEMPLATE_FIELDS.map(([k, v]) => `${k}  →  ${v}`).join('\n')}</pre>
           </div>
           <div className="flex justify-end border-t border-line pt-4">
             <Button variant="outline" size="sm" leftIcon={<RefreshCw size={14} />} onClick={() => setRotateOpen(true)}>

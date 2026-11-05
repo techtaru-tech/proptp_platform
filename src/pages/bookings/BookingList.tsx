@@ -1,3 +1,4 @@
+import { RecordRef } from '../../components/ui/RecordRef';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Download, Eye } from 'lucide-react';
@@ -176,7 +177,7 @@ export function BookingList({ statusFilter }: BookingListProps) {
   };
 
   const columns: DataTableColumn<BookingRow>[] = [
-    { key: 'id', header: 'Booking ID', render: (b) => <span className="font-medium text-ink">{b.id}</span> },
+    { key: 'id', header: 'Ref', render: (b) => <RecordRef row={b} /> },
     { key: 'bookingName', header: 'Customer', render: (b) => b.bookingName },
     { key: 'phone', header: 'Phone', render: (b) => b.phone },
     { key: 'project', header: 'Project', render: (b) => projectNameForBooking(b) },

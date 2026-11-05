@@ -213,7 +213,7 @@ function BoardColumn({
       <div className="flex items-center gap-2 border-b border-line px-3.5 py-3">
         <span className={cn('h-2 w-2 shrink-0 rounded-full', COLUMN_ACCENT[status])} />
         <h3 className="text-sm font-semibold text-ink">{TASK_STATUS_LABEL[status]}</h3>
-        <span className="ml-auto rounded-full bg-white px-2 py-0.5 text-xs font-medium text-ink-muted">{total}</span>
+        <span className="ml-auto rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-ink-muted">{total}</span>
       </div>
 
       <div className="flex min-h-[120px] flex-col gap-2.5 p-3">
@@ -247,7 +247,7 @@ function TaskCard({ task, onDragStart, onClick }: { task: Task; onDragStart: () 
       draggable
       onDragStart={onDragStart}
       onClick={onClick}
-      className="group cursor-pointer overflow-hidden rounded-lg border border-line bg-white shadow-card transition-shadow hover:shadow-popover"
+      className="group cursor-pointer overflow-hidden rounded-lg border border-line bg-surface shadow-card transition-shadow hover:shadow-popover"
     >
       <div className="flex">
         <span

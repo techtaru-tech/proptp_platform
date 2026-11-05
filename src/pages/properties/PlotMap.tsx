@@ -266,7 +266,7 @@ export function PlotMap() {
           <Badge tone={map.status === 'live' ? 'success' : 'neutral'} dot>
             {map.status === 'live' ? 'Live' : 'Draft'}
           </Badge>
-          <div className="flex overflow-hidden rounded-lg border border-line bg-white" role="group" aria-label="Map mode">
+          <div className="flex overflow-hidden rounded-lg border border-line bg-surface" role="group" aria-label="Map mode">
             {(
               [
                 ['board', 'Board', Eye],
@@ -286,7 +286,7 @@ export function PlotMap() {
             ))}
           </div>
           {mode === 'board' && (
-            <div className="flex overflow-hidden rounded-lg border border-line bg-white" role="group" aria-label="Map look">
+            <div className="flex overflow-hidden rounded-lg border border-line bg-surface" role="group" aria-label="Map look">
               {(
                 [
                   ['status', 'Status colours'],
@@ -371,7 +371,7 @@ export function PlotMap() {
                 aria-pressed={active}
                 onClick={() => toggleStatus(status)}
                 className={cn(
-                  'flex items-center gap-3.5 rounded-xl border bg-white p-4 text-left shadow-card transition-shadow hover:shadow-popover focus-ring',
+                  'flex items-center gap-3.5 rounded-xl border bg-surface p-4 text-left shadow-card transition-shadow hover:shadow-popover focus-ring',
                   active ? 'border-brand-500 ring-1 ring-brand-500' : 'border-line'
                 )}
               >

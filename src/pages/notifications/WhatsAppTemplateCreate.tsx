@@ -312,7 +312,7 @@ export function WhatsAppTemplateCreate() {
           <Card>
             <CardHeader title="Preview" subtitle="Roughly how it looks on the phone" />
             <div className="rounded-xl bg-[#e7ddd3] p-3">
-              <div className="max-w-full overflow-hidden rounded-lg bg-white shadow-sm">
+              <div className="max-w-full overflow-hidden rounded-lg bg-surface shadow-sm">
                 {fileKind && (
                   <div className="flex h-36 items-center justify-center bg-surface-subtle text-ink-faint">
                     {samplePreview && fileKind === 'IMAGE' ? (

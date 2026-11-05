@@ -45,7 +45,7 @@ export function SalesPolicySettings() {
     <div>
       <PageHeader title="Sales policy" description="Rules the sales and accounts teams work to. Change them here; nothing is fixed in code." breadcrumb={[{ label: 'Settings', to: '/settings/organization' }, { label: 'Sales policy' }]}
         actions={<Button variant="primary" onClick={save} isLoading={saving} disabled={!dirty}>Save changes</Button>} />
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
         <Card>
           <CardHeader title="Late-payment penalty" subtitle="Charged on an overdue instalment, simple (not compounding)." />
           <div className="flex flex-col gap-4">

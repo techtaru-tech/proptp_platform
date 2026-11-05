@@ -423,7 +423,7 @@ export function LeadDetail() {
                     <ManagementRow icon={GitBranch} label="Pipeline Stage" value={stage ? `${pipeline?.name} · ${stage.name}` : 'Unassigned'} onClick={() => { setStagePipeline(lead.pipelineId ?? pipelines[0]?.id ?? ""); setStageValue(lead.pipelineStageId ?? ''); setStageOpen(true); }} />
                     <div className="flex w-full items-center justify-between gap-3 rounded-lg border border-line px-3.5 py-2">
                       <label htmlFor="leadTemperature" className="text-sm text-ink-muted">Temperature</label>
-                      <select id="leadTemperature" name="leadTemperature" value={lead.temperature ?? ''} className="rounded-md border border-line-strong bg-white px-2 py-1 text-sm focus-ring"
+                      <select id="leadTemperature" name="leadTemperature" value={lead.temperature ?? ''} className="rounded-md border border-line-strong bg-surface px-2 py-1 text-sm focus-ring"
                         onChange={async (e) => { await updateLead(lead.id, { temperature: (e.target.value || null) as LeadTemperature | null }); setReloadKey((k) => k + 1); }}>
                         <option value="">Not rated</option><option value="hot">Hot</option><option value="warm">Warm</option><option value="cold">Cold</option>
                       </select>
@@ -752,7 +752,7 @@ export function LeadDetail() {
                 rows={3}
                 value={lostReason}
                 onChange={(e) => setLostReason(e.target.value)}
-                className="w-full rounded-lg border border-line-strong bg-white px-3 py-2 text-sm text-ink focus-ring"
+                className="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink focus-ring"
                 placeholder="Why was this lead lost?"
               />
             </div>

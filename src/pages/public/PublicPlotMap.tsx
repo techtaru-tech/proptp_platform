@@ -56,7 +56,7 @@ export function PublicPlotMap() {
 
   const shell = (children: React.ReactNode) => (
     <div className="min-h-screen bg-surface-subtle">
-      <header className="border-b border-line bg-white">
+      <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
           <img src={proptoLockup} alt="Propto CRM" className="h-10 w-auto" />
           <span className="text-xs text-ink-faint">Plot availability</span>
@@ -77,7 +77,7 @@ export function PublicPlotMap() {
 
   if (error || !data) {
     return shell(
-      <div className="mx-auto mt-10 flex max-w-sm flex-col items-center gap-3 rounded-xl border border-line bg-white p-8 text-center shadow-card">
+      <div className="mx-auto mt-10 flex max-w-sm flex-col items-center gap-3 rounded-xl border border-line bg-surface p-8 text-center shadow-card">
         <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted text-ink-faint">
           <MapPinOff size={22} />
         </span>
@@ -115,7 +115,7 @@ export function PublicPlotMap() {
 
       <PlotMapView imageUrl={data.image.url} width={data.image.width} height={data.image.height} plots={plots} selectedId={selectedId} onSelect={setSelectedId} />
 
-      <section aria-live="polite" className={cn('rounded-xl border bg-white p-4 shadow-card', selected ? 'border-line' : 'border-dashed border-line-strong')}>
+      <section aria-live="polite" className={cn('rounded-xl border bg-surface p-4 shadow-card', selected ? 'border-line' : 'border-dashed border-line-strong')}>
         {selected ? (
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between gap-3">

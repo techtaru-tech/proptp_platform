@@ -12,7 +12,7 @@ interface BadgeProps {
 
 const TONE_CLASSES: Record<BadgeTone, string> = {
   neutral: 'bg-surface-muted text-ink-muted',
-  shell: 'bg-shell-50 text-shell-700',
+  shell: 'bg-shell-50 text-steel-600',
   brand: 'bg-brand-50 text-brand-700',
   accent: 'bg-accent-50 text-accent-700',
   success: 'bg-success-50 text-success-700',
@@ -34,7 +34,7 @@ const DOT_CLASSES: Record<BadgeTone, string> = {
 
 export function Badge({ children, tone = 'neutral', dot, className }: BadgeProps) {
   return (
-    <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium', TONE_CLASSES[tone], className)}>
+    <span className={cn('inline-flex items-center gap-1.5 whitespace-nowrap rounded-sm px-1.5 py-px text-xs font-medium', TONE_CLASSES[tone], className)}>
       {dot && <span className={cn('h-1.5 w-1.5 rounded-full', DOT_CLASSES[tone])} />}
       {children}
     </span>

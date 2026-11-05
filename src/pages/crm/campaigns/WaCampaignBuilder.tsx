@@ -169,7 +169,7 @@ export function WaCampaignBuilder() {
       />
       {templateError && (
         <p className="mb-5 flex items-start gap-2 rounded-lg border border-warning-100 bg-warning-50 px-4 py-3 text-sm text-warning-700">
-          <AlertTriangle size={16} className="mt-0.5 shrink-0" /> Could not read your approved templates ({templateError}), so type their names instead.
+          <AlertTriangle size={16} className="mt-0.5 shrink-0" /> Could not read your approved templates: {templateError.replace(/\.\s*$/, '')}. Type the template names instead.
         </p>
       )}
 

@@ -1,3 +1,4 @@
+import { RecordRef } from '../../components/ui/RecordRef';
 import { useMemo, useState } from 'react';
 import { Download, LifeBuoy, MessageSquare } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
@@ -61,7 +62,7 @@ export function SupportReport() {
   }, [filtered]);
 
   const columns: DataTableColumn<Row>[] = [
-    { key: 'id', header: 'Ticket ID', render: (r) => <span className="font-medium text-ink">{r.id}</span> },
+    { key: 'id', header: 'Ticket ID', render: (r) => <RecordRef row={r} /> },
     { key: 'subject', header: 'Subject', render: (r) => <span className="line-clamp-1 max-w-xs">{r.subject}</span> },
     { key: 'status', header: 'Status', render: (r) => <StatusBadge kind="ticket" status={r.status} /> },
     { key: 'createdAt', header: 'Created', render: (r) => formatDate(r.createdAt) },

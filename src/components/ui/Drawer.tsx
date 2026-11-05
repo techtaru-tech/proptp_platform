@@ -35,15 +35,15 @@ export function Drawer({ isOpen, onClose, title, children, width = 'md' }: Drawe
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-shell-950/50" onClick={onClose} aria-hidden="true" />
+      <div className="absolute inset-0 bg-shell-950/40" onClick={onClose} aria-hidden="true" />
       <div
         role="dialog"
         aria-modal="true"
-        className={cn('relative z-10 flex h-full w-full flex-col bg-white shadow-popover', WIDTH_CLASSES[width])}
+        className={cn('relative z-10 flex h-full w-full flex-col bg-surface shadow-popover', WIDTH_CLASSES[width])}
       >
         {title && (
-          <div className="flex items-center justify-between border-b border-line px-5 py-4">
-            <h2 className="text-base font-semibold text-ink">{title}</h2>
+          <div className="flex items-center justify-between border-b border-line px-4 py-3">
+            <h2 className="text-[15px] font-semibold text-ink">{title}</h2>
             <button
               type="button"
               onClick={onClose}
@@ -54,7 +54,7 @@ export function Drawer({ isOpen, onClose, title, children, width = 'md' }: Drawe
             </button>
           </div>
         )}
-        <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        <div className="flex-1 overflow-y-auto px-4 py-4">{children}</div>
       </div>
     </div>,
     document.body

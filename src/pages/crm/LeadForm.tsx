@@ -305,7 +305,7 @@ export function LeadDealFields({ values, errors, onChange }: FieldsProps) {
           value={values.notes}
           onChange={(e) => onChange({ notes: e.target.value })}
           placeholder="Requirement, budget, preferences..."
-          className="w-full rounded-lg border border-line-strong bg-white px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink-faint focus-ring"
+          className="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink-faint focus-ring"
         />
       </div>
     </div>

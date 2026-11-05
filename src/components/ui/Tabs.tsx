@@ -36,20 +36,20 @@ export function Tabs({ items, value, defaultValue, onChange, children }: TabsPro
             aria-selected={active === item.key}
             onClick={() => select(item.key)}
             className={cn(
-              'relative flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3.5 py-2.5 text-sm font-medium transition-colors focus-ring',
-              active === item.key ? 'text-shell-800' : 'text-ink-muted hover:text-ink'
+              'relative flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors duration-150 focus-ring',
+              active === item.key ? 'text-ink' : 'text-ink-subtle hover:text-ink'
             )}
           >
             {item.icon}
             {item.label}
             {item.badge !== undefined && (
-              <span className="rounded-full bg-surface-muted px-1.5 py-0.5 text-[11px] font-semibold text-ink-muted">{item.badge}</span>
+              <span className="rounded-sm bg-surface-muted px-1.5 text-2xs font-semibold tabular-nums text-ink-muted">{item.badge}</span>
             )}
-            {active === item.key && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-shell-800" />}
+            {active === item.key && <span className="absolute inset-x-2 -bottom-px h-0.5 bg-brand-600" />}
           </button>
         ))}
       </div>
-      {children && <div className="pt-4">{children(active)}</div>}
+      {children && <div className="pt-3">{children(active)}</div>}
     </div>
   );
 }

@@ -14,19 +14,19 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  primary: 'bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800 shadow-card',
-  accent: 'bg-accent-600 text-white hover:bg-accent-700 active:bg-accent-800 shadow-card',
-  secondary: 'bg-surface-muted text-ink hover:bg-line-DEFAULT',
-  outline: 'border border-line-strong bg-white text-ink hover:bg-surface-subtle',
+  primary: 'bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800',
+  accent: 'bg-accent-600 text-white hover:bg-accent-700 active:bg-accent-800',
+  secondary: 'bg-surface-muted text-ink hover:bg-line',
+  outline: 'border border-line-strong bg-surface text-ink hover:border-ink-faint hover:bg-surface-subtle',
   ghost: 'text-ink-muted hover:bg-surface-muted hover:text-ink',
   danger: 'bg-danger-600 text-white hover:bg-danger-700',
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
-  sm: 'h-8 px-3 text-xs gap-1.5 rounded-md',
-  md: 'h-9 px-4 text-sm gap-2 rounded-lg',
-  lg: 'h-11 px-5 text-sm gap-2 rounded-lg',
-  icon: 'h-9 w-9 rounded-lg',
+  sm: 'h-7 px-2.5 text-xs gap-1.5 rounded-md',
+  md: 'h-8 px-3 text-sm gap-1.5 rounded-lg',
+  lg: 'h-9 px-4 text-sm gap-2 rounded-lg',
+  icon: 'h-8 w-8 rounded-lg',
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(

@@ -205,7 +205,7 @@ export function UnitBasicInfoFields({ values, errors, onChange }: FieldsProps) {
           value={values.details}
           onChange={(e) => onChange({ details: e.target.value })}
           placeholder="Describe this unit..."
-          className="w-full rounded-lg border border-line-strong bg-white px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink-faint focus-ring"
+          className="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink-faint focus-ring"
         />
       </div>
       <label className="flex items-center gap-2 text-sm text-ink-muted sm:col-span-2">

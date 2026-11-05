@@ -185,7 +185,7 @@ export function NotificationComposer({ onClose, onSent }: { onClose: () => void;
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder="Write the notification message..."
-              className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus-ring ${
+              className={`w-full rounded-lg border bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus-ring ${
                 errors.body ? 'border-danger-500' : 'border-line-strong hover:border-ink-faint'
               }`}
             />
@@ -325,7 +325,7 @@ export function NotificationComposer({ onClose, onSent }: { onClose: () => void;
                   value={sendAt}
                   min={localInputValue(new Date())}
                   onChange={(e) => setSendAt(e.target.value)}
-                  className="rounded-lg border border-line-strong bg-white px-3 py-2 text-sm text-ink focus-ring"
+                  className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink focus-ring"
                 />
               )}
             </div>

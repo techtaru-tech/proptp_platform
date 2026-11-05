@@ -1,3 +1,4 @@
+import { PROJECT_IMAGE_PLACEHOLDER } from '../../utils/placeholders';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LayoutGrid, List, MapPin, Plus } from 'lucide-react';
@@ -81,7 +82,7 @@ export function ProjectList() {
       render: (p) => (
         <div className="flex items-center gap-3">
           <img
-            src={fileUrl(p.thumbnail ?? p.banner) ?? 'https://placehold.co/140x100/652251/ffffff?text=Project'}
+            src={fileUrl(p.thumbnail ?? p.banner) ?? PROJECT_IMAGE_PLACEHOLDER}
             alt={p.projectName}
             className="h-10 w-14 shrink-0 rounded-md object-cover"
           />
@@ -139,7 +140,7 @@ export function ProjectList() {
           onReset={resetFilters}
           hasActiveFilters={hasActiveFilters}
           actions={
-            <div className="flex items-center gap-1 rounded-lg border border-line-strong bg-white p-0.5">
+            <div className="flex items-center gap-1 rounded-lg border border-line-strong bg-surface p-0.5">
               <button
                 type="button"
                 aria-label="List view"
@@ -236,11 +237,11 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
     <button
       type="button"
       onClick={onClick}
-      className="flex flex-col overflow-hidden rounded-xl border border-line bg-white text-left shadow-card transition-shadow hover:shadow-popover focus-ring"
+      className="flex flex-col overflow-hidden rounded-xl border border-line bg-surface text-left shadow-card transition-shadow hover:shadow-popover focus-ring"
     >
       <div className="relative h-32 w-full">
         <img
-          src={fileUrl(project.thumbnail ?? project.banner) ?? 'https://placehold.co/400x300/652251/ffffff?text=Project'}
+          src={fileUrl(project.thumbnail ?? project.banner) ?? PROJECT_IMAGE_PLACEHOLDER}
           alt={project.projectName}
           className="h-full w-full object-cover"
         />
@@ -270,7 +271,7 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
             <p className="text-[10px] uppercase tracking-wide text-ink-faint">Booked</p>
           </div>
           <div>
-            <p className="text-sm font-semibold text-shell-700">{counts.soldOut}</p>
+            <p className="text-sm font-semibold text-steel-600">{counts.soldOut}</p>
             <p className="text-[10px] uppercase tracking-wide text-ink-faint">Sold Out</p>
           </div>
         </div>

@@ -1,8 +1,10 @@
 @import 'tailwindcss';
+@import './styles/tokens.css';
 @config '../tailwind.config.js';
 
 /* Self-hosted — no text waits on a third-party origin. Inter (body) and Plus Jakarta Sans
-   (headings) are the two faces proptocrm.com uses; each is one variable file for every weight. */
+   (headings) are the two faces proptocrm.com uses; Geist Mono sets IDs and references.
+   Each is one variable file for every weight. */
 @font-face {
   font-family: 'Inter';
   font-style: normal;
@@ -17,6 +19,13 @@
   font-display: swap;
   src: url('/fonts/plus-jakarta-sans-variable.woff2') format('woff2');
 }
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/geist-mono-variable.woff2') format('woff2');
+}
 
 :root {
   color-scheme: light;
@@ -27,22 +36,31 @@ html, body, #root {
 }
 
 body {
-  @apply bg-surface-subtle text-ink font-sans antialiased;
+  @apply bg-surface-subtle text-base text-ink font-sans antialiased;
+  /* Inter's single-storey a, tailed l and flat-topped 1 — read as a set table, not a default font. */
+  font-feature-settings: 'cv11', 'cv05', 'cv08';
 }
 
 /* Page and section titles take Propto's display face, as on proptocrm.com. */
 @layer base {
   h1, h2 {
-    @apply font-display tracking-[-0.02em];
+    @apply font-display tracking-[-0.015em];
+  }
+  /* Figures line up in every table and stat, whichever component drew them. */
+  table, .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+  kbd {
+    @apply inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-sm border border-line-strong bg-surface px-1 font-mono text-[10px] font-medium text-ink-subtle;
   }
 }
 
 * {
-  border-color: #e4e7ec;
+  border-color: var(--c-line);
 }
 
 ::selection {
-  background: rgba(43, 178, 101, 0.25);
+  background: color-mix(in oklab, var(--c-brand-500) 28%, transparent);
 }
 
 ::-webkit-scrollbar {
@@ -53,18 +71,38 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d0d5dd;
+  background: var(--c-line-strong);
   border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2bb265;
+  background: var(--c-ink-faint);
+  background-clip: content-box;
 }
 
 .focus-ring {
-  @apply outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
+  @apply outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 focus-visible:ring-offset-surface;
 }
 
 @layer utilities {
   .scrollbar-none::-webkit-scrollbar { display: none; }
   .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+/* Charts draw their colours as SVG attributes; these follow the theme instead. */
+.recharts-cartesian-grid line { stroke: var(--c-line); }
+.recharts-cartesian-axis-tick-value { fill: var(--c-ink-subtle); }
+.recharts-default-tooltip {
+  background: var(--c-surface) !important;
+  border: 1px solid var(--c-line) !important;
+  border-radius: 6px;
+  font-size: 12px;
+  box-shadow: 0 8px 24px -6px rgba(16, 24, 40, 0.14);
+}
+.recharts-tooltip-label { color: var(--c-ink) !important; font-weight: 600; }
+.recharts-tooltip-cursor { fill: var(--c-surface-muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0ms !important; animation-duration: 0ms !important; }
 }

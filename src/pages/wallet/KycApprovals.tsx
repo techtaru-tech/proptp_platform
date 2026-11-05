@@ -101,7 +101,7 @@ export function KycApprovals() {
     <div>
       <PageHeader
         title="KYC Approvals"
-        description="Real system captures no rejection reason on this action — rejecting a KYC submission also deactivates the account."
+        description="Rejecting a KYC submission also deactivates the partner's account."
       />
 
       <Card padded={false}>
@@ -152,7 +152,7 @@ export function KycApprovals() {
         onClose={() => setRejectTarget(null)}
         onConfirm={handleReject}
         title="Reject KYC"
-        description={rejectTarget ? `This will reject ${rejectTarget.name}'s KYC AND deactivate their account, matching the real system's behavior.` : undefined}
+        description={rejectTarget ? `This will reject ${rejectTarget.name}'s KYC and deactivate their account.` : undefined}
         confirmLabel="Reject & Deactivate"
         variant="danger"
         audited

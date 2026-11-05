@@ -94,7 +94,7 @@ export function WebhookTestModal({ connection, onClose }: WebhookTestModalProps)
             value={payloadText}
             onChange={(e) => setPayloadText(e.target.value)}
             spellCheck={false}
-            className="w-full rounded-lg border border-line-strong bg-white px-3 py-2 font-mono text-xs leading-relaxed text-ink focus-ring"
+            className="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 font-mono text-xs leading-relaxed text-ink focus-ring"
           />
           <p className="text-xs text-ink-faint">
             Paste a real payload from the platform to check it maps correctly before going live.

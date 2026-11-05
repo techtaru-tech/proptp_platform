@@ -1,54 +1,42 @@
 import type { ReactNode } from 'react';
-import { BarChart3, ShieldCheck, Users } from 'lucide-react';
 import proptoLockupWhite from '../assets/brand/propto-lockup-white.png';
+import heroTowers from '../assets/dashboard/hero-towers.webp';
 
 const HIGHLIGHTS = [
-  { icon: BarChart3, label: 'Projects, bookings and payments in one console' },
-  { icon: Users, label: 'Partners, teams, attendance and payouts' },
-  { icon: ShieldCheck, label: 'Role-based access with a full audit trail' },
+  'Leads, site visits and bookings',
+  'Collections, payouts and commission statements',
+  'Attendance, leave and payroll',
 ];
 
 /**
- * The signed-out shell: one rounded card floating on a tinted page, brand panel on the left
- * (desktop only) and the form on the right. The page padding is what gives the card air on
- * every side — it is deliberately not a full-bleed split.
+ * The signed-out shell: a photo panel on the left (desktop only) and the form on the right,
+ * inside one bordered card on the plain page background.
  */
 export function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-surface-subtle via-surface to-brand-50 p-4 sm:p-6 lg:p-10">
-      <div className="grid w-full max-w-6xl overflow-hidden rounded-3xl border border-line bg-white shadow-popover lg:min-h-[640px] lg:grid-cols-2">
-        <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-shell-950 via-shell-900 to-brand-800 p-12 text-white lg:flex">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.14),transparent_45%)]" />
+    <div className="flex min-h-screen items-center justify-center bg-surface-subtle p-4 sm:p-6 lg:p-10">
+      <div className="grid w-full max-w-5xl overflow-hidden rounded-xl border border-line bg-surface lg:min-h-[600px] lg:grid-cols-[1.05fr_1fr]">
+        <div className="relative hidden flex-col justify-between overflow-hidden bg-shell-950 p-10 text-white lg:flex">
+          {/* A real photograph (Unsplash License), darkened so the copy stays readable. */}
+          <img src={heroTowers} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover object-[60%_70%]" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,26,49,0.86)_0%,rgba(4,26,49,0.55)_45%,rgba(4,26,49,0.92)_100%)]" />
 
-          {/* Navy into Propto green, like proptocrm.com's dark sections, with the white-text
-              lockup set directly on it. */}
-          <div className="relative">
-            <img src={proptoLockupWhite} alt="Propto CRM" className="h-14 w-auto" />
-          </div>
+          <img src={proptoLockupWhite} alt="Propto CRM" className="relative h-10 w-auto self-start" />
 
           <div className="relative">
-            <h2 className="text-4xl font-semibold leading-tight">Partner &amp; Operations Admin Panel</h2>
-            <p className="mt-4 text-base leading-relaxed text-white/80">
-              Everything your operations team runs on, in a single secure console.
+            <p className="max-w-sm text-[15px] leading-relaxed text-white/85">
+              The office side of Propto CRM — the same records your partners see in the app.
             </p>
-
-            <ul className="mt-9 space-y-4">
-              {HIGHLIGHTS.map(({ icon: Icon, label }) => (
-                <li key={label} className="flex items-start gap-3 text-sm text-white/90">
-                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/15 backdrop-blur">
-                    <Icon size={14} />
-                  </span>
-                  {label}
-                </li>
-              ))}
+            <ul className="mt-6 space-y-2 border-l border-white/20 pl-4 text-[13px] text-white/85">
+              {HIGHLIGHTS.map((label) => <li key={label}>{label}</li>)}
             </ul>
           </div>
 
-          <p className="relative text-xs text-white/60">© {new Date().getFullYear()} Propto CRM. All rights reserved.</p>
+          <p className="relative text-xs text-white/50">© {new Date().getFullYear()} Propto CRM</p>
         </div>
 
-        <div className="flex items-center justify-center px-6 py-12 sm:px-14 sm:py-16">
-          <div className="w-full max-w-md">{children}</div>
+        <div className="flex items-center justify-center px-6 py-10 sm:px-12 sm:py-14">
+          <div className="w-full max-w-sm">{children}</div>
         </div>
       </div>
     </div>

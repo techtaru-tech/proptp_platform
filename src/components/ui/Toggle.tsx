@@ -23,7 +23,7 @@ export function Toggle({ checked, onChange, label, showLabel = true, description
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(
-          'relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors focus-ring',
+          'relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors duration-150 focus-ring',
           checked ? 'bg-brand-600' : 'bg-line-strong',
           disabled && 'cursor-not-allowed opacity-50'
         )}
@@ -32,8 +32,8 @@ export function Toggle({ checked, onChange, label, showLabel = true, description
             Tailwind v4 setup, which let the knob spill out of the track and over the label. */}
         <span
           className={cn(
-            'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-card transition-[left] duration-150',
-            checked ? 'left-[22px]' : 'left-0.5'
+            'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.2)] transition-[left] duration-150',
+            checked ? 'left-[18px]' : 'left-0.5'
           )}
         />
       </button>

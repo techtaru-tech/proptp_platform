@@ -441,7 +441,7 @@ export function PlotMapEditor({ projectId, imageUrl, width, height, initialShape
       </div>
 
       <aside className="flex flex-col gap-4">
-        <div className="rounded-xl border border-line bg-white p-4 shadow-card">
+        <div className="rounded-xl border border-line bg-surface p-4 shadow-card">
           <p className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Tools</p>
           <div className="mt-2.5 grid grid-cols-3 gap-2">
             {tools.map(({ id, label, icon: Icon }) => (
@@ -478,7 +478,7 @@ export function PlotMapEditor({ projectId, imageUrl, width, height, initialShape
           </div>
         </div>
 
-        <div className="rounded-xl border border-line bg-white p-4 shadow-card">
+        <div className="rounded-xl border border-line bg-surface p-4 shadow-card">
           <p className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Selected outline</p>
           {selected ? (
             <div className="mt-3 flex flex-col gap-3.5">
@@ -512,7 +512,7 @@ export function PlotMapEditor({ projectId, imageUrl, width, height, initialShape
           )}
         </div>
 
-        <div className="rounded-xl border border-line bg-white p-4 shadow-card">
+        <div className="rounded-xl border border-line bg-surface p-4 shadow-card">
           <div className="flex items-baseline justify-between">
             <p className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Progress</p>
             <p className="text-sm font-semibold text-ink">
@@ -532,7 +532,7 @@ export function PlotMapEditor({ projectId, imageUrl, width, height, initialShape
               </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {unlinked.slice(0, 12).map((s, i) => (
-                  <button key={s.key} type="button" onClick={() => setSelectedKey(s.key)} className="rounded-md bg-white px-2 py-0.5 text-xs text-warning-700 ring-1 ring-warning-100 hover:bg-warning-100 focus-ring">
+                  <button key={s.key} type="button" onClick={() => setSelectedKey(s.key)} className="rounded-md bg-surface px-2 py-0.5 text-xs text-warning-700 ring-1 ring-warning-100 hover:bg-warning-100 focus-ring">
                     {s.label || `#${i + 1}`}
                   </button>
                 ))}

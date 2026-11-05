@@ -75,7 +75,7 @@ export function PlotMapSelect() {
             <Link
               key={project.id}
               to={`/properties/map/${project.id}`}
-              className="group overflow-hidden rounded-xl border border-line bg-white shadow-card transition-shadow hover:shadow-popover focus-ring"
+              className="group overflow-hidden rounded-xl border border-line bg-surface shadow-card transition-shadow hover:shadow-popover focus-ring"
             >
               <div className="relative h-32 bg-surface-muted">
                 {map ? (

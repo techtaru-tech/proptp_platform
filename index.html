@@ -7,6 +7,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#062645" />
     <title>Propto CRM — Admin Panel</title>
+    <script>
+      // Applied before the first paint so a dark-mode user never sees a white flash.
+      try {
+        var t = localStorage.getItem('propto.theme');
+        if (t === 'dark') document.documentElement.classList.add('dark');
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

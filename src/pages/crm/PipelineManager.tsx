@@ -83,7 +83,7 @@ export function PipelineManager() {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between gap-3">
-        <p className="text-sm text-ink-muted">Create and manage pipelines and their stages. Work leads through them on the Kanban tab.</p>
+        <p className="text-sm text-ink-muted">Work leads through these on the Kanban tab.</p>
         <Button variant="primary" size="sm" leftIcon={<Plus size={14} />} onClick={openCreate}>
           Add Pipeline
         </Button>

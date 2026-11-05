@@ -3,6 +3,7 @@ import QRCode from 'qrcode';
 import type { NextFunction, Request, Response } from 'express';
 import { prisma } from '../../prisma';
 import {
+  accessExpiredMessage,
   canUsePanel,
   hashPassword,
   requireAuth,
@@ -62,6 +63,9 @@ adminAuthRouter.post('/login', async (req, res, next) => {
     if (user.status !== 'active') {
       return res.status(403).json({ error: 'This admin account is not active.' });
     }
+    if (user.accessExpiresAt && user.accessExpiresAt.getTime() <= Date.now()) {
+      return res.status(403).json({ error: accessExpiredMessage(user.accessExpiresAt) });
+    }
 
     // Password was right, but it is only the first half of the answer when 2FA is on. The
     // challenge below unlocks nothing except the verify step.
@@ -89,6 +93,7 @@ async function sessionResponse(userId: string, req: Request) {
     roleName: access.roleName ?? undefined,
     isFullAccess: access.isFullAccess,
     modules: access.modules,
+    accessExpiresAt: user.accessExpiresAt?.toISOString() ?? null,
     ...(await hierarchyProfile(user.id)),
     token: signToken({ sub: user.id, role: user.role, sid: sessionId }),
   };
@@ -158,6 +163,7 @@ adminAuthRouter.get('/me', requireAuth, async (req: AuthedRequest, res, next) =>
       roleName: access.roleName ?? undefined,
       isFullAccess: access.isFullAccess,
       modules: access.modules,
+      accessExpiresAt: user.accessExpiresAt?.toISOString() ?? null,
       ...(await hierarchyProfile(user.id)),
     });
   } catch (err) {

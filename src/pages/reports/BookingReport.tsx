@@ -1,3 +1,4 @@
+import { RecordRef } from '../../components/ui/RecordRef';
 import { useMemo, useState } from 'react';
 import { Download, ClipboardList, IndianRupee, CheckCircle2, Clock3 } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
@@ -22,9 +23,18 @@ const STATUS_OPTIONS = [
   { value: 'all', label: 'All Statuses' },
   { value: 'Pending', label: 'Pending' },
   { value: 'Confirmed', label: 'Confirmed' },
+  { value: 'Cancelled', label: 'Cancelled' },
 ];
 
 const PAGE_SIZE = 10;
+
+/** The report endpoint returns the stored status; the page groups part-paid with booked, as the dashboard does. */
+function statusLabel(status: string): string {
+  if (status === 'booked' || status === 'partPaid') return 'Confirmed';
+  if (status === 'pending') return 'Pending';
+  if (status === 'cancelled') return 'Cancelled';
+  return status;
+}
 
 export function BookingReport() {
   const { data, isLoading, error } = useAsync(() => getBookingReport(), []);
@@ -34,7 +44,7 @@ export function BookingReport() {
   const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
-    const rows = data ?? [];
+    const rows = (data ?? []).map((r) => ({ ...r, status: statusLabel(r.status) }));
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
       if (status !== 'all' && r.status !== status) return false;
@@ -59,7 +69,7 @@ export function BookingReport() {
   }, [filtered]);
 
   const columns: DataTableColumn<Row>[] = [
-    { key: 'id', header: 'Booking ID', render: (r) => <span className="font-medium text-ink">{r.id}</span> },
+    { key: 'id', header: 'Ref', render: (r) => <RecordRef row={r} /> },
     { key: 'date', header: 'Date', render: (r) => formatDate(r.date) },
     { key: 'project', header: 'Project', render: (r) => r.project },
     { key: 'partner', header: 'Partner', render: (r) => r.partner },

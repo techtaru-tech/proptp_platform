@@ -450,7 +450,7 @@ function FormEditor({ existing, onCreatedAnother }: { existing?: LeadForm; onCre
               </datalist>
 
               {/* The consent field, shown locked so the builder matches what visitors will see. */}
-              <div className="flex items-start justify-between gap-3 rounded-lg border border-dashed border-line-strong bg-white px-3 py-3">
+              <div className="flex items-start justify-between gap-3 rounded-lg border border-dashed border-line-strong bg-surface px-3 py-3">
                 <div className="flex items-start gap-2.5">
                   <Lock size={14} className="mt-0.5 shrink-0 text-ink-faint" />
                   <div>
@@ -472,7 +472,7 @@ function FormEditor({ existing, onCreatedAnother }: { existing?: LeadForm; onCre
           </Card>
 
           <CollapsibleCard title="Live Preview" subtitle="A live preview of how the form will appear to visitors." defaultOpen>
-            <div className={values.layout === 'card' ? 'rounded-xl border border-line bg-white p-5' : ''}>
+            <div className={values.layout === 'card' ? 'rounded-xl border border-line bg-surface p-5' : ''}>
               <PublicFormRenderer form={previewForm} mode="preview" />
             </div>
           </CollapsibleCard>
@@ -491,7 +491,7 @@ function FormEditor({ existing, onCreatedAnother }: { existing?: LeadForm; onCre
                     type="color"
                     value={values.accentColor}
                     onChange={(e) => patch({ accentColor: e.target.value })}
-                    className="h-9 w-12 cursor-pointer rounded-lg border border-line-strong bg-white p-1"
+                    className="h-9 w-12 cursor-pointer rounded-lg border border-line-strong bg-surface p-1"
                   />
                   <Input
                     aria-label="Accent colour hex"
@@ -601,7 +601,7 @@ function Textarea({ label, value, onChange, placeholder, hint, rows = 2 }: Texta
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-line-strong bg-white px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink-faint focus-ring"
+        className="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink-faint focus-ring"
       />
       {hint && <p className="text-xs text-ink-faint">{hint}</p>}
     </div>

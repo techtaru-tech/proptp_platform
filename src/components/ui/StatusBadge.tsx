@@ -2,6 +2,12 @@ import { Badge, type BadgeTone } from './Badge';
 
 type StatusMap = Record<string, { label: string; tone: BadgeTone }>;
 
+/** "team_leader" -> "Team leader", "pending" -> "Pending". */
+function humanize(value: string): string {
+  const words = value.replace(/[_-]+/g, ' ').trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 const PROJECT_STATUS: StatusMap = {
   '1': { label: 'Active', tone: 'success' },
   '0': { label: 'Deactive', tone: 'neutral' },
@@ -24,6 +30,13 @@ const UNIT_ACTIVE_STATUS: StatusMap = {
 const BOOKING_STATUS: StatusMap = {
   '0': { label: 'Pending', tone: 'warning' },
   '1': { label: 'Confirmed', tone: 'success' },
+  pending: { label: 'Pending', tone: 'warning' },
+  booked: { label: 'Confirmed', tone: 'success' },
+  partPaid: { label: 'Part paid', tone: 'success' },
+  cancelled: { label: 'Cancelled', tone: 'danger' },
+  Pending: { label: 'Pending', tone: 'warning' },
+  Confirmed: { label: 'Confirmed', tone: 'success' },
+  Cancelled: { label: 'Cancelled', tone: 'danger' },
 };
 
 /** Booking `is_deposit`: 0=Initial payment, 1=Installment/deposit payment. */
@@ -79,6 +92,8 @@ const PAYMENT_MODE: StatusMap = {
   '1': { label: 'Cash', tone: 'neutral' },
   '2': { label: 'Cheque', tone: 'info' },
   '3': { label: 'Other', tone: 'neutral' },
+  '4': { label: 'Online', tone: 'info' },
+  online: { label: 'Online', tone: 'info' },
 };
 
 const CORRECTION_STATUS: StatusMap = {
@@ -170,7 +185,7 @@ interface StatusBadgeProps {
 
 export function StatusBadge({ kind, status, dot = true, className }: StatusBadgeProps) {
   const key = String(status);
-  const entry = MAPS[kind][key] ?? { label: key, tone: 'neutral' as const };
+  const entry = MAPS[kind][key] ?? { label: humanize(key), tone: 'neutral' as const };
   return (
     <Badge tone={entry.tone} dot={dot} className={className}>
       {entry.label}

@@ -22,7 +22,7 @@ export function ConstructionHome() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {data.map((p) => (
-            <Link key={p.id} to={`/construction/${p.id}`} className="rounded-xl border border-line bg-white p-5 shadow-card transition-shadow hover:shadow-popover focus-ring">
+            <Link key={p.id} to={`/construction/${p.id}`} className="rounded-xl border border-line bg-surface p-5 shadow-card transition-shadow hover:shadow-popover focus-ring">
               <h3 className="text-base font-semibold text-ink">{p.projectName}</h3>
               <p className="text-xs text-ink-muted">{p.projectLocation}</p>
               {p.activities === 0 ? (
@@ -31,7 +31,7 @@ export function ConstructionHome() {
                 <>
                   <div className="mt-5 flex items-end justify-between">
                     <div>
-                      <p className="text-3xl font-semibold tabular-nums text-ink">{p.actual}%</p>
+                      <p className="text-2xl font-semibold tabular-nums text-ink">{p.actual}%</p>
                       <p className="text-xs text-ink-muted">complete · plan {p.planned}%</p>
                     </div>
                     <BehindBadge days={p.daysBehind} />

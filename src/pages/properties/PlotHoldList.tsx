@@ -1,3 +1,4 @@
+import { RecordRef } from '../../components/ui/RecordRef';
 import { useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
@@ -130,7 +131,7 @@ export function PlotHoldList() {
   };
 
   const columns: DataTableColumn<PlotHoldRow>[] = [
-    { key: 'id', header: 'Hold ID', render: (h) => <span className="font-medium text-ink">{h.id}</span> },
+    { key: 'id', header: 'Hold ID', render: (h) => <RecordRef row={h} /> },
     { key: 'property', header: 'Property', render: (h) => unitLabelForHold(h) },
     { key: 'project', header: 'Project', render: (h) => projectNameForHold(h) },
     { key: 'user', header: 'Held For', render: (h) => h.userName },
@@ -212,11 +213,11 @@ export function PlotHoldList() {
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1.5 text-sm font-medium text-ink">
               Hold start
-              <input type="date" value={holdStart} onChange={(e) => setHoldStart(e.target.value)} className="rounded-lg border border-line-strong bg-white px-3 py-2 text-sm focus-ring" />
+              <input type="date" value={holdStart} onChange={(e) => setHoldStart(e.target.value)} className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm focus-ring" />
             </label>
             <label className="flex flex-col gap-1.5 text-sm font-medium text-ink">
               Hold end
-              <input type="date" value={holdEnd} onChange={(e) => setHoldEnd(e.target.value)} className="rounded-lg border border-line-strong bg-white px-3 py-2 text-sm focus-ring" />
+              <input type="date" value={holdEnd} onChange={(e) => setHoldEnd(e.target.value)} className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm focus-ring" />
             </label>
           </div>
           {createError && <p className="text-xs text-danger-600">{createError}</p>}

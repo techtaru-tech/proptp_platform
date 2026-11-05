@@ -1,3 +1,4 @@
+import { RecordRef } from '../../components/ui/RecordRef';
 import { useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
@@ -73,7 +74,7 @@ export function IncentiveRequestList() {
   };
 
   const columns: DataTableColumn<IncentiveRequestRow>[] = [
-    { key: 'id', header: 'Request ID', render: (r) => <span className="font-medium text-ink">{r.id}</span> },
+    { key: 'id', header: 'Request ID', render: (r) => <RecordRef row={r} /> },
     { key: 'user', header: 'Agent / Partner', render: (r) => userDisplayName(r.userId) },
     { key: 'property', header: 'Property', render: (r) => unitLabelForIncentiveRequest(r) },
     { key: 'project', header: 'Project', render: (r) => projectNameForIncentiveRequest(r) },
@@ -101,7 +102,7 @@ export function IncentiveRequestList() {
     <div>
       <PageHeader
         title="Incentive Requests"
-        description="Agents raise incentive requests against a booked property; the real system's accept/reject action is a simple status flip with no automatic payout."
+        description="Incentive requests partners raise against booked properties. Accepting one does not pay it out — release it from Payouts."
       />
 
       <Card padded={false}>

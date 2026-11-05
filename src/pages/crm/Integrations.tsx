@@ -179,7 +179,7 @@ export function Integrations() {
         <p>
           Credentials, access tokens and webhook secrets are stored encrypted on the backend and are never exposed here. Meta
           connections verify against the Graph API and receive at <code>/api/webhook/meta</code>; every other source ingests
-          through its own tokenised webhook URL below — paste that URL into the platform, then use <strong>Send test payload</strong>
+          through its own tokenised webhook URL below — paste that URL into the platform, then use <strong>Send test payload</strong>{' '}
           to confirm the fields map correctly.
         </p>
       </div>

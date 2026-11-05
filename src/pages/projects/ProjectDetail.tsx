@@ -1,3 +1,5 @@
+import { RecordRef } from '../../components/ui/RecordRef';
+import { PROJECT_IMAGE_PLACEHOLDER } from '../../utils/placeholders';
 import { useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Building2, Edit2, HardHat, ImageIcon, ClipboardList, History, LayoutGrid, MapPin, Plus, Search } from 'lucide-react';
@@ -47,7 +49,7 @@ const UNIT_STATUS_OPTIONS: { value: UnitBookingStatus | 'all'; label: string }[]
 const UNIT_STATUS_TINT: Record<UnitBookingStatus, string> = {
   0: 'border-success-200 bg-success-50 text-success-700',
   1: 'border-info-200 bg-info-50 text-info-700',
-  2: 'border-shell-200 bg-shell-50 text-shell-700',
+  2: 'border-shell-200 bg-shell-50 text-steel-600',
 };
 
 export function ProjectDetail() {
@@ -180,7 +182,7 @@ export function ProjectDetail() {
 
       <Card padded={false} className="mb-6 overflow-hidden">
         <img
-          src={fileUrl(project.banner) ?? 'https://placehold.co/1200x480/652251/ffffff?text=Project'}
+          src={fileUrl(project.banner) ?? PROJECT_IMAGE_PLACEHOLDER}
           alt={project.projectName}
           className="h-48 w-full object-cover sm:h-64"
         />
@@ -364,7 +366,7 @@ function InventoryTab({ projectId, onSelectUnit }: { projectId: string; onSelect
           <Button variant="primary" size="sm" leftIcon={<Plus size={14} />} onClick={() => navigate('/properties/new')}>
             Add Property
           </Button>
-          <div className="flex items-center gap-1 rounded-lg border border-line-strong bg-white p-0.5">
+          <div className="flex items-center gap-1 rounded-lg border border-line-strong bg-surface p-0.5">
             <button
               type="button"
               onClick={() => setView('grid')}
@@ -457,7 +459,7 @@ function BookingsTab({ bookings }: { bookings: BookingRow[] }) {
     return <EmptyState title="No bookings yet" description="No bookings have been made for this project." />;
   }
   const columns: DataTableColumn<(typeof bookings)[number]>[] = [
-    { key: 'id', header: 'Booking ID', render: (b) => <span className="font-medium text-ink">{b.id}</span> },
+    { key: 'id', header: 'Ref', render: (b) => <RecordRef row={b} /> },
     { key: 'bookingName', header: 'Customer', render: (b) => b.bookingName },
     { key: 'partner', header: 'Partner', render: (b) => b.partnerName },
     { key: 'amount', header: 'Amount', align: 'right', render: (b) => formatCurrency(b.amount) },

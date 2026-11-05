@@ -11,6 +11,16 @@ import { milestoneState } from '../../services/legal';
 export const adminDashboardRouter = Router();
 
 const TREND_DAYS = 14;
+/** Months in the collection chart (its widest view is two years) plus a year before, for "last year". */
+const COLLECTION_MONTHS = 24;
+const MONTH_LABEL = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** "2026-11" for the month `back` months before the given "YYYY-MM". */
+function monthBefore(month: string, back: number): string {
+  const [y, m] = month.split('-').map(Number);
+  const idx = y * 12 + (m - 1) - back;
+  return `${Math.floor(idx / 12)}-${String((idx % 12) + 1).padStart(2, '0')}`;
+}
 
 /**
  * The dashboard snapshot. Counting is done with `groupBy`/`count` aggregates rather than by
@@ -20,6 +30,11 @@ adminDashboardRouter.get('/snapshot', async (_req, res, next) => {
   try {
     const today = dayKey();
     const trendStart = new Date(today.getTime() - (TREND_DAYS - 1) * 86400000);
+    // Months are the org's calendar months; a margin of a few days is fetched and then bucketed exactly.
+    const thisMonth = dayString().slice(0, 7);
+    const firstMonth = monthBefore(thisMonth, COLLECTION_MONTHS + 11);
+    const collectionStart = new Date(`${firstMonth}-01T00:00:00Z`);
+    collectionStart.setUTCDate(collectionStart.getUTCDate() - 1);
 
     const [
       projectsByStatus,
@@ -32,6 +47,7 @@ adminDashboardRouter.get('/snapshot', async (_req, res, next) => {
       ticketsByStatus,
       trendRows,
       openUnits,
+      collectionRows,
     ] = await Promise.all([
       prisma.project.groupBy({ by: ['status'], _count: { _all: true } }),
       prisma.propertyUnit.groupBy({ by: ['bookingStatus'], _count: { _all: true } }),
@@ -47,7 +63,50 @@ adminDashboardRouter.get('/snapshot', async (_req, res, next) => {
         where: { bookingStatus: { not: 0 } },
         select: { totalInvestmentAmount: true, bookings: { select: { amount: true, status: true } } },
       }),
+      // Same basis as `collected` below (every booking and deposit payment), bucketed by month.
+      prisma.booking.findMany({
+        where: { createdAt: { gte: collectionStart } },
+        select: { createdAt: true, amount: true, isDeposit: true, status: true },
+      }),
     ]);
+
+    const byMonth = new Map<string, { collected: number; bookings: number }>();
+    // Month-to-date against the same days of last month, so the 5th of a month isn't measured
+    // against all thirty days of the one before it.
+    const lastMonth = monthBefore(thisMonth, 1);
+    const todayOfMonth = dayString().slice(8, 10);
+    const lastMonthToDate = { collected: 0, bookings: 0 };
+    for (const row of collectionRows) {
+      const day = dayString(row.createdAt);
+      const key = day.slice(0, 7);
+      if (key === lastMonth && day.slice(8, 10) <= todayOfMonth) {
+        lastMonthToDate.collected += row.amount;
+        if (row.isDeposit === 0 && (row.status === 'booked' || row.status === 'partPaid')) lastMonthToDate.bookings += 1;
+      }
+      const m = byMonth.get(key) ?? { collected: 0, bookings: 0 };
+      m.collected += row.amount;
+      if (row.isDeposit === 0 && (row.status === 'booked' || row.status === 'partPaid')) m.bookings += 1;
+      byMonth.set(key, m);
+    }
+    const collectionTrend = Array.from({ length: COLLECTION_MONTHS }, (_, i) => {
+      const key = monthBefore(thisMonth, COLLECTION_MONTHS - 1 - i);
+      return {
+        key,
+        month: MONTH_LABEL[Number(key.slice(5)) - 1],
+        year: Number(key.slice(0, 4)),
+        collection: byMonth.get(key)?.collected ?? 0,
+        bookings: byMonth.get(key)?.bookings ?? 0,
+        lastYear: byMonth.get(monthBefore(key, 12))?.collected ?? 0,
+      };
+    });
+    const monthCompare = {
+      collectedThisMonth: byMonth.get(thisMonth)?.collected ?? 0,
+      collectedLastMonth: byMonth.get(lastMonth)?.collected ?? 0,
+      collectedLastMonthToDate: lastMonthToDate.collected,
+      confirmedThisMonth: byMonth.get(thisMonth)?.bookings ?? 0,
+      confirmedLastMonth: byMonth.get(lastMonth)?.bookings ?? 0,
+      confirmedLastMonthToDate: lastMonthToDate.bookings,
+    };
 
     const countBy = <T extends string | number>(rows: { _count: { _all: number } }[], keys: T[], keyOf: (r: any) => T) => {
       const map = new Map<T, number>(keys.map((k) => [k, 0]));
@@ -146,6 +205,8 @@ adminDashboardRouter.get('/snapshot', async (_req, res, next) => {
         pendingReplies: ticketCounts.get('pending') ?? 0,
         resolved: (ticketCounts.get('resolved') ?? 0) + (ticketCounts.get('closed') ?? 0),
       },
+      collectionTrend,
+      monthCompare,
       bookingTrend: [...trendCounts.entries()].map(([date, count]) => ({ date: date.slice(5), bookings: count })),
       paymentOverview: [
         { name: 'Bank Transfer', value: payments.bankTransfer },
@@ -243,7 +304,7 @@ adminDashboardRouter.get('/management', async (req: AuthedRequest, res, next) =>
         prisma.lead.groupBy({ by: ['originalSource'], where, _count: { _all: true } }),
         prisma.lead.aggregate({ where: { ...where, dealValue: { not: null }, stage: { is: { isWon: false, isLost: false } } }, _count: { _all: true }, _sum: { dealValue: true } }),
       ]);
-      const stages = await prisma.pipelineStage.findMany({ where: { id: { in: byStage.map((s) => s.pipelineStageId!) } }, select: { id: true, name: true, pipelineId: true, sortOrder: true } });
+      const stages = await prisma.pipelineStage.findMany({ where: { id: { in: byStage.map((s) => s.pipelineStageId!) } }, select: { id: true, name: true, pipelineId: true, sortOrder: true, isWon: true, isLost: true } });
       const sid = new Map(stages.map((s) => [s.id, s]));
       // One pipeline at a time reads sensibly: the one that holds most of the leads.
       const perPipeline = new Map<string, number>();
@@ -252,7 +313,7 @@ adminDashboardRouter.get('/management', async (req: AuthedRequest, res, next) =>
       out.pipeline = byStage
         .filter((r) => sid.get(r.pipelineStageId!)?.pipelineId === main)
         .sort((a, b) => sid.get(a.pipelineStageId!)!.sortOrder - sid.get(b.pipelineStageId!)!.sortOrder)
-        .map((r) => ({ stageId: r.pipelineStageId, name: sid.get(r.pipelineStageId!)!.name, leads: r._count._all, value: r._sum.dealValue ?? 0, to: `/crm/leads?stageId=${r.pipelineStageId}` }));
+        .map((r) => ({ stageId: r.pipelineStageId, name: sid.get(r.pipelineStageId!)!.name, isWon: sid.get(r.pipelineStageId!)!.isWon, isLost: sid.get(r.pipelineStageId!)!.isLost, leads: r._count._all, value: r._sum.dealValue ?? 0, to: `/crm/leads?stageId=${r.pipelineStageId}` }));
       out.expectedBusiness = { leads: open._count._all, value: open._sum.dealValue ?? 0, to: '/crm/leads' };
       out.sources = bySource.map((r) => ({ source: r.originalSource ?? 'unknown', leads: r._count._all, to: r.originalSource ? `/crm/leads?source=${r.originalSource}` : '/crm/leads' })).sort((a, b) => b.leads - a.leads).slice(0, 8);
     }

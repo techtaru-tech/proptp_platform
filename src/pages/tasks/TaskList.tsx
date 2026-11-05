@@ -58,7 +58,7 @@ export function TaskList({ mineOnly = false }: { mineOnly?: boolean }) {
   const [dueTo, setDueTo] = useState('');
   const [overdue, setOverdue] = useState(false);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(25);
   const [pendingDelete, setPendingDelete] = useState<Task | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 

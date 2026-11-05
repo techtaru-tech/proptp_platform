@@ -336,7 +336,7 @@ function BoardTab({ id, tick }: { id: string; tick: number }) {
           <p className="mb-2 flex items-center justify-between text-sm font-medium text-ink">{col.name}<Badge tone="neutral">{col.total}</Badge></p>
           <div className="space-y-2">
             {col.contacts.map((c) => (
-              <div key={c.id} className="rounded-md border border-line bg-white p-2.5 text-sm shadow-card">
+              <div key={c.id} className="rounded-md border border-line bg-surface p-2.5 text-sm shadow-card">
                 <p className="font-medium text-ink">{c.name || c.phone}</p>
                 <p className="text-xs text-ink-faint">{c.name ? c.phone : ''}{c.language ? ` · ${c.language === 'hi' ? 'Hinglish' : 'English'}` : ''}</p>
                 {c.meetingAt && <p className="mt-1 flex items-center gap-1 text-xs font-medium text-success-700"><CalendarClock size={12} /> {formatDateTime(c.meetingAt)}</p>}

@@ -156,6 +156,7 @@ import { OrganizationSettings } from './pages/settings/OrganizationSettings';
 import { BusinessHoursSettings } from './pages/settings/BusinessHoursSettings';
 import { RolesSettings } from './pages/settings/RolesSettings';
 import { PanelUsersSettings } from './pages/settings/PanelUsersSettings';
+import { ClientAccessSettings } from './pages/settings/ClientAccessSettings';
 import { AttendancePolicySettings } from './pages/settings/AttendancePolicySettings';
 import { NotificationSettings } from './pages/settings/NotificationSettings';
 import { AdminProfileSettings } from './pages/settings/AdminProfileSettings';
@@ -357,6 +358,7 @@ function App() {
                 <Route path="/settings/business-hours" element={<BusinessHoursSettings />} />
                 <Route path="/settings/roles" element={<RolesSettings />} />
                 <Route path="/settings/panel-users" element={<PanelUsersSettings />} />
+                <Route path="/settings/client-access" element={<ClientAccessSettings />} />
                 <Route path="/settings/telephony" element={<TelephonySettingsPage />} />
                 <Route path="/settings/email" element={<EmailSettingsPage />} />
                 <Route path="/settings/whatsapp" element={<WhatsAppSettingsPage />} />

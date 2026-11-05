@@ -152,7 +152,7 @@ function MapPlaceholder({ record }: { record: NonNullable<Awaited<ReturnType<typ
           className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-dashed"
           style={{ borderColor: inside ? '#12b76a' : '#f04438' }}
         >
-          <span className="flex flex-col items-center gap-0.5 text-shell-800">
+          <span className="flex flex-col items-center gap-0.5 text-steel-700">
             <Navigation size={16} />
             <span className="text-[10px] font-medium">Office</span>
           </span>
@@ -166,7 +166,7 @@ function MapPlaceholder({ record }: { record: NonNullable<Awaited<ReturnType<typ
         }}
       >
         <MapPin size={20} className={inside ? 'text-success-600' : 'text-danger-600'} fill="currentColor" fillOpacity={0.15} />
-        <span className="rounded bg-white px-1.5 py-0.5 text-[10px] font-medium text-ink shadow-card">Check-in</span>
+        <span className="rounded bg-surface px-1.5 py-0.5 text-[10px] font-medium text-ink shadow-card">Check-in</span>
       </div>
     </div>
   );

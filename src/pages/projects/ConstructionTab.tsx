@@ -45,7 +45,7 @@ export function ConstructionTab({ projectId }: { projectId: string }) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">Whole project</p>
-          <p className="text-4xl font-semibold tabular-nums text-ink">{bundle.summary.actual}%</p>
+          <p className="text-3xl font-semibold tabular-nums text-ink">{bundle.summary.actual}%</p>
           <p className="text-sm text-ink-muted">complete · plan says {bundle.summary.planned}% · {bundle.summary.activities} activities</p>
         </div>
         <div className="flex flex-col items-end gap-1">

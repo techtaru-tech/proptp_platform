@@ -12,6 +12,13 @@ export interface DashboardSnapshot {
   teams: { employeeNetwork: number; leaderNetwork: number; teamMembers: number };
   attendance: { present: number; checkedIn: number; checkedOut: number; late: number; absent: number; pendingSync: number };
   support: { open: number; pendingReplies: number; resolved: number };
+  /** The last 24 org-calendar months, oldest first; `lastYear` is the same month a year earlier. */
+  collectionTrend: { key: string; month: string; year: number; collection: number; bookings: number; lastYear: number }[];
+  /** `…LastMonthToDate` covers the same days of last month as have passed in this one. */
+  monthCompare: {
+    collectedThisMonth: number; collectedLastMonth: number; collectedLastMonthToDate: number;
+    confirmedThisMonth: number; confirmedLastMonth: number; confirmedLastMonthToDate: number;
+  };
   bookingTrend: { date: string; bookings: number }[];
   paymentOverview: { name: string; value: number }[];
   inventoryBreakdown: { name: string; value: number }[];

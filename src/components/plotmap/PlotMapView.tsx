@@ -180,7 +180,7 @@ export function PlotMapView({ imageUrl, width, height, plots, selectedId, onSele
         </svg>
       </div>
 
-      <div className="absolute right-3 top-3 flex flex-col overflow-hidden rounded-lg border border-line bg-white shadow-card">
+      <div className="absolute right-3 top-3 flex flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-card">
         <button type="button" aria-label="Zoom in" onClick={() => step(0.5)} disabled={zoom >= MAX_ZOOM} className="p-2 text-ink-muted hover:bg-surface-muted disabled:opacity-40 focus-ring">
           <ZoomIn size={16} />
         </button>

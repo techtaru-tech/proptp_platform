@@ -104,11 +104,11 @@ export function Payroll() {
                 <tr key={s.userId} className="border-b border-line last:border-0">
                   <td className="px-4 py-2.5">
                     <span className="font-medium text-ink">{s.name}</span>
-                    <span className="ml-2 text-xs text-ink-faint">{s.role}</span>
+                    <span className="ml-2 text-xs text-ink-faint">{s.role.replace(/_/g, ' ')}</span>
                   </td>
-                  <td className="px-4 py-2.5 text-right tabular-nums text-ink-muted">{s.basic || '—'}</td>
-                  <td className="px-4 py-2.5 text-right tabular-nums text-ink-muted">{s.hra || '—'}</td>
-                  <td className="px-4 py-2.5 text-right tabular-nums text-ink-muted">{s.otherAllowance || '—'}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-ink-muted">{s.basic ? formatCurrency(s.basic) : '—'}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-ink-muted">{s.hra ? formatCurrency(s.hra) : '—'}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-ink-muted">{s.otherAllowance ? formatCurrency(s.otherAllowance) : '—'}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums font-medium text-ink">
                     {s.hasStructure ? formatCurrency(s.grossMonthly) : '—'}
                   </td>

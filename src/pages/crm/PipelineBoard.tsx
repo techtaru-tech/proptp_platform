@@ -173,7 +173,7 @@ function StageColumn({ title, color, column, isLoading, onLoadMore, isDragOver, 
       onDrop={handleDrop}
       className={cn('flex h-[calc(100vh-15rem)] w-72 shrink-0 flex-col rounded-xl border bg-surface-subtle transition-colors', isDragOver ? 'border-brand-400 bg-brand-50' : 'border-line')}
     >
-      <div className="flex items-center justify-between rounded-t-xl border-b border-line bg-white px-3.5 py-2.5">
+      <div className="flex items-center justify-between rounded-t-xl border-b border-line bg-surface px-3.5 py-2.5">
         <span className="flex items-center gap-2 text-sm font-semibold text-ink">
           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
           {title}
@@ -192,7 +192,7 @@ function StageColumn({ title, color, column, isLoading, onLoadMore, isDragOver, 
                 draggable
                 onDragStart={() => onDragStartLead(lead.id)}
                 onClick={() => onCardClick(lead.id)}
-                className="cursor-pointer rounded-lg border border-line bg-white p-3 shadow-card transition-shadow hover:shadow-popover"
+                className="cursor-pointer rounded-lg border border-line bg-surface p-3 shadow-card transition-shadow hover:shadow-popover"
               >
                 <div className="mb-1.5 flex items-center justify-between gap-2">
                   <p className="flex items-center gap-1 truncate text-sm font-medium text-ink">

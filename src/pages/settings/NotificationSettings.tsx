@@ -9,7 +9,7 @@ import {
   updateNotificationSettings,
   type NotificationSettings as NotificationSettingsType,
 } from '../../services/settingsService';
-import { cn } from '../../utils/cn';
+import { Toggle } from '../../components/ui/Toggle';
 
 const TOGGLES: { key: keyof NotificationSettingsType; label: string; description: string }[] = [
   { key: 'emailAlerts', label: 'Email Alerts', description: 'Receive email notifications for important operational events.' },
@@ -61,24 +61,7 @@ export function NotificationSettings() {
                 <p className="text-sm font-medium text-ink">{t.label}</p>
                 <p className="mt-0.5 text-xs text-ink-muted">{t.description}</p>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={values[t.key]}
-                aria-label={t.label}
-                onClick={() => toggle(t.key)}
-                className={cn(
-                  'relative h-6 w-11 shrink-0 rounded-full transition-colors focus-ring',
-                  values[t.key] ? 'bg-brand-600' : 'bg-line-strong'
-                )}
-              >
-                <span
-                  className={cn(
-                    'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-card transition-transform',
-                    values[t.key] ? 'translate-x-[22px]' : 'translate-x-0.5'
-                  )}
-                />
-              </button>
+              <Toggle checked={values[t.key]} onChange={() => toggle(t.key)} label={t.label} showLabel={false} />
             </div>
           ))}
         </div>

@@ -61,7 +61,7 @@ export function StampedPhotos({
             <img src={URL.createObjectURL(p.file)} alt={`${label} ${i + 1}`} className="h-16 w-20 rounded-lg border border-line object-cover" />
             <span className="absolute inset-x-0 bottom-0 flex items-center gap-0.5 rounded-b-lg bg-black/60 px-1 text-[9px] text-white"><MapPin size={8} />{p.latitude.toFixed(3)},{p.longitude.toFixed(3)}</span>
             <button type="button" aria-label={`Remove ${label} ${i + 1}`} onClick={() => onChange(photos.filter((_, j) => j !== i))}
-              className="absolute -right-1.5 -top-1.5 rounded-full border border-line bg-white p-0.5 focus-ring"><X size={11} /></button>
+              className="absolute -right-1.5 -top-1.5 rounded-full border border-line bg-surface p-0.5 focus-ring"><X size={11} /></button>
           </span>
         ))}
         {photos.length < max && (

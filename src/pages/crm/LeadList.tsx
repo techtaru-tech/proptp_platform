@@ -350,7 +350,7 @@ export function LeadList() {
           {/* A real link, so the browser's own "open in new tab" works on the row. The whole
               block, not just the name: a lead without one would leave an empty link behind. */}
           <Link to={`/crm/leads/${l.id}`} onClick={(e) => e.stopPropagation()} className="min-w-0 rounded focus-ring">
-            <p className="flex items-center gap-1 font-medium text-ink">
+            <p className="flex items-center gap-1 whitespace-nowrap font-medium text-ink">
               {leadFullName(l)}
               {l.isStarred && <Star size={12} className="fill-warning-500 text-warning-500" />}
               {l.receivedOutsideBusinessHours && (

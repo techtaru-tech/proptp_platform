@@ -158,7 +158,7 @@ export function TicketDetail() {
                           href={fileUrl(url)}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 text-[11px] text-ink-muted hover:border-ink-faint focus-ring"
+                          className="inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2 py-1 text-[11px] text-ink-muted hover:border-ink-faint focus-ring"
                         >
                           <Paperclip size={11} /> Attachment {i + 1}
                         </a>
@@ -198,7 +198,7 @@ export function TicketDetail() {
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Type a reply..."
               rows={2}
-              className="flex-1 resize-none rounded-lg border border-line-strong bg-white px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus-ring"
+              className="flex-1 resize-none rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus-ring"
             />
             <input ref={fileInputRef} type="file" accept={ACCEPT_MEDIA} multiple className="sr-only" onChange={(e) => handleAttach(e.target.files)} />
             <Button

@@ -41,7 +41,7 @@ export function Vendors() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {data.map((v) => (
-            <Link key={v.id} to={`/vendors/${v.id}`} className="rounded-xl border border-line bg-white p-5 shadow-card hover:shadow-popover focus-ring">
+            <Link key={v.id} to={`/vendors/${v.id}`} className="rounded-xl border border-line bg-surface p-5 shadow-card hover:shadow-popover focus-ring">
               <div className="flex items-start justify-between gap-2">
                 <h3 className="font-semibold text-ink">{v.name}</h3>
                 <Badge tone={v.active ? 'success' : 'neutral'}>{v.active ? 'Active' : 'Inactive'}</Badge>

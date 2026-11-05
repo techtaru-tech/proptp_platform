@@ -1,3 +1,4 @@
+import { RecordRef } from '../../components/ui/RecordRef';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Download, Eye, PauseCircle, PlayCircle, RefreshCw } from 'lucide-react';
@@ -163,7 +164,7 @@ export function InvestmentList({ filter = 'all' }: InvestmentListProps) {
   };
 
   const columns: DataTableColumn<InvestmentRow>[] = [
-    { key: 'id', header: 'Investment ID', render: (inv) => <span className="font-medium text-ink">{inv.id}</span> },
+    { key: 'id', header: 'Investment ID', render: (inv) => <RecordRef row={inv} /> },
     { key: 'investor', header: 'Investor', render: (inv) => inv.userName },
     { key: 'project', header: 'Project', render: (inv) => projectNameForInvestment(inv) },
     { key: 'unit', header: 'Property', render: (inv) => unitLabelForInvestment(inv) },
@@ -291,7 +292,7 @@ export function InvestmentList({ filter = 'all' }: InvestmentListProps) {
         isOpen={deactivateOpen}
         onClose={() => setDeactivateOpen(false)}
         title="Deactivate Investment"
-        description="A reason is required whenever an investment is deactivated, matching the real admin workflow."
+        description="Give a reason — it is kept on the investment's history."
         size="sm"
         footer={
           <>
@@ -314,7 +315,7 @@ export function InvestmentList({ filter = 'all' }: InvestmentListProps) {
             value={deactivateReason}
             onChange={(e) => setDeactivateReason(e.target.value)}
             placeholder="e.g. Investor requested early exit"
-            className="w-full rounded-lg border border-line-strong bg-white px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink-faint focus-ring"
+            className="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink-faint focus-ring"
           />
         </div>
       </Modal>

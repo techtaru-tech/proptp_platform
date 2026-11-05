@@ -1062,6 +1062,10 @@ model User {
 
   sessions Session[]
 
+  /// Temporary panel access (Settings > Client Access): once this moment passes the account
+  /// can no longer sign in and every open session stops working. Null = no expiry.
+  accessExpiresAt DateTime?
+
   leaveRequests   LeaveRequest[]   @relation("LeaveRequester")
   leaveBalances   LeaveBalance[]
   salaryStructure SalaryStructure?
@@ -3640,4 +3644,16 @@ model WaOptOut {
   reason    String   @default("")
   source    String   @default("whatsapp")
   createdAt DateTime @default(now())
+}
+
+/// One run of the demo-data rotation (DEMO_TOOLS=true). `records` lists the ids it created per
+/// model, so the next run can remove exactly those rows and nothing else.
+model DemoBatch {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  records   Json
+  summary   Json?
+  clearedAt DateTime?
+
+  @@index([createdAt])
 }

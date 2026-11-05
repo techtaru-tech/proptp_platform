@@ -15,8 +15,8 @@ function ChildLink({ to, label }: { to: string; label: string }) {
       end
       className={({ isActive }) =>
         cn(
-          'block rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors focus-ring',
-          isActive ? 'bg-brand-600 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
+          'relative block rounded-md px-2.5 py-1 text-[12.5px] transition-colors duration-150 focus-ring',
+          isActive ? 'bg-white/[0.08] font-medium text-white before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-full before:bg-brand-400' : 'text-white/60 hover:bg-white/5 hover:text-white'
         )
       }
     >
@@ -54,16 +54,16 @@ export function Sidebar() {
 
   const content = (
     <div className="flex h-full flex-col bg-shell-900 text-white">
-      <div className={cn('flex items-center border-b border-white/10 px-4 py-4', sidebarCollapsed ? 'justify-center' : 'justify-between')}>
+      <div className={cn('flex h-12 shrink-0 items-center border-b border-white/10 px-4', sidebarCollapsed ? 'justify-center' : 'justify-between')}>
         {/* The sidebar is Propto's own navy, so the white-text lockup sits on it directly — the
             way proptocrm.com shows it on dark. The mark alone keeps a white chip: its navy road
             would vanish into the sidebar. */}
         {sidebarCollapsed ? (
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white p-1.5 shadow-card">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white p-1.5">
             <img src={proptoMark} alt="Propto CRM" className="h-full w-auto" />
           </span>
         ) : (
-          <img src={proptoLockupWhite} alt="Propto CRM" className="h-9 w-auto" />
+          <img src={proptoLockupWhite} alt="Propto CRM" className="h-7 w-auto" />
         )}
         <button
           type="button"
@@ -76,28 +76,33 @@ export function Sidebar() {
       </div>
 
       {!sidebarCollapsed && (
-        <div className="px-4 pb-3 pt-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-white/40">Admin Panel</p>
+        <div className="px-4 pb-1.5 pt-3.5">
+          <p className="text-2xs font-semibold uppercase tracking-wider text-white/40">Admin panel</p>
         </div>
       )}
 
-      <nav className="flex-1 space-y-0.5 overflow-y-auto px-2.5 pb-4 scrollbar-none">
+      <nav className="flex-1 space-y-px overflow-y-auto px-2 pb-4 scrollbar-none">
         {sections.map((section) => {
           const single = section.items.length === 1 ? section.items[0] : undefined;
           const isOpen = activeSection === section.label;
           const isCurrent = autoExpanded !== undefined && section.items.some((i) => i.label === autoExpanded);
           const rowClass = (on: boolean) =>
             cn(
-              'flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors focus-ring',
-              on ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white',
+              'relative flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors duration-150 focus-ring',
+              on ? 'bg-white/[0.08] text-white' : 'text-white/70 hover:bg-white/5 hover:text-white',
               sidebarCollapsed && 'justify-center'
             );
 
           // A section that is just one page (Dashboard, Reports with no children) is a plain link.
           if (single && !single.children) {
             return (
-              <NavLink key={section.label} to={single.to} title={sidebarCollapsed ? section.label : undefined} className={rowClass(isCurrent)}>
-                <section.icon size={18} className="shrink-0" />
+              <NavLink
+                key={section.label}
+                to={single.to}
+                title={sidebarCollapsed ? section.label : undefined}
+                className={cn(rowClass(isCurrent), isCurrent && 'before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-full before:bg-brand-400')}
+              >
+                <section.icon size={16} strokeWidth={1.75} className="shrink-0" />
                 {!sidebarCollapsed && <span className="truncate">{section.label}</span>}
               </NavLink>
             );
@@ -111,7 +116,7 @@ export function Sidebar() {
                 className={rowClass(isCurrent || isOpen)}
                 title={sidebarCollapsed ? section.label : undefined}
               >
-                <section.icon size={18} className="shrink-0" />
+                <section.icon size={16} strokeWidth={1.75} className="shrink-0" />
                 {!sidebarCollapsed && (
                   <>
                     <span className="flex-1 truncate text-left">{section.label}</span>
@@ -121,7 +126,7 @@ export function Sidebar() {
               </button>
 
               {isOpen && !sidebarCollapsed && (
-                <div className="mb-1 ml-[1.65rem] mt-0.5 space-y-0.5 border-l border-white/10 pl-3">
+                <div className="mb-1 ml-[1.45rem] mt-px space-y-px border-l border-white/10 pl-2.5">
                   {single
                     ? single.children!.map((child) => <ChildLink key={child.to} to={child.to} label={child.label} />)
                     : section.items.map((item) =>
@@ -131,7 +136,7 @@ export function Sidebar() {
                               type="button"
                               onClick={() => setExpandedItem(expandedItem === item.label ? '' : item.label)}
                               className={cn(
-                                'flex w-full items-center rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors focus-ring',
+                                'flex w-full items-center rounded-md px-2.5 py-1 text-[12.5px] font-medium transition-colors duration-150 focus-ring',
                                 autoExpanded === item.label || expandedItem === item.label ? 'text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
                               )}
                             >
@@ -139,7 +144,7 @@ export function Sidebar() {
                               <ChevronDown size={12} className={cn('shrink-0 transition-transform', (autoExpanded === item.label || expandedItem === item.label) && 'rotate-180')} />
                             </button>
                             {(autoExpanded === item.label || expandedItem === item.label) && (
-                              <div className="ml-2 space-y-0.5 border-l border-white/10 pl-2">
+                              <div className="ml-2 space-y-px border-l border-white/10 pl-2">
                                 {item.children.map((child) => (
                                   <ChildLink key={child.to} to={child.to} label={child.label} />
                                 ))}
@@ -161,7 +166,7 @@ export function Sidebar() {
         <button
           type="button"
           onClick={toggleSidebar}
-          className="flex w-full items-center justify-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-white/60 hover:bg-white/5 hover:text-white focus-ring"
+          className="flex w-full items-center justify-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-medium text-white/60 hover:bg-white/5 hover:text-white focus-ring"
         >
           {sidebarCollapsed ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
           {!sidebarCollapsed && 'Collapse'}
@@ -172,8 +177,8 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className={cn('hidden shrink-0 transition-all duration-200 md:block', sidebarCollapsed ? 'w-[76px]' : 'w-64')}>
-        <div className="fixed inset-y-0 z-30 w-[inherit]" style={{ width: sidebarCollapsed ? 76 : 256 }}>
+      <aside className={cn('hidden shrink-0 transition-[width] duration-200 md:block', sidebarCollapsed ? 'w-16' : 'w-[232px]')}>
+        <div className="fixed inset-y-0 z-30 w-[inherit]" style={{ width: sidebarCollapsed ? 64 : 232 }}>
           {content}
         </div>
       </aside>
@@ -181,7 +186,7 @@ export function Sidebar() {
       {mobileSidebarOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="absolute inset-0 bg-shell-950/60" onClick={() => setMobileSidebarOpen(false)} aria-hidden="true" />
-          <div className="relative z-10 h-full w-64">{content}</div>
+          <div className="relative z-10 h-full w-[232px]">{content}</div>
         </div>
       )}
     </>

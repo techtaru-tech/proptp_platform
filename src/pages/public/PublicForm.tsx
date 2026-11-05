@@ -26,7 +26,7 @@ export function PublicForm() {
 
   if (isLoading) {
     return shell(
-      <div className="flex flex-col gap-3 rounded-xl border border-line bg-white p-6 shadow-card">
+      <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-6 shadow-card">
         <Skeleton className="h-5 w-2/3" />
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-10 w-full" />
@@ -38,7 +38,7 @@ export function PublicForm() {
 
   if (error || !form) {
     return shell(
-      <div className="flex flex-col items-center gap-3 rounded-xl border border-line bg-white px-6 py-12 text-center shadow-card">
+      <div className="flex flex-col items-center gap-3 rounded-xl border border-line bg-surface px-6 py-12 text-center shadow-card">
         <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted text-ink-faint">
           <FileWarning size={22} />
         </span>
@@ -51,7 +51,7 @@ export function PublicForm() {
   }
 
   return shell(
-    <div className={form.layout === 'card' ? 'rounded-xl border border-line bg-white p-6 shadow-card' : ''}>
+    <div className={form.layout === 'card' ? 'rounded-xl border border-line bg-surface p-6 shadow-card' : ''}>
       <PublicFormRenderer form={form} />
     </div>
   );

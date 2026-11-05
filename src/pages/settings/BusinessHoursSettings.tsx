@@ -14,7 +14,7 @@ import {
 import { cn } from '../../utils/cn';
 
 const TIME_INPUT_CLASS =
-  'h-9 rounded-lg border border-line-strong bg-white px-2.5 text-sm text-ink transition-colors hover:border-ink-faint focus-ring disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-ink-faint';
+  'h-9 rounded-lg border border-line-strong bg-surface px-2.5 text-sm text-ink transition-colors hover:border-ink-faint focus-ring disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-ink-faint';
 
 /** Monday-first order for display — DAY_LABELS/schedule stay Sunday-first (JS `Date#getDay()`) underneath. */
 const DISPLAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
@@ -183,7 +183,7 @@ export function BusinessHoursSettings() {
                 onChange={(e) => { setClosedMessage(e.target.value); markDirty(); }}
                 placeholder="e.g. Follow up first thing tomorrow morning."
                 disabled={!enabled}
-                className="w-full rounded-lg border border-line-strong bg-white px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink-faint focus-ring disabled:cursor-not-allowed disabled:bg-surface-muted"
+                className="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink-faint focus-ring disabled:cursor-not-allowed disabled:bg-surface-muted"
               />
             </div>
             <p className="flex items-start gap-2 rounded-lg bg-surface-subtle px-3 py-2.5 text-xs text-ink-muted">

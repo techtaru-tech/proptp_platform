@@ -1,3 +1,4 @@
+import { RecordRef } from '../../components/ui/RecordRef';
 import { useMemo, useState } from 'react';
 import { Download, Wallet, CheckCircle2, Repeat } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
@@ -59,7 +60,7 @@ export function PaymentReport() {
   }, [filtered]);
 
   const columns: DataTableColumn<Row>[] = [
-    { key: 'id', header: 'Payment ID', render: (r) => <span className="font-medium text-ink">{r.id}</span> },
+    { key: 'id', header: 'Payment ID', render: (r) => <RecordRef row={r} /> },
     { key: 'date', header: 'Date', render: (r) => formatDate(r.date) },
     { key: 'mode', header: 'Payment Mode', render: (r) => r.paymentMode },
     { key: 'amount', header: 'Amount', align: 'right', render: (r) => formatCurrency(r.amount) },

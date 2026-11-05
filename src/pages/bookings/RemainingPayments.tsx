@@ -1,3 +1,4 @@
+import { RecordRef } from '../../components/ui/RecordRef';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Download, Edit2, Plus, Trash2 } from 'lucide-react';
@@ -184,15 +185,15 @@ export function RemainingPayments() {
             e.stopPropagation();
             navigate(`/bookings/${r.booking.id}`);
           }}
-          className="font-medium text-brand-600 hover:text-brand-700 focus-ring rounded"
+          className="rounded hover:underline focus-ring"
         >
-          {r.booking.id}
+          <RecordRef row={r.booking} className="text-brand-700" />
         </button>
       ),
     },
-    { key: 'customer', header: 'Customer', render: (r) => r.booking.bookingName },
-    { key: 'project', header: 'Project', render: (r) => r.projectName },
-    { key: 'unit', header: 'Unit', render: (r) => r.unitLabel },
+    { key: 'customer', header: 'Customer', className: 'whitespace-nowrap', render: (r) => r.booking.bookingName },
+    { key: 'project', header: 'Project', className: 'whitespace-nowrap', render: (r) => r.projectName },
+    { key: 'unit', header: 'Unit', className: 'whitespace-nowrap', render: (r) => <span title={r.unitLabel}>{r.unitLabel.split(' · ')[0]}</span> },
     { key: 'total', header: 'Total Investment', align: 'right', render: (r) => formatCurrency(r.totalAmount) },
     { key: 'paid', header: 'Paid Amount', align: 'right', render: (r) => formatCurrency(r.paidAmount) },
     { key: 'remaining', header: 'Remaining Amount', align: 'right', sortable: true, render: (r) => formatCurrency(r.remainingAmount) },
@@ -274,7 +275,7 @@ export function RemainingPayments() {
         isOpen={!!addPaymentRow}
         onClose={() => setAddPaymentRow(null)}
         title="Add Payment"
-        description="Manually record a deposit/installment payment against this property, mirroring the real admin's deposit entry flow."
+        description="Record an instalment received against this property."
         size="sm"
         footer={
           <>
@@ -346,7 +347,7 @@ export function RemainingPayments() {
         title="Delete Deposit"
         description={
           deleteRow
-            ? `This permanently deletes ${deleteRow.booking.id} and reverses the unit's balance/booking status — this is the real system's only way to "reject" a deposit.`
+            ? `This permanently deletes ${deleteRow.booking.id} and reverses the unit's balance/booking status — use it to reject a deposit that was entered by mistake.`
             : undefined
         }
         confirmLabel="Delete"

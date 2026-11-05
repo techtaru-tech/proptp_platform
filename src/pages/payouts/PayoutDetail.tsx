@@ -137,7 +137,7 @@ export function PayoutDetail() {
         </Card>
 
         <Card>
-          <CardHeader title="Status & Actions" subtitle="Confirm → Release is a genuine two-step process in the real system" />
+          <CardHeader title="Status & Actions" subtitle="Confirm first, then release" />
           {payout.status === 'pending' && (
             <div className="flex flex-wrap gap-2.5">
               <Button variant="primary" leftIcon={<CheckCircle2 size={15} />} onClick={() => setConfirmingConfirm(true)}>
@@ -188,7 +188,7 @@ export function PayoutDetail() {
         isOpen={rejectOpen}
         onClose={() => setRejectOpen(false)}
         title="Reject Payout"
-        description="A reason is required, matching the real admin's rejection flow."
+        description="The partner sees this reason in the app."
         size="sm"
         footer={
           <>
@@ -211,7 +211,7 @@ export function PayoutDetail() {
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
             placeholder="e.g. Insufficient supporting documents"
-            className="w-full rounded-lg border border-line-strong bg-white px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink-faint focus-ring"
+            className="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink-faint focus-ring"
           />
         </div>
       </Modal>

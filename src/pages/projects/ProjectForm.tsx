@@ -149,7 +149,7 @@ export function ProjectBasicInfoFields({ values, errors, onChange }: FieldsProps
           value={values.projectDescription}
           onChange={(e) => onChange({ projectDescription: e.target.value })}
           placeholder="Describe the project — architecture, positioning, highlights..."
-          className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors focus-ring ${
+          className={`w-full rounded-lg border bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors focus-ring ${
             errors.projectDescription ? 'border-danger-500' : 'border-line-strong hover:border-ink-faint'
           }`}
         />

@@ -1,3 +1,4 @@
+import { RecordRef } from '../../components/ui/RecordRef';
 import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Network, UserCog } from 'lucide-react';
@@ -200,7 +201,7 @@ export function UserDetail() {
   ];
 
   const bookingColumns: DataTableColumn<BookingRow>[] = [
-    { key: 'id', header: 'Booking ID', render: (b) => <span className="font-medium text-ink">{b.id}</span> },
+    { key: 'id', header: 'Ref', render: (b) => <RecordRef row={b} /> },
     { key: 'project', header: 'Project', render: (b) => b.projectName },
     { key: 'amount', header: 'Amount', align: 'right', render: (b) => formatCurrency(b.amount) },
     { key: 'status', header: 'Status', render: (b) => <StatusBadge kind="booking" status={b.status} /> },
@@ -208,7 +209,7 @@ export function UserDetail() {
   ];
 
   const payoutColumns: DataTableColumn<PayoutRequest>[] = [
-    { key: 'id', header: 'Payout ID', render: (p) => <span className="font-medium text-ink">{p.id}</span> },
+    { key: 'id', header: 'Payout ID', render: (p) => <RecordRef row={p} /> },
     { key: 'amount', header: 'Amount', align: 'right', render: (p) => formatCurrency(p.amount) },
     { key: 'status', header: 'Status', render: (p) => <StatusBadge kind="payout" status={p.status} /> },
     { key: 'date', header: 'Request Date', render: (p) => formatDate(p.requestDate) },
@@ -238,7 +239,7 @@ export function UserDetail() {
         }
       />
 
-      <div className="mb-6 flex flex-wrap items-center gap-4 rounded-xl border border-line bg-white p-5 shadow-card">
+      <div className="mb-6 flex flex-wrap items-center gap-4 rounded-xl border border-line bg-surface p-5 shadow-card">
         <Avatar name={user.name} src={user.avatarUrl} size="lg" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">

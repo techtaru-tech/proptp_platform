@@ -11,14 +11,14 @@ interface SearchInputProps {
 export function SearchInput({ value, onChange, placeholder = 'Search...', className }: SearchInputProps) {
   return (
     <div className={cn('relative', className)}>
-      <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
+      <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-faint" />
       <input
         type="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="h-9 w-full rounded-lg border border-line-strong bg-white pl-9 pr-8 text-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink-faint focus-ring"
+        className="h-8 w-full rounded-lg border border-line-strong bg-surface pl-8 pr-8 text-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink-faint focus-ring"
       />
       {value && (
         <button

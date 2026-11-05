@@ -207,7 +207,7 @@ function ConversationList({
               onClick={() => onTab(t.key)}
               className={cn(
                 'flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-ring',
-                tab === t.key ? 'bg-white text-ink shadow-card' : 'text-ink-muted hover:text-ink'
+                tab === t.key ? 'bg-surface text-ink shadow-card' : 'text-ink-muted hover:text-ink'
               )}
             >
               {t.label}
@@ -349,7 +349,7 @@ function Thread({
                 <div
                   className={cn(
                     'max-w-[80%] rounded-2xl px-3.5 py-2 text-sm',
-                    outbound ? 'bg-brand-600 text-white' : 'bg-white text-ink shadow-card'
+                    outbound ? 'bg-brand-600 text-white' : 'bg-surface text-ink shadow-card'
                   )}
                 >
                   <p className="whitespace-pre-wrap break-words">{m.body || `[${m.type}]`}</p>
@@ -404,7 +404,7 @@ function Thread({
               }}
               placeholder="Type a message"
               rows={2}
-              className="flex-1 resize-none rounded-lg border border-line-strong bg-white px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus-ring"
+              className="flex-1 resize-none rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus-ring"
             />
             <Button variant="primary" size="icon" aria-label="Send" isLoading={sending} onClick={send} disabled={!draft.trim()}>
               <Send size={15} />

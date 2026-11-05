@@ -11,7 +11,7 @@ import { FilterBar } from '../../components/tables/FilterBar';
 import { useAsync } from '../../hooks/useAsync';
 import { useDebounce } from '../../hooks/useDebounce';
 import * as userService from '../../services/userService';
-import { findUserById } from '../../data/referenceData';
+import { findUserById, refTeams } from '../../data/referenceData';
 import type { Employee, AccountStatus } from '../../types';
 
 const STATUS_OPTIONS = [
@@ -65,7 +65,7 @@ export function EmployeeList() {
     { key: 'phone', header: 'Phone', render: (e) => e.phone },
     { key: 'email', header: 'Email', render: (e) => e.email },
     { key: 'leader', header: 'Leader', render: (e) => (e.leaderId ? findUserById(e.leaderId)?.name ?? '—' : '—') },
-    { key: 'team', header: 'Team', render: (e) => e.teamId ?? '—' },
+    { key: 'team', header: 'Team', render: (e) => (e.teamId ? refTeams.find((t) => t.id === e.teamId)?.name ?? '—' : '—') },
     { key: 'status', header: 'Status', render: (e) => <StatusBadge kind="account" status={e.status} /> },
     { key: 'attendance', header: 'Attendance Today', render: (e) => <StatusBadge kind="attendance" status={e.attendanceStatusToday} /> },
   ];

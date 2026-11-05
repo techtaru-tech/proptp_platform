@@ -63,6 +63,13 @@ export interface DemoRefreshResult {
   visitsToday: number;
 }
 
-export const getDemoDataStatus = () => api.get<{ enabled: boolean }>('/demo-data/status');
+export interface DemoRotation {
+  everyHours: number;
+  lastRunAt: string | null;
+  nextRunAt: string | null;
+  lastSummary: Record<string, number> | null;
+}
+export const getDemoDataStatus = () => api.get<{ enabled: boolean; rotation: DemoRotation | null }>('/demo-data/status');
+export const rotateDemoData = () => api.post<{ summary: Record<string, number>; rotation: DemoRotation }>('/demo-data/rotate');
 
 export const refreshDemoData = () => api.post<DemoRefreshResult>('/demo-data/refresh');

@@ -71,7 +71,7 @@ export function ProjectReportPage() {
                 {t.rows.length === 0 ? <EmptyState title="Nothing to show" /> : (
                   <div className="max-h-[28rem] overflow-auto">
                     <table className="w-full text-sm">
-                      <thead className="sticky top-0 bg-white"><tr className="text-left text-xs uppercase tracking-wide text-ink-faint">{t.columns.map((c, i) => <th key={c} className={`px-4 py-2 font-medium ${i === 0 ? 'pl-5' : ''}`}>{c}</th>)}</tr></thead>
+                      <thead className="sticky top-0 bg-surface"><tr className="text-left text-xs uppercase tracking-wide text-ink-faint">{t.columns.map((c, i) => <th key={c} className={`px-4 py-2 font-medium ${i === 0 ? 'pl-5' : ''}`}>{c}</th>)}</tr></thead>
                       <tbody>{t.rows.map((r, ri) => (
                         <tr key={ri} className="border-t border-line">{r.map((c, ci) => (
                           <td key={ci} className={`px-4 py-2 ${ci === 0 ? 'pl-5 font-medium text-ink' : 'text-ink'} ${isNumeric(c) ? 'tabular-nums' : ''}`}>

@@ -499,7 +499,7 @@ function StepCard({
       <div className="flex flex-col gap-3 p-3">
         <Select label="Step Type" required value={step.type} onChange={(e) => onTypeChange(e.target.value as AutomationStepType)} options={STEP_TYPE_OPTIONS} />
 
-        <div className="rounded-lg border border-line bg-white p-3">
+        <div className="rounded-lg border border-line bg-surface p-3">
           <p className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-ink-faint">
             {step.type === 'condition' ? 'Condition Config' : step.type === 'action' ? 'Action Config' : 'Delay Config'}
           </p>
@@ -801,7 +801,7 @@ function Textarea({ label, value, onChange, placeholder, rows = 2 }: { label: st
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-line-strong bg-white px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink-faint focus-ring"
+        className="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink-faint focus-ring"
       />
     </div>
   );

@@ -101,13 +101,18 @@ export async function requireAuth(req: AuthedRequest, res: Response, next: NextF
   try {
     const user = await prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, role: true, status: true, panelRoleId: true },
+      select: { id: true, role: true, status: true, panelRoleId: true, accessExpiresAt: true },
     });
     if (!user) {
       return res.status(401).json({ error: { code: 'invalid_token', message: 'Your session has expired. Please sign in again.' } });
     }
     if (user.status !== 'active') {
       return res.status(401).json({ error: { code: `account_${user.status}`, message: BLOCKED_ACCOUNT_MESSAGE[user.status] } });
+    }
+
+    // Temporary client access ends at a moment, not when the token happens to run out.
+    if (user.accessExpiresAt && user.accessExpiresAt.getTime() <= Date.now()) {
+      return res.status(401).json({ error: { code: 'access_expired', message: accessExpiredMessage(user.accessExpiresAt) } });
     }
 
     const session = await touchSession(payload.sid);
@@ -120,6 +125,12 @@ export async function requireAuth(req: AuthedRequest, res: Response, next: NextF
   } catch (err) {
     return next(err);
   }
+}
+
+/** What a person with lapsed temporary access is told, at sign-in and on their next request. */
+export function accessExpiredMessage(at: Date): string {
+  const when = at.toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: process.env.ORG_TIME_ZONE || 'Asia/Kolkata' });
+  return `This login expired on ${when}. Ask your Propto contact to extend it.`;
 }
 
 /**

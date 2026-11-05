@@ -1,3 +1,4 @@
+import { RecordRef } from '../../components/ui/RecordRef';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Download, Eye } from 'lucide-react';
@@ -116,7 +117,7 @@ export function Transactions() {
   };
 
   const columns: DataTableColumn<BookingRow>[] = [
-    { key: 'id', header: 'Payment ID', render: (b) => <span className="font-medium text-ink">{b.id}</span> },
+    { key: 'id', header: 'Payment ID', render: (b) => <RecordRef row={b} /> },
     { key: 'bookingName', header: 'Customer', render: (b) => b.bookingName },
     { key: 'unit', header: 'Unit', render: (b) => unitLabelForPayment(b) },
     { key: 'project', header: 'Project', render: (b) => projectNameForPayment(b) },
@@ -148,7 +149,7 @@ export function Transactions() {
     <div>
       <PageHeader
         title="Payments"
-        description="Track initial booking payments and installments across all units. Every payment mode is bank transfer, cash, cheque or other — matching the real system."
+        description="Booking payments and instalments across all units."
         actions={
           <Button variant="outline" leftIcon={<Download size={15} />} onClick={handleExport} disabled={!data?.items.length}>
             Export

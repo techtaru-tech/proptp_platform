@@ -44,7 +44,7 @@ export function formatFullCurrency(amount: number | null | undefined): string {
 
 export function formatDate(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '\u00a0');
 }
 
 export function formatDateTime(iso: string): string {

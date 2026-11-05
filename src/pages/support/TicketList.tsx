@@ -1,3 +1,4 @@
+import { RecordRef } from '../../components/ui/RecordRef';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../components/ui/PageHeader';
@@ -39,7 +40,7 @@ export function TicketList() {
   };
 
   const columns: DataTableColumn<SupportTicket>[] = [
-    { key: 'id', header: 'Ticket ID', render: (t) => <span className="font-medium text-ink">{t.id}</span> },
+    { key: 'id', header: 'Ticket ID', render: (t) => <RecordRef row={t} /> },
     { key: 'user', header: 'User', render: (t) => t.userName },
     { key: 'subject', header: 'Subject', render: (t) => <span className="line-clamp-1 max-w-xs">{t.subject}</span> },
     { key: 'status', header: 'Status', render: (t) => <StatusBadge kind="ticket" status={t.status} /> },

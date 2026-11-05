@@ -47,7 +47,7 @@ export const portal = {
 };
 
 export interface ManagementView {
-  pipeline?: { stageId: string; name: string; leads: number; value: number; to: string }[];
+  pipeline?: { stageId: string; name: string; isWon: boolean; isLost: boolean; leads: number; value: number; to: string }[];
   expectedBusiness?: { leads: number; value: number; to: string };
   sources?: { source: string; leads: number; to: string }[];
   bookings?: { pending: { count: number; amount: number; to: string }; confirmed: { count: number; amount: number; to: string } };

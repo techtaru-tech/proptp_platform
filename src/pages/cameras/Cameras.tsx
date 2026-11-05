@@ -119,7 +119,7 @@ function CameraTile({ cam, onEdit, onRemove }: { cam: CameraRow; onEdit: () => v
   const frame = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<LiveState>('loading');
   return (
-    <div className="overflow-hidden rounded-xl border border-line bg-white shadow-card">
+    <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-card">
       <div ref={frame} className="relative aspect-video bg-black">
         {cam.liveUrl ? (
           <LiveVideo url={cam.liveUrl} onState={setState} />
@@ -132,7 +132,7 @@ function CameraTile({ cam, onEdit, onRemove }: { cam: CameraRow; onEdit: () => v
         )}
         {cam.liveUrl && state === 'playing' && (
           <span className="pointer-events-none absolute left-3 top-3 inline-flex items-center gap-1.5 rounded bg-danger-600 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" /> Live
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-surface" /> Live
           </span>
         )}
       </div>

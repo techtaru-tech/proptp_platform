@@ -76,7 +76,7 @@ export function RichTextEditor({ value, onChange, placeholder, ariaLabel, classN
   };
 
   return (
-    <div className={cn('overflow-hidden rounded-lg border border-line-strong bg-white', className)}>
+    <div className={cn('overflow-hidden rounded-lg border border-line-strong bg-surface', className)}>
       <div className="flex flex-wrap items-center gap-0.5 border-b border-line bg-surface-subtle px-1.5 py-1">
         <Tool icon={<Bold size={14} />} label="Bold" onClick={() => exec('bold')} />
         <Tool icon={<Italic size={14} />} label="Italic" onClick={() => exec('italic')} />

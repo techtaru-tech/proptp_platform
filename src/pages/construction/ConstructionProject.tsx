@@ -73,7 +73,7 @@ export function ConstructionProject() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">Whole project</p>
-            <p className="text-4xl font-semibold tabular-nums text-ink">{data.summary.actual}%</p>
+            <p className="text-3xl font-semibold tabular-nums text-ink">{data.summary.actual}%</p>
             <p className="text-sm text-ink-muted">complete · plan says {data.summary.planned}%</p>
           </div>
           <div className="text-right">

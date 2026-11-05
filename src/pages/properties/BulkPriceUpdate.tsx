@@ -46,7 +46,7 @@ export function BulkPriceUpdate() {
     <div>
       <PageHeader
         title="Bulk Price Update"
-        description="Reprice multiple unbooked properties within a project at once. Only unbooked, active properties are eligible, matching the real admin's bulk-price flow."
+        description="Reprice several properties in a project at once. Only active, unbooked properties can be changed."
         actions={
           <Button variant="primary" onClick={handleSave} isLoading={saving} disabled={Object.keys(edits).length === 0}>
             Save Changes
@@ -91,7 +91,7 @@ export function BulkPriceUpdate() {
                             min={0}
                             defaultValue={u.totalInvestmentAmount}
                             onChange={(e) => updateEdit(u.id, { totalInvestmentAmount: Number(e.target.value), perAreaAmount: edit?.perAreaAmount ?? u.perAreaAmount })}
-                            className="w-36 rounded-lg border border-line-strong bg-white px-2.5 py-1.5 text-sm focus-ring"
+                            className="w-36 rounded-lg border border-line-strong bg-surface px-2.5 py-1.5 text-sm focus-ring"
                           />
                         </td>
                         <td className="px-4 py-2.5">
@@ -100,7 +100,7 @@ export function BulkPriceUpdate() {
                             min={0}
                             defaultValue={u.perAreaAmount}
                             onChange={(e) => updateEdit(u.id, { perAreaAmount: Number(e.target.value), totalInvestmentAmount: edit?.totalInvestmentAmount ?? u.totalInvestmentAmount })}
-                            className="w-32 rounded-lg border border-line-strong bg-white px-2.5 py-1.5 text-sm focus-ring"
+                            className="w-32 rounded-lg border border-line-strong bg-surface px-2.5 py-1.5 text-sm focus-ring"
                           />
                         </td>
                       </tr>

@@ -15,9 +15,9 @@ interface FilterBarProps {
 
 export function FilterBar({ search, onSearchChange, searchPlaceholder, children, onReset, hasActiveFilters, actions }: FilterBarProps) {
   return (
-    <div className="flex flex-col gap-3 border-b border-line p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-      <div className="flex flex-1 flex-wrap items-center gap-2.5">
-        {onSearchChange && <SearchInput value={search ?? ''} onChange={onSearchChange} placeholder={searchPlaceholder} className="w-full sm:w-64" />}
+    <div className="flex flex-col gap-2 border-b border-line px-3 py-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <div className="flex flex-1 flex-wrap items-center gap-2">
+        {onSearchChange && <SearchInput value={search ?? ''} onChange={onSearchChange} placeholder={searchPlaceholder} className="w-full sm:w-72" />}
         {children}
         {onReset && hasActiveFilters && (
           <Button variant="ghost" size="sm" leftIcon={<X size={13} />} onClick={onReset}>

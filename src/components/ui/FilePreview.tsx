@@ -32,7 +32,7 @@ export function FilePreview({ label, url, sensitive, className }: FilePreviewPro
           <button
             type="button"
             onClick={() => setRevealed((v) => !v)}
-            className="absolute right-2 top-2 flex items-center gap-1 rounded-md bg-white/90 px-2 py-1 text-[11px] font-medium text-ink-muted shadow-card hover:bg-white focus-ring"
+            className="absolute right-2 top-2 flex items-center gap-1 rounded-md bg-white/90 px-2 py-1 text-[11px] font-medium text-ink-muted shadow-card hover:bg-surface focus-ring"
           >
             {revealed ? <EyeOff size={12} /> : <Eye size={12} />}
             {revealed ? 'Hide' : 'View'}

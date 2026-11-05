@@ -15,7 +15,7 @@ interface UserCardProps {
 
 export function UserCard({ name, role, status, subtitle, avatarUrl, to }: UserCardProps) {
   const content = (
-    <div className="flex items-center gap-3 rounded-lg border border-line bg-white p-3 transition-colors hover:border-ink-faint">
+    <div className="flex items-center gap-3 rounded-lg border border-line bg-surface p-3 transition-colors hover:border-ink-faint">
       <Avatar name={name} src={avatarUrl} size="md" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-ink">{name}</p>

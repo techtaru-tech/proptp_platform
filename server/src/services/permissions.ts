@@ -118,6 +118,7 @@ const PATH_MODULE_ENTRIES = [
   { prefix: '/audit', module: 'settings' },
   { prefix: '/panel-roles', module: 'settings' },
   { prefix: '/panel-users', module: 'settings' },
+  { prefix: '/client-access', module: 'settings' },
 ] satisfies { prefix: string; module: ModuleKey }[];
 
 const PATH_MODULES = [...PATH_MODULE_ENTRIES].sort((a, b) => b.prefix.length - a.prefix.length);

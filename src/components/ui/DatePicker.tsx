@@ -24,7 +24,7 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
             type="date"
             id={inputId}
             className={cn(
-              'h-9 w-full rounded-lg border border-line-strong bg-white pl-9 pr-3 text-sm text-ink transition-colors hover:border-ink-faint focus-ring',
+              'h-9 w-full rounded-lg border border-line-strong bg-surface pl-9 pr-3 text-sm text-ink transition-colors hover:border-ink-faint focus-ring',
               className
             )}
             {...props}

@@ -31,7 +31,7 @@ export function Pagination({
   };
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-3 py-2">
       <div className="flex items-center gap-3">
         <p className="text-xs text-ink-muted">
           Showing <span className="font-medium text-ink">{start}</span>–<span className="font-medium text-ink">{end}</span> of{' '}
@@ -44,7 +44,7 @@ export function Pagination({
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
               aria-label="Rows per page"
-              className="rounded-md border border-line-strong bg-white px-1.5 py-1 text-xs text-ink focus-ring"
+              className="rounded-md border border-line-strong bg-surface px-1.5 py-1 text-xs text-ink focus-ring"
             >
               {pageSizeOptions.map((n) => (
                 <option key={n} value={n}>

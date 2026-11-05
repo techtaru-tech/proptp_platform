@@ -138,7 +138,7 @@ export function Forms() {
       </Card>
 
       {data && data.total === 0 && !isLoading && !search && (
-        <div className="mt-4 flex items-center gap-3 rounded-xl border border-line bg-white p-4 text-sm text-ink-muted shadow-card">
+        <div className="mt-4 flex items-center gap-3 rounded-xl border border-line bg-surface p-4 text-sm text-ink-muted shadow-card">
           <FileText size={16} className="shrink-0 text-ink-faint" />
           A form gets a public link at <code className="text-ink">/f/your-slug</code> and an embed snippet you can paste into any page.
         </div>

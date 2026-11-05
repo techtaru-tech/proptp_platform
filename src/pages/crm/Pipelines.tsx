@@ -8,7 +8,7 @@ export function Pipelines() {
     <div>
       <PageHeader
         title="Pipeline"
-        description="Create and manage pipelines and their stages."
+        description="Stages leads move through, from first contact to booking."
         breadcrumb={[{ label: 'CRM', to: '/crm' }, { label: 'Pipeline' }]}
       />
       <PipelineManager />

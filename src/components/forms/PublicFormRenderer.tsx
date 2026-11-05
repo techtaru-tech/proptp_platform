@@ -114,7 +114,7 @@ export function PublicFormRenderer({ form, mode = 'live' }: PublicFormRendererPr
   }
 
   const inputClass =
-    'h-10 w-full rounded-lg border border-line-strong bg-white px-3 text-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink-faint focus:outline-none focus:ring-2 focus:ring-offset-1';
+    'h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink-faint focus:outline-none focus:ring-2 focus:ring-offset-1';
 
   return (
     <div className="flex flex-col gap-4">
@@ -242,7 +242,7 @@ function FieldControl({ field, value, onChange, accentColor, inputClass }: Field
           placeholder={field.placeholder ?? undefined}
           onChange={(e) => onChange(e.target.value)}
           style={ring}
-          className="w-full rounded-lg border border-line-strong bg-white px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink-faint focus:outline-none focus:ring-2 focus:ring-offset-1"
+          className="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink-faint focus:outline-none focus:ring-2 focus:ring-offset-1"
         />
       );
     }

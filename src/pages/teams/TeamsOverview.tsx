@@ -47,7 +47,7 @@ export function TeamsOverview() {
         title="Teams / Referrals"
         description="Leader-led teams, employee networks and agent referral structures."
         actions={
-          <div className="flex items-center gap-1 rounded-lg border border-line-strong bg-white p-0.5">
+          <div className="flex items-center gap-1 rounded-lg border border-line-strong bg-surface p-0.5">
             <button
               type="button"
               onClick={() => setView('tree')}
