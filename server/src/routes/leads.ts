@@ -42,6 +42,7 @@ leadsRouter.get('/', async (req, res) => {
     dateTo,
     lastActivityFrom,
     lastActivityTo,
+    starred,
     sortBy,
     sortDir,
   } = req.query as Record<string, string>;
@@ -56,6 +57,7 @@ leadsRouter.get('/', async (req, res) => {
     buildLeadWhere({
       search, status, priority, source, pipelineId, stageId, assignedUserId, temperature,
       campaignName, adName, formName, dateFrom, dateTo, lastActivityFrom, lastActivityTo,
+      starred: starred === 'true',
     }),
     scope
   );
@@ -200,7 +202,7 @@ leadsRouter.get('/ids', async (req, res, next) => {
   try {
     const {
       search, status, priority, source, pipelineId, stageId, assignedUserId, temperature,
-      campaignName, adName, formName, dateFrom, dateTo, lastActivityFrom, lastActivityTo,
+      campaignName, adName, formName, dateFrom, dateTo, lastActivityFrom, lastActivityTo, starred,
     } =
       req.query as Record<string, string>;
     const scope = await scopeOf(req);
@@ -208,6 +210,7 @@ leadsRouter.get('/ids', async (req, res, next) => {
       buildLeadWhere({
         search, status, priority, source, pipelineId, stageId, assignedUserId, temperature,
         campaignName, adName, formName, dateFrom, dateTo, lastActivityFrom, lastActivityTo,
+        starred: starred === 'true',
       }),
       scope
     );

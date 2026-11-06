@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock3, Info, Pencil, Plus, Trash2, Users } from 'lucide-react';
+import { Bot, Pencil, Plus, Trash2, Users } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Toggle } from '../../components/ui/Toggle';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { Skeleton } from '../../components/ui/LoadingSkeleton';
 import { ConfirmationDialog } from '../../components/ui/ConfirmationDialog';
-import { DataTable, type DataTableColumn } from '../../components/tables/DataTable';
 import { useAsync } from '../../hooks/useAsync';
 import { useToast } from '../../context/ToastContext';
 import {
@@ -15,7 +16,8 @@ import {
   SDR_CHANNEL_OPTIONS, SDR_GOAL_OPTIONS,
 } from '../../services/aiSdrService';
 import { userDisplayName } from '../../data/referenceData';
-import type { AiSdrAgent } from '../../types';
+import { cn } from '../../utils/cn';
+import type { AiSdrAgent, SdrCapabilities } from '../../types';
 
 export function AiSdrAgents() {
   const navigate = useNavigate();
@@ -39,75 +41,7 @@ export function AiSdrAgents() {
     setReloadKey((k) => k + 1);
   };
 
-  const columns: DataTableColumn<AiSdrAgent>[] = [
-    {
-      key: 'name',
-      header: 'Agent',
-      render: (a) => (
-        <div>
-          <p className="font-medium text-ink">{a.name}</p>
-          {a.persona && <p className="max-w-xs truncate text-xs text-ink-faint">{a.persona}</p>}
-        </div>
-      ),
-    },
-    { key: 'goal', header: 'Goal', render: (a) => <Badge tone="shell">{SDR_GOAL_OPTIONS.find((o) => o.value === a.goal)?.label ?? a.goal}</Badge> },
-    { key: 'channel', header: 'Channel', render: (a) => SDR_CHANNEL_OPTIONS.find((o) => o.value === a.channel)?.label ?? a.channel },
-    {
-      key: 'guardrails',
-      header: 'Guardrails',
-      render: (a) => (
-        <span className="text-xs text-ink-muted">
-          max {a.maxFollowUps} · ≥{a.minHoursBetweenFollowUps}h apart
-          {a.respectBusinessHours && (
-            <span className="ml-1.5 inline-flex items-center gap-1 text-ink-faint">
-              <Clock3 size={11} />
-              business hours
-            </span>
-          )}
-        </span>
-      ),
-    },
-    { key: 'handoff', header: 'Hands off to', render: (a) => (a.handoffUserId ? userDisplayName(a.handoffUserId) : <span className="text-ink-faint">—</span>) },
-    {
-      key: 'enrollments',
-      header: 'Leads',
-      align: 'center',
-      render: (a) => (
-        <span className="text-sm text-ink">
-          {a.activeEnrollmentCount ?? 0}
-          <span className="text-ink-faint"> / {a.enrollmentCount ?? 0}</span>
-        </span>
-      ),
-    },
-    {
-      key: 'active',
-      header: 'Active',
-      align: 'center',
-      render: (a) => (
-        <div onClick={(e) => e.stopPropagation()}>
-          <Toggle label={`${a.name} active`} showLabel={false} checked={a.active} onChange={() => handleToggle(a)} />
-        </div>
-      ),
-    },
-    {
-      key: 'actions',
-      header: 'Actions',
-      align: 'right',
-      render: (a) => (
-        <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-          <Button variant="ghost" size="sm" leftIcon={<Users size={13} />} onClick={() => navigate(`/crm/sdr-agents/${a.id}`)}>
-            Leads
-          </Button>
-          <Button variant="ghost" size="sm" leftIcon={<Pencil size={13} />} onClick={() => navigate(`/crm/sdr-agents/${a.id}/edit`)}>
-            Edit
-          </Button>
-          <Button variant="ghost" size="sm" className="text-danger-600" leftIcon={<Trash2 size={13} />} onClick={() => setDeleteTarget(a)}>
-            Delete
-          </Button>
-        </div>
-      ),
-    },
-  ];
+  const list = agents ?? [];
 
   return (
     <div>
@@ -122,28 +56,53 @@ export function AiSdrAgents() {
         }
       />
 
-      {capabilities && !capabilities.aiProviderConfigured && (
-        <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-warning-100 bg-warning-50 px-4 py-3 text-sm text-warning-700">
-          <Info size={16} className="mt-0.5 shrink-0" />
-          <p>
-            <strong>No AI provider is configured.</strong> Everything except message writing works for real: leads enrol
-            (manually or from an automation), the cadence and follow-up ceiling are enforced, business hours are respected,
-            and handoff genuinely reassigns the lead. Due follow-ups are listed for a human to send.
-          </p>
+      {/* Agents are the main column; what the engine can do today sits beside them (above on small screens). */}
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_23rem]">
+        <div className="xl:order-2">
+          <CapabilityPanel capabilities={capabilities} />
         </div>
-      )}
 
-      <Card padded={false}>
-        <DataTable
-          columns={columns}
-          rows={agents ?? []}
-          rowKey={(a) => a.id}
-          isLoading={isLoading}
-          onRowClick={(a) => navigate(`/crm/sdr-agents/${a.id}`)}
-          emptyTitle="No agents yet"
-          emptyDescription="Create an agent, then enrol leads into it manually or with an automation action."
-        />
-      </Card>
+        <div className="min-w-0 xl:order-1">
+          {isLoading ? (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {[0, 1].map((i) => (
+                <Card key={i} className="space-y-2.5">
+                  <Skeleton className="h-3.5 w-40" />
+                  <Skeleton className="h-3 w-56" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-2 w-full" />
+                </Card>
+              ))}
+            </div>
+          ) : list.length === 0 ? (
+            <Card padded={false}>
+              <EmptyState
+                icon={Bot}
+                title="No agents yet"
+                description="Create an agent, then enrol leads into it manually or with an automation action."
+                action={
+                  <Button variant="primary" size="sm" leftIcon={<Plus size={13} />} onClick={() => navigate('/crm/sdr-agents/new')}>
+                    Create first agent
+                  </Button>
+                }
+              />
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {list.map((a) => (
+                <AgentCard
+                  key={a.id}
+                  agent={a}
+                  onOpen={() => navigate(`/crm/sdr-agents/${a.id}`)}
+                  onEdit={() => navigate(`/crm/sdr-agents/${a.id}/edit`)}
+                  onToggle={() => handleToggle(a)}
+                  onDelete={() => setDeleteTarget(a)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       <ConfirmationDialog
         isOpen={!!deleteTarget}
@@ -159,5 +118,175 @@ export function AiSdrAgents() {
         variant="danger"
       />
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Capability status — the same flags that drive the "not configured" notice
+// ---------------------------------------------------------------------------
+
+function CapabilityPanel({ capabilities }: { capabilities?: SdrCapabilities }) {
+  // The first four are the engine itself and run regardless of provider; the last two
+  // are exactly the server's `aiProviderConfigured` / `messagingProviderConfigured`.
+  const rows = capabilities
+    ? [
+        { label: 'Enrol leads manually or from an automation', ok: true },
+        { label: 'Cadence and follow-up ceiling enforced', ok: true },
+        { label: 'Business hours respected', ok: true },
+        { label: 'Handoff reassigns the lead', ok: true },
+        { label: 'Message writing', sub: 'AI provider', ok: capabilities.aiProviderConfigured },
+        { label: 'Automatic sending', sub: 'Messaging provider', ok: capabilities.messagingProviderConfigured },
+      ]
+    : [];
+  const working = rows.filter((r) => r.ok).length;
+  const needsSetup = rows.length - working;
+
+  return (
+    <Card padded={false} className="overflow-hidden">
+      <div className="flex items-start justify-between gap-3 border-b border-line px-4 py-3">
+        <div>
+          <h3 className="text-[13px] font-semibold text-ink">Capability status</h3>
+          <p className="mt-0.5 text-xs text-ink-subtle">What works today and what needs setup.</p>
+        </div>
+        {capabilities && (
+          <span className="shrink-0 pt-0.5 text-2xs tabular-nums text-ink-faint">
+            {working} of {rows.length} working
+          </span>
+        )}
+      </div>
+
+      {!capabilities ? (
+        <div className="space-y-3 px-4 py-3">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-3 w-full" />
+          ))}
+        </div>
+      ) : (
+        <ul className="divide-y divide-line">
+          {rows.map((r) => (
+            <li key={r.label} className="flex items-center justify-between gap-3 px-4 py-2">
+              <span className="min-w-0 text-xs text-ink">
+                {r.label}
+                {r.sub && <span className="text-ink-faint"> · {r.sub}</span>}
+              </span>
+              <Badge tone={r.ok ? 'success' : 'warning'} dot className="shrink-0">
+                {r.ok ? 'Works' : 'Needs setup'}
+              </Badge>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {capabilities && needsSetup > 0 && (
+        <p className="border-t border-line bg-surface-subtle px-4 py-2.5 text-2xs text-ink-subtle">
+          {!capabilities.aiProviderConfigured
+            ? 'Nothing is written or sent automatically yet: due follow-ups are listed for a human to send, and you log the message you actually sent on the lead’s thread.'
+            : 'Automatic sending needs a messaging provider. Until then, due follow-ups are listed for a human to send.'}
+        </p>
+      )}
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// One agent
+// ---------------------------------------------------------------------------
+
+function Chip({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-flex items-center rounded-sm border border-line bg-surface-subtle px-1.5 py-px text-2xs font-medium text-ink-muted">
+      {children}
+    </span>
+  );
+}
+
+function AgentCard({
+  agent: a, onOpen, onEdit, onToggle, onDelete,
+}: { agent: AiSdrAgent; onOpen: () => void; onEdit: () => void; onToggle: () => void; onDelete: () => void }) {
+  const goal = SDR_GOAL_OPTIONS.find((o) => o.value === a.goal)?.label ?? a.goal;
+  const channel = SDR_CHANNEL_OPTIONS.find((o) => o.value === a.channel)?.label ?? a.channel;
+  const total = a.enrollmentCount ?? 0;
+  const active = a.activeEnrollmentCount ?? 0;
+  const pct = total > 0 ? Math.round((active / total) * 100) : 0;
+
+  return (
+    <Card padded={false} className={cn('flex flex-col', !a.active && 'bg-surface-subtle')}>
+      <div className="flex items-start justify-between gap-3 px-4 pt-3.5">
+        <div className="min-w-0">
+          <button
+            type="button"
+            onClick={onOpen}
+            className="block max-w-full truncate rounded text-left text-[13px] font-semibold text-ink hover:text-brand-700 focus-ring"
+          >
+            {a.name}
+          </button>
+          <p className="mt-0.5 text-xs text-ink-subtle">
+            Goal: {goal} · Channel: {channel}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className={cn('text-2xs font-medium', a.active ? 'text-success-700' : 'text-ink-faint')}>{a.active ? 'Active' : 'Off'}</span>
+          <Toggle label={`${a.name} active`} showLabel={false} checked={a.active} onChange={onToggle} />
+        </div>
+      </div>
+
+      {a.persona ? (
+        <p className="line-clamp-2 px-4 pt-2 text-xs text-ink-muted">{a.persona}</p>
+      ) : (
+        <p className="px-4 pt-2 text-xs italic text-ink-faint">No persona written yet.</p>
+      )}
+
+      <div className="mx-4 mt-3 space-y-2.5 border-t border-line pt-3">
+        <div className="flex flex-wrap gap-1.5">
+          <Chip>
+            max {a.maxFollowUps} follow-up{a.maxFollowUps === 1 ? '' : 's'}
+          </Chip>
+          <Chip>≥{a.minHoursBetweenFollowUps}h apart</Chip>
+          {a.respectBusinessHours && <Chip>business hours</Chip>}
+          {a.goal === 'book_meeting' && a.meetingType && <Chip>{a.meetingType}</Chip>}
+        </div>
+
+        <p className="text-xs text-ink-subtle">
+          {a.handoffUserId ? (
+            <>
+              Hands off to <span className="font-medium text-ink">{userDisplayName(a.handoffUserId)}</span>
+            </>
+          ) : (
+            'No handoff person set'
+          )}
+        </p>
+
+        <div>
+          <div className="flex items-center justify-between text-2xs tabular-nums text-ink-faint">
+            <span>Leads</span>
+            <span>
+              <span className="font-medium text-ink">{active}</span> active / {total} enrolled
+            </span>
+          </div>
+          <div
+            className="mt-1 h-1 overflow-hidden rounded-full bg-surface-muted"
+            role="progressbar"
+            aria-label="Leads still being worked"
+            aria-valuemin={0}
+            aria-valuemax={total}
+            aria-valuenow={active}
+          >
+            <div className="h-full rounded-full bg-brand-600" style={{ width: `${pct}%` }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 flex justify-end gap-0.5 border-t border-line px-2 py-1.5">
+        <Button variant="ghost" size="sm" leftIcon={<Users size={13} />} onClick={onOpen}>
+          Leads
+        </Button>
+        <Button variant="ghost" size="sm" leftIcon={<Pencil size={13} />} onClick={onEdit}>
+          Edit
+        </Button>
+        <Button variant="ghost" size="sm" className="text-danger-600 hover:text-danger-700" leftIcon={<Trash2 size={13} />} onClick={onDelete}>
+          Delete
+        </Button>
+      </div>
+    </Card>
   );
 }

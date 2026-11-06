@@ -29,7 +29,7 @@ export function ChatThread({ state, notReady, compact }: { state: AssistantChatS
       <div className={cn('min-h-0 flex-1 overflow-y-auto', compact ? 'px-3 py-3' : 'px-4 py-4 sm:px-6')}>
         {notReady && (
           <p className="mb-3 rounded-lg border border-warning-100 bg-warning-50 px-3 py-2 text-xs text-warning-700">
-            The assistant is not set up yet. Add <strong>ANTHROPIC_API_KEY</strong> to the server settings and restart.
+            The assistant is not set up yet. An administrator can add an Anthropic API key in <strong>Settings › AI Assistant</strong>.
           </p>
         )}
         {shown.length === 0 ? (

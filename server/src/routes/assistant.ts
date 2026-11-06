@@ -8,11 +8,13 @@ export const assistantRouter = Router();
 
 const fail = (res: any, err: unknown, next: (e: unknown) => void) => (err instanceof AssistantError ? res.status(err.status).json({ error: err.message }) : next(err));
 
-assistantRouter.get('/status', (_req, res) => res.json({ configured: isConfigured(), model: ASSISTANT_MODEL }));
+assistantRouter.get('/status', async (_req, res, next) => {
+  try { res.json({ configured: await isConfigured(), model: ASSISTANT_MODEL }); } catch (err) { next(err); }
+});
 
 assistantRouter.get('/conversations', async (req: AuthedRequest, res, next) => {
   try {
-    const rows = await prisma.assistantConversation.findMany({ where: { userId: req.auth!.sub }, orderBy: { updatedAt: 'desc' }, take: 100, select: { id: true, title: true, updatedAt: true } });
+    const rows = await prisma.assistantConversation.findMany({ where: { userId: req.auth!.sub, kind: 'general' }, orderBy: { updatedAt: 'desc' }, take: 100, select: { id: true, title: true, updatedAt: true } });
     res.json(rows.map((r) => ({ ...r, updatedAt: r.updatedAt.toISOString() })));
   } catch (err) { next(err); }
 });

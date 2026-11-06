@@ -304,6 +304,7 @@ export const NAV_ITEMS: NavItem[] = [
       { label: 'Roles & Permissions', to: '/settings/roles' },
       { label: 'Panel Users', to: '/settings/panel-users' },
       { label: 'Client Access', to: '/settings/client-access' },
+      { label: 'AI Assistant', to: '/settings/ai-assistant' },
       { label: 'Business Hours', to: '/settings/business-hours' },
       { label: 'Telephony', to: '/settings/telephony' },
       { label: 'Email', to: '/settings/email' },

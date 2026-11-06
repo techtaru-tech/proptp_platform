@@ -86,6 +86,7 @@ const PATH_MODULE_ENTRIES = [
   { prefix: '/partner-portal', module: 'partner_portal' },
   { prefix: '/sms', module: 'settings' },
   { prefix: '/assistant', module: 'assistant' },
+  { prefix: '/crm-agent', module: 'crm' },
   { prefix: '/channel-partners', module: 'partners' },
   { prefix: '/units', module: 'properties' },
   { prefix: '/plot-holds', module: 'properties' },

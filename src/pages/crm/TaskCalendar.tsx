@@ -47,12 +47,38 @@ const STATUS_OPTIONS: { value: FollowUpStatus | 'all'; label: string }[] = [
  */
 type TaskState = 'upcoming' | 'overdue' | 'missed' | 'completed';
 
-const STATE_CHIP: Record<TaskState, string> = {
-  upcoming: 'border-info-100 bg-info-50 text-info-700',
-  overdue: 'border-danger-100 bg-danger-50 text-danger-700',
-  missed: 'border-line bg-surface-muted text-ink-muted line-through',
-  completed: 'border-success-100 bg-success-50 text-success-700',
+/**
+ * One look per state, shared by the legend, the month chips, the phone-width dots and the day
+ * drawer: a light fill with a solid left edge, so a chip still reads by colour at 11px.
+ *
+ * The edge is an inset shadow rather than a left border, so it adds no width and the chip text
+ * lines up with the day number whatever the state.
+ */
+const STATE_STYLE: Record<TaskState, { label: string; chip: string; dot: string; edge: string }> = {
+  overdue: { label: 'Overdue', chip: 'bg-danger-50 text-danger-700', dot: 'bg-danger-500', edge: 'shadow-[inset_2px_0_0_var(--c-danger-500)]' },
+  upcoming: { label: 'Upcoming', chip: 'bg-info-50 text-info-700', dot: 'bg-info-500', edge: 'shadow-[inset_2px_0_0_var(--c-info-500)]' },
+  completed: { label: 'Completed', chip: 'bg-success-50 text-success-700', dot: 'bg-success-500', edge: 'shadow-[inset_2px_0_0_var(--c-success-500)]' },
+  missed: { label: 'Missed', chip: 'bg-surface-muted text-ink-subtle line-through decoration-ink-faint', dot: 'bg-ink-faint', edge: 'shadow-[inset_2px_0_0_var(--c-ink-faint)]' },
 };
+
+const LEGEND_ORDER: TaskState[] = ['overdue', 'upcoming', 'completed', 'missed'];
+
+/** Chips per day before the rest fold into "+N more"; a week row stays one height. */
+const CHIPS_PER_DAY = 3;
+
+/** "2:40pm": the chip has ~20 characters to spend, and the leading zero and space buy nothing. */
+function compactTime(iso: string): string {
+  const d = new Date(iso);
+  const h = d.getHours();
+  const m = d.getMinutes();
+  return `${h % 12 || 12}${m ? `:${String(m).padStart(2, '0')}` : ''}${h < 12 ? 'am' : 'pm'}`;
+}
+
+/** "1 Nov – 12 Dec": the span the grid (and so every count on the page) covers. */
+function rangeLabel(first: Date, last: Date): string {
+  const f = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  return `${f(first)} – ${f(last)}`;
+}
 
 function taskState(task: FollowUpWithLeadName, now: number): TaskState {
   if (task.completed || task.status === 'completed') return 'completed';
@@ -160,9 +186,14 @@ export function TaskCalendar() {
     return tally;
   }, [tasks, now]);
 
-  const todayKey = dayKey(new Date());
+  const todayKey = dayKey(new Date(now));
   const monthLabel = month.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
-  const selectedTasks = selectedDay ? tasksByDay.get(dayKey(selectedDay)) ?? [] : [];
+  const gridRange = rangeLabel(days[0], days[days.length - 1]);
+  const selectedKey = selectedDay ? dayKey(selectedDay) : null;
+  const selectedTasks = selectedKey ? tasksByDay.get(selectedKey) ?? [] : [];
+  // Still ahead today: the "upcoming" ones whose day is today.
+  const upcomingToday = (tasksByDay.get(todayKey) ?? []).filter((t) => taskState(t, now) === 'upcoming').length;
+  const viewTotal = tasks.length;
 
   const reload = () => setReloadKey((k) => k + 1);
 
@@ -236,42 +267,90 @@ export function TaskCalendar() {
         }
       />
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        <StatCard label="Overdue this view" value={counts.overdue} icon={AlertTriangle} tone="danger" />
-        <StatCard label="Upcoming this view" value={counts.upcoming} icon={CalendarDays} tone="info" />
-        <StatCard label="Completed this view" value={counts.completed} icon={Check} tone="success" />
+      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+        <StatCard
+          label="Overdue"
+          value={counts.overdue}
+          icon={AlertTriangle}
+          tone="danger"
+          footer={
+            isLoading && !data ? undefined : counts.overdue > 0
+              ? <span className="font-medium text-danger-700">needs action</span>
+              : <span className="font-medium text-success-700">all clear</span>
+          }
+        />
+        <StatCard
+          label="Upcoming"
+          value={counts.upcoming}
+          icon={CalendarDays}
+          tone="info"
+          footer={
+            isLoading && !data ? undefined : upcomingToday > 0
+              ? <span className="tabular-nums"><span className="font-medium text-info-700">{upcomingToday}</span> still due today</span>
+              : 'nothing left today'
+          }
+        />
+        <StatCard
+          label="Completed"
+          value={counts.completed}
+          icon={Check}
+          tone="success"
+          footer={
+            isLoading && !data ? undefined : (
+              <span className="tabular-nums">
+                {viewTotal ? `${Math.round((counts.completed / viewTotal) * 100)}% of ${viewTotal}` : 'no tasks'} on this grid
+              </span>
+            )
+          }
+        />
       </div>
 
       <Card padded={false} className="overflow-hidden">
-        <div className="flex flex-col gap-3 border-b border-line p-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 border-b border-line px-4 py-2.5 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" aria-label="Previous month" onClick={() => setMonth((m) => addMonths(m, -1))}>
-              <ChevronLeft size={16} />
-            </Button>
-            <Button variant="outline" size="icon" aria-label="Next month" onClick={() => setMonth((m) => addMonths(m, 1))}>
-              <ChevronRight size={16} />
-            </Button>
-            <h2 className="min-w-[9.5rem] px-1 text-sm font-semibold text-ink">{monthLabel}</h2>
-            <Button variant="ghost" size="sm" onClick={() => setMonth(startOfMonth(new Date()))}>
+            <div className="flex shrink-0">
+              <Button variant="outline" size="icon" aria-label="Previous month" className="rounded-r-none" onClick={() => setMonth((m) => addMonths(m, -1))}>
+                <ChevronLeft size={16} />
+              </Button>
+              <Button variant="outline" size="icon" aria-label="Next month" className="-ml-px rounded-l-none" onClick={() => setMonth((m) => addMonths(m, 1))}>
+                <ChevronRight size={16} />
+              </Button>
+            </div>
+            <div className="min-w-[8.5rem] px-1">
+              <h2 className="text-[15px] font-semibold leading-5 text-ink">{monthLabel}</h2>
+              <p className="text-2xs tabular-nums text-ink-faint">{gridRange}</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setMonth(startOfMonth(new Date()))}>
               Today
             </Button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Select
-              aria-label="Assigned to"
-              value={assignedUserId}
-              onChange={(e) => setAssignedUserId(e.target.value)}
-              options={[{ value: 'all', label: 'All Users' }, ...assignableUsers.map((u) => ({ value: u.id, label: u.name }))]}
-              wrapperClassName="w-44"
-            />
-            <Select
-              aria-label="Status"
-              value={status}
-              onChange={(e) => setStatus(e.target.value as FollowUpStatus | 'all')}
-              options={STATUS_OPTIONS}
-              wrapperClassName="w-40"
-            />
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5">
+            <ul className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-muted" aria-label="Legend">
+              {LEGEND_ORDER.map((state) => (
+                <li key={state} className="inline-flex items-center gap-1.5">
+                  <span className={cn('h-2 w-2 rounded-[2px]', STATE_STYLE[state].dot)} aria-hidden="true" />
+                  {STATE_STYLE[state].label}
+                </li>
+              ))}
+            </ul>
+            <span className="hidden h-5 w-px bg-line sm:block" aria-hidden="true" />
+            <div className="flex flex-wrap items-center gap-2">
+              <Select
+                aria-label="Assigned to"
+                value={assignedUserId}
+                onChange={(e) => setAssignedUserId(e.target.value)}
+                options={[{ value: 'all', label: 'All Users' }, ...assignableUsers.map((u) => ({ value: u.id, label: u.name }))]}
+                wrapperClassName="w-44"
+              />
+              <Select
+                aria-label="Status"
+                value={status}
+                onChange={(e) => setStatus(e.target.value as FollowUpStatus | 'all')}
+                options={STATUS_OPTIONS}
+                wrapperClassName="w-40"
+              />
+            </div>
           </div>
         </div>
 
@@ -281,18 +360,20 @@ export function TaskCalendar() {
           <>
             <div className="grid grid-cols-7 border-b border-line bg-surface-subtle">
               {WEEKDAYS.map((day) => (
-                <div key={day} className="px-2 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
+                <div key={day} className="px-2 py-1.5 text-center text-2xs font-semibold uppercase tracking-wider text-ink-subtle">
                   {day}
                 </div>
               ))}
             </div>
 
-            <div className="grid grid-cols-7 [&>*:nth-child(7n)]:border-r-0">
+            <div className="grid grid-cols-7 [&>*:nth-child(7n)]:border-r-0 [&>*:nth-last-child(-n+7)]:border-b-0">
               {days.map((day) => {
                 const key = dayKey(day);
                 const dayTasks = tasksByDay.get(key) ?? [];
                 const inMonth = day.getMonth() === month.getMonth();
                 const isToday = key === todayKey;
+                const isSelected = key === selectedKey;
+                const extra = dayTasks.length - CHIPS_PER_DAY;
 
                 return (
                   <button
@@ -300,57 +381,66 @@ export function TaskCalendar() {
                     type="button"
                     onClick={() => setSelectedDay(day)}
                     className={cn(
-                      'flex min-h-[7rem] flex-col items-stretch gap-1 border-b border-r border-line p-2 text-left align-top transition-colors hover:bg-surface-subtle focus-ring',
-                      !inMonth && 'bg-surface-subtle/70'
+                      'relative flex min-h-[4.5rem] min-w-0 flex-col items-stretch gap-[3px] border-b border-r border-line p-1 text-left align-top transition-colors duration-100 focus-ring sm:min-h-[7.25rem] sm:p-1.5',
+                      inMonth ? 'bg-surface' : 'bg-surface-subtle',
+                      isSelected ? 'bg-surface-muted' : 'hover:bg-surface-subtle',
+                      // Today is outlined, not filled, so its chips keep their own colours.
+                      isToday && 'z-[1] shadow-[inset_0_0_0_1.5px_var(--c-brand-600)]'
                     )}
-                    aria-label={`${formatDayLabel(day)} — ${dayTasks.length} task${dayTasks.length === 1 ? '' : 's'}`}
+                    aria-current={isToday ? 'date' : undefined}
+                    aria-label={`${formatDayLabel(day)}${isToday ? ' (today)' : ''} — ${dayTasks.length} task${dayTasks.length === 1 ? '' : 's'}`}
                   >
-                    <span className="flex items-center justify-between">
-                      <span
-                        className={cn(
-                          'flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold',
-                          isToday ? 'bg-shell-900 text-white' : inMonth ? 'text-ink' : 'text-ink-faint'
+                    <span className="flex items-center justify-between gap-1 px-0.5">
+                      <span className="flex h-5 items-center gap-1">
+                        <span
+                          className={cn(
+                            'text-xs font-semibold tabular-nums',
+                            isToday ? 'flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-600 px-1 text-white' : inMonth ? 'pl-0.5 text-ink' : 'pl-0.5 text-ink-faint'
+                          )}
+                        >
+                          {day.getDate()}
+                        </span>
+                        {/* The 1st carries its month, so the trailing days of the grid aren't mistaken for this one. */}
+                        {day.getDate() === 1 && !isToday && (
+                          <span className={cn('hidden text-xs font-semibold sm:inline', inMonth ? 'text-ink' : 'text-ink-faint')}>
+                            {day.toLocaleDateString('en-IN', { month: 'short' })}
+                          </span>
                         )}
-                      >
-                        {day.getDate()}
+                        {isToday && <span className="hidden text-2xs font-semibold text-brand-700 sm:inline">Today</span>}
                       </span>
                       {isLoading && <Skeleton className="h-3 w-8" />}
                     </span>
 
-                    {dayTasks.slice(0, 3).map((task) => (
-                      <span
-                        key={task.id}
-                        title={`${task.title}${task.leadName ? ` — ${task.leadName}` : ''} · ${formatTime(task.dueAt)}`}
-                        className={cn(
-                          'truncate rounded-md border px-1.5 py-0.5 text-[11px] font-medium leading-4',
-                          STATE_CHIP[taskState(task, now)]
-                        )}
-                      >
-                        {formatTime(task.dueAt)} {task.title}
-                      </span>
-                    ))}
+                    {/* Chips from a small tablet up; on a phone a day is ~50px wide, so dots instead. */}
+                    <span className="hidden flex-col gap-[3px] sm:flex">
+                      {dayTasks.slice(0, CHIPS_PER_DAY).map((task) => {
+                        const state = taskState(task, now);
+                        return (
+                          <span
+                            key={task.id}
+                            title={`${task.title}${task.leadName ? ` — ${task.leadName}` : ''} · ${formatTime(task.dueAt)} · ${STATE_STYLE[state].label}`}
+                            className={cn('block truncate rounded-r-[3px] py-px pl-1.5 pr-1 text-2xs font-medium leading-4', STATE_STYLE[state].chip, STATE_STYLE[state].edge)}
+                          >
+                            <span className="tabular-nums opacity-75">{compactTime(task.dueAt)}</span> {task.title}
+                          </span>
+                        );
+                      })}
+                      {extra > 0 && (
+                        <span className="px-1 text-2xs font-medium text-ink-subtle">+{extra} more</span>
+                      )}
+                    </span>
 
-                    {dayTasks.length > 3 && (
-                      <span className="px-1 text-[11px] font-medium text-ink-subtle">+{dayTasks.length - 3} more</span>
+                    {dayTasks.length > 0 && (
+                      <span className="flex flex-wrap items-center gap-[3px] px-0.5 sm:hidden" aria-hidden="true">
+                        {dayTasks.slice(0, 6).map((task) => (
+                          <span key={task.id} className={cn('h-1.5 w-1.5 rounded-full', STATE_STYLE[taskState(task, now)].dot)} />
+                        ))}
+                        {dayTasks.length > 6 && <span className="text-[10px] leading-none text-ink-subtle">+{dayTasks.length - 6}</span>}
+                      </span>
                     )}
                   </button>
                 );
               })}
-            </div>
-
-            <div className="flex flex-wrap items-center justify-end gap-4 px-4 py-3 text-xs text-ink-muted">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-info-500" /> Upcoming
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-danger-500" /> Overdue
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-success-500" /> Completed
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-ink-faint" /> Missed
-              </span>
             </div>
           </>
         )}
@@ -385,7 +475,7 @@ export function TaskCalendar() {
               const assignee = assigneeName(task.assignedUserId);
 
               return (
-                <div key={task.id} className="rounded-lg border border-line p-3">
+                <div key={task.id} className={cn('rounded-lg border border-line p-3 pl-3.5', STATE_STYLE[state].edge)}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-medium text-ink">{task.title}</p>

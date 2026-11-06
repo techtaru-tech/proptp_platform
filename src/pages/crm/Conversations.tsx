@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, Check, CheckCheck, Clock3, Info, MessageSquare, Send, User } from 'lucide-react';
+import {
+  AlertTriangle, ArrowLeft, Check, CheckCheck, Clock3, Info, MessageSquare, Send, User,
+} from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -11,6 +13,7 @@ import { Avatar } from '../../components/ui/Avatar';
 import { SearchInput } from '../../components/ui/SearchInput';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { Skeleton } from '../../components/ui/LoadingSkeleton';
 import { useAsync } from '../../hooks/useAsync';
 import { useToast } from '../../context/ToastContext';
 import {
@@ -19,8 +22,8 @@ import {
   type ConversationTab,
 } from '../../services/whatsappService';
 import { getLead } from '../../services/leadService';
-import { assignableUsers, userDisplayName } from '../../data/referenceData';
-import { formatDateTime, formatRelativeTime } from '../../utils/format';
+import { assignableUsers } from '../../data/referenceData';
+import { formatDate, formatTime } from '../../utils/format';
 import { cn } from '../../utils/cn';
 import type { LeadStatus, WhatsAppConversation, WhatsAppMessage } from '../../types';
 
@@ -33,7 +36,32 @@ const LEAD_STATUS_OPTIONS: { value: LeadStatus | 'all'; label: string }[] = [
   { value: 'lost', label: 'Lost' },
 ];
 
+/** Calendar-day difference between `iso` and today, in local time. */
+function daysAgo(iso: string): number {
+  const d = new Date(iso);
+  const today = new Date();
+  const start = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  return Math.round((start(today) - start(d)) / 86_400_000);
+}
+
+/** Inbox-style stamp: a time today, "Yesterday", a weekday this week, then a date. */
+function listTime(iso: string): string {
+  const days = daysAgo(iso);
+  if (days <= 0) return formatTime(iso);
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return new Date(iso).toLocaleDateString('en-IN', { weekday: 'short' });
+  return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+}
+
+function dayLabel(iso: string): string {
+  const days = daysAgo(iso);
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  return formatDate(iso);
+}
+
 export function Conversations() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [accountId, setAccountId] = useState('');
   const [tab, setTab] = useState<ConversationTab>('all');
@@ -74,7 +102,7 @@ export function Conversations() {
             title="No WhatsApp number linked"
             description="Link a WhatsApp Business number under Settings → WhatsApp. Once Meta starts posting to its webhook, every conversation lands here."
             action={
-              <Button variant="primary" onClick={() => (window.location.href = '/settings/whatsapp')}>
+              <Button variant="primary" onClick={() => navigate('/settings/whatsapp')}>
                 Link a number
               </Button>
             }
@@ -107,19 +135,26 @@ export function Conversations() {
       />
 
       {account && account.status === 'error' && (
-        <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-700">
-          <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+        <div className="mb-3 flex items-start gap-2 rounded-lg border border-danger-100 bg-danger-50 px-3 py-2 text-sm text-danger-700">
+          <AlertTriangle size={14} className="mt-0.5 shrink-0" />
           <p>
-            <strong>{account.label} is erroring.</strong> {account.lastError}
+            <strong className="font-semibold">{account.label} is erroring.</strong> {account.lastError}
           </p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[22rem_1fr_20rem]">
+      {/* One frame, three panes split by hairlines — list, thread, lead. */}
+      <div
+        className={cn(
+          'grid grid-cols-1 overflow-hidden rounded-xl border border-line bg-surface',
+          'lg:h-[calc(100vh-11rem)] lg:min-h-[32rem] lg:grid-cols-[18rem_minmax(0,1fr)_15rem] xl:grid-cols-[20rem_minmax(0,1fr)_17rem]'
+        )}
+      >
         <ConversationList
           conversations={conversations ?? []}
           isLoading={isLoading}
           selectedId={selectedId}
+          hiddenOnMobile={!!selectedId}
           onSelect={async (conversation) => {
             setSelectedId(conversation.id);
             if (conversation.unreadCount > 0) {
@@ -139,17 +174,23 @@ export function Conversations() {
 
         {selectedId ? (
           <>
-            <Thread conversationId={selectedId} onSent={refresh} toast={toast} />
+            <Thread conversationId={selectedId} onSent={refresh} onBack={() => setSelectedId(null)} toast={toast} />
             <LeadPanel conversationId={selectedId} onChanged={refresh} />
           </>
         ) : (
-          <Card className="lg:col-span-2">
+          <div className="hidden flex-col items-center justify-center bg-surface-subtle lg:col-span-2 lg:flex">
             <EmptyState
               icon={MessageSquare}
               title="Pick a conversation"
               description="Choose a thread on the left to read it, reply, and see the lead behind it."
             />
-          </Card>
+            {account && (
+              <p className="-mt-4 text-2xs tabular-nums text-ink-faint">
+                {account.label} · {account.displayPhone} — {account.conversationCount} conversation
+                {account.conversationCount === 1 ? '' : 's'}, {account.unreadCount} unread
+              </p>
+            )}
+          </div>
         )}
       </div>
     </div>
@@ -164,6 +205,8 @@ interface ListProps {
   conversations: WhatsAppConversation[];
   isLoading: boolean;
   selectedId: string | null;
+  /** Below `lg` the list and the open thread take turns on screen. */
+  hiddenOnMobile: boolean;
   onSelect: (conversation: WhatsAppConversation) => void;
   tab: ConversationTab;
   onTab: (tab: ConversationTab) => void;
@@ -176,92 +219,147 @@ interface ListProps {
 }
 
 function ConversationList({
-  conversations, isLoading, selectedId, onSelect,
+  conversations, isLoading, selectedId, hiddenOnMobile, onSelect,
   tab, onTab, search, onSearch, assignee, onAssignee, leadStatus, onLeadStatus,
 }: ListProps) {
+  const unreadThreads = conversations.filter((c) => c.unreadCount > 0).length;
+
   return (
-    <Card padded={false} className="flex max-h-[calc(100vh-13rem)] flex-col">
-      <div className="space-y-2.5 border-b border-line p-3">
+    <section
+      aria-label="Conversations"
+      className={cn(
+        'min-h-0 flex-col border-b border-line lg:border-b-0 lg:border-r',
+        hiddenOnMobile ? 'hidden lg:flex' : 'flex'
+      )}
+    >
+      <div className="space-y-2 border-b border-line p-3">
         <SearchInput value={search} onChange={onSearch} placeholder="Search lead(s)" />
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <Select
             aria-label="Assignee"
             value={assignee}
             onChange={(e) => onAssignee(e.target.value)}
             options={[{ value: 'all', label: 'Assignee' }, ...assignableUsers().map((u) => ({ value: u.id, label: u.name }))]}
-            wrapperClassName="flex-1"
           />
           <Select
             aria-label="Lead status"
             value={leadStatus}
             onChange={(e) => onLeadStatus(e.target.value as LeadStatus | 'all')}
             options={LEAD_STATUS_OPTIONS}
-            wrapperClassName="flex-1"
           />
         </div>
-        <div className="flex rounded-lg bg-surface-muted p-0.5">
-          {CONVERSATION_TABS.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => onTab(t.key)}
-              className={cn(
-                'flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-ring',
-                tab === t.key ? 'bg-surface text-ink shadow-card' : 'text-ink-muted hover:text-ink'
-              )}
-            >
-              {t.label}
-              {t.key === 'all' && conversations.length > 0 && tab === 'all' && ` (${conversations.length})`}
-            </button>
-          ))}
+        <div role="tablist" aria-label="Conversation filter" className="flex rounded-lg border border-line bg-surface-subtle p-0.5">
+          {CONVERSATION_TABS.map((t) => {
+            const on = tab === t.key;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={on}
+                onClick={() => onTab(t.key)}
+                className={cn(
+                  'h-6 flex-1 rounded-md text-xs font-medium transition-colors duration-100 focus-ring',
+                  on ? 'border border-line bg-surface text-ink' : 'text-ink-subtle hover:text-ink'
+                )}
+              >
+                {t.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      {!isLoading && conversations.length > 0 && (
+        <div className="flex items-center justify-between border-b border-line px-3 py-1.5 text-2xs tabular-nums text-ink-faint">
+          <span>
+            {conversations.length} thread{conversations.length === 1 ? '' : 's'}
+          </span>
+          {unreadThreads > 0 && <span className="font-medium text-brand-700">{unreadThreads} unread</span>}
+        </div>
+      )}
+
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {isLoading ? (
-          <p className="p-4 text-sm text-ink-faint">Loading conversations...</p>
-        ) : conversations.length === 0 ? (
-          <p className="p-4 text-sm text-ink-faint">
-            {tab === 'pending'
-              ? 'Nothing is waiting on a reply.'
-              : tab === 'intervened'
-                ? 'Nobody has replied to a thread yet.'
-                : 'No conversations on this number yet.'}
-          </p>
-        ) : (
-          conversations.map((c) => {
-            const name = c.leadName || c.contactName || c.contactPhone;
-            return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => onSelect(c)}
-                className={cn(
-                  'flex w-full items-start gap-3 border-b border-line px-3 py-3 text-left transition-colors hover:bg-surface-subtle focus-ring',
-                  selectedId === c.id && 'bg-surface-subtle'
-                )}
-              >
-                <Avatar name={name} size="sm" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <p className="truncate text-sm font-medium text-ink">{name}</p>
-                    <span className="shrink-0 text-[11px] text-ink-faint">
-                      {c.lastMessageAt ? formatRelativeTime(c.lastMessageAt) : ''}
-                    </span>
-                  </div>
-                  <p className="truncate text-xs text-ink-muted">{c.lastMessagePreview ?? 'No messages yet'}</p>
+          <div className="divide-y divide-line">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-2.5 px-3 py-3">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-2.5 w-1/2" />
+                  <Skeleton className="h-2.5 w-3/4" />
                 </div>
-                {c.unreadCount > 0 && (
-                  <span className="mt-1 shrink-0 rounded-full bg-success-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                    {c.unreadCount}
-                  </span>
-                )}
-              </button>
-            );
-          })
+              </div>
+            ))}
+          </div>
+        ) : conversations.length === 0 ? (
+          <div className="px-4 py-10 text-center">
+            <MessageSquare size={16} className="mx-auto text-ink-faint" aria-hidden="true" />
+            <p className="mt-2 text-xs text-ink-subtle">
+              {search.trim() || assignee !== 'all' || leadStatus !== 'all'
+                ? 'No threads match these filters.'
+                : tab === 'pending'
+                  ? 'Nothing is waiting on a reply.'
+                  : tab === 'intervened'
+                    ? 'Nobody has replied to a thread yet.'
+                    : 'No conversations on this number yet.'}
+            </p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-line">
+            {conversations.map((c) => {
+              const name = c.leadName || c.contactName || c.contactPhone;
+              const selected = selectedId === c.id;
+              const unread = c.unreadCount > 0;
+              return (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(c)}
+                    aria-current={selected ? 'true' : undefined}
+                    className={cn(
+                      'relative flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors duration-100 focus-ring',
+                      selected ? 'bg-brand-50' : 'hover:bg-surface-subtle'
+                    )}
+                  >
+                    {selected && <span className="absolute inset-y-0 left-0 w-0.5 bg-brand-600" aria-hidden="true" />}
+                    <Avatar name={name} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline gap-2">
+                        <p className={cn('min-w-0 flex-1 truncate text-[13px] text-ink', unread ? 'font-semibold' : 'font-medium')}>
+                          {name}
+                        </p>
+                        {c.lastMessageAt && (
+                          <time
+                            dateTime={c.lastMessageAt}
+                            className={cn('shrink-0 text-2xs tabular-nums', unread ? 'font-medium text-brand-700' : 'text-ink-faint')}
+                          >
+                            {listTime(c.lastMessageAt)}
+                          </time>
+                        )}
+                      </div>
+                      <div className="mt-0.5 flex items-center gap-2">
+                        <p className={cn('min-w-0 flex-1 truncate text-xs', unread ? 'text-ink-muted' : 'text-ink-subtle')}>
+                          {c.lastMessagePreview ?? 'No messages yet'}
+                        </p>
+                        {unread && (
+                          <span
+                            className="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-brand-600 px-1 text-2xs font-semibold tabular-nums text-white"
+                            aria-label={`${c.unreadCount} unread`}
+                          >
+                            {c.unreadCount}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </div>
-    </Card>
+    </section>
   );
 }
 
@@ -269,27 +367,38 @@ function ConversationList({
 // Middle — the chat thread
 // ---------------------------------------------------------------------------
 
+const TICK_LABEL: Record<string, string> = { read: 'Read', delivered: 'Delivered', failed: 'Failed', sent: 'Sent', queued: 'Queued' };
+
 function TickIcon({ status }: { status: string }) {
-  if (status === 'read') return <CheckCheck size={12} className="text-info-500" />;
-  if (status === 'delivered') return <CheckCheck size={12} />;
-  if (status === 'failed') return <AlertTriangle size={12} className="text-danger-500" />;
-  return <Check size={12} />;
+  const label = TICK_LABEL[status] ?? status;
+  if (status === 'read') return <CheckCheck size={12} className="text-white" aria-label={label} />;
+  if (status === 'delivered') return <CheckCheck size={12} aria-label={label} />;
+  if (status === 'failed') return <AlertTriangle size={12} aria-label={label} />;
+  return <Check size={12} aria-label={label} />;
 }
 
 function Thread({
-  conversationId, onSent, toast,
-}: { conversationId: string; onSent: () => void; toast: ReturnType<typeof useToast>['toast'] }) {
+  conversationId, onSent, onBack, toast,
+}: {
+  conversationId: string;
+  onSent: () => void;
+  onBack: () => void;
+  toast: ReturnType<typeof useToast>['toast'];
+}) {
+  const navigate = useNavigate();
   const [reloadKey, setReloadKey] = useState(0);
   const [draft, setDraft] = useState('');
   const [templateName, setTemplateName] = useState('');
   const [sending, setSending] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: conversation } = useAsync(() => getConversation(conversationId), [conversationId, reloadKey]);
   const { data: messages, isLoading } = useAsync(() => listMessages(conversationId), [conversationId, reloadKey]);
 
+  // Scroll the message pane itself, not the page, to the newest message.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: 'end' });
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
   const send = async () => {
@@ -311,70 +420,114 @@ function Thread({
   };
 
   const name = conversation?.leadName || conversation?.contactName || conversation?.contactPhone || '';
+  const list = messages ?? [];
 
   return (
-    <Card padded={false} className="flex max-h-[calc(100vh-13rem)] flex-col">
-      <div className="flex items-center justify-between gap-3 border-b border-line p-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <Avatar name={name} size="sm" />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-ink">{name}</p>
-            <p className="text-xs text-ink-faint">{conversation?.contactPhone}</p>
+    <section aria-label="Thread" className="flex min-h-0 min-w-0 flex-col">
+      <div className="flex items-center gap-2.5 border-b border-line px-3 py-2.5">
+        <Button variant="ghost" size="icon" className="-ml-1 h-7 w-7 lg:hidden" aria-label="Back to conversations" onClick={onBack}>
+          <ArrowLeft size={15} />
+        </Button>
+        <Avatar name={name || '?'} size="sm" />
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <p className="truncate text-[13px] font-semibold text-ink">{name}</p>
+            {conversation?.leadStatus && (
+              <span className="hidden shrink-0 sm:inline-flex">
+                <StatusBadge kind="leadStatus" status={conversation.leadStatus} />
+              </span>
+            )}
           </div>
+          <p className="truncate text-2xs tabular-nums text-ink-faint">
+            {conversation?.contactPhone}
+            {conversation?.intervened && ' · The team has replied here'}
+          </p>
         </div>
         {conversation && (
           <span
             className={cn(
-              'inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium',
+              'inline-flex shrink-0 items-center gap-1 rounded-sm px-1.5 py-px text-2xs font-medium tabular-nums',
               conversation.canReply ? 'bg-success-50 text-success-700' : 'bg-warning-50 text-warning-700'
             )}
             title="WhatsApp only allows a freeform reply within 24 hours of the customer's last message."
           >
             <Clock3 size={11} />
-            {formatWindowLeft(conversation.windowMinutesLeft)}
+            {conversation.canReply ? `${formatWindowLeft(conversation.windowMinutesLeft)} left` : 'Window closed'}
           </span>
+        )}
+        {conversation?.leadId && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            aria-label="Open lead"
+            leftIcon={<User size={13} />}
+            onClick={() => navigate(`/crm/leads/${conversation.leadId}`)}
+          >
+            <span className="hidden sm:inline">Open lead</span>
+          </Button>
         )}
       </div>
 
-      <div className="flex-1 space-y-2.5 overflow-y-auto bg-surface-subtle p-4">
+      <div
+        ref={scrollRef}
+        className="min-h-[18rem] flex-1 overflow-y-auto bg-surface-subtle px-4 py-3 max-lg:max-h-[60vh] lg:min-h-0"
+      >
         {isLoading ? (
-          <p className="text-sm text-ink-faint">Loading messages...</p>
-        ) : (messages ?? []).length === 0 ? (
-          <p className="text-sm text-ink-faint">No messages in this thread yet.</p>
+          <p className="py-6 text-center text-xs text-ink-faint">Loading messages…</p>
+        ) : list.length === 0 ? (
+          <p className="py-6 text-center text-xs text-ink-faint">No messages in this thread yet.</p>
         ) : (
-          (messages ?? []).map((m: WhatsAppMessage) => {
-            const outbound = m.direction === 'outbound';
-            return (
-              <div key={m.id} className={cn('flex', outbound ? 'justify-end' : 'justify-start')}>
-                <div
-                  className={cn(
-                    'max-w-[80%] rounded-2xl px-3.5 py-2 text-sm',
-                    outbound ? 'bg-brand-600 text-white' : 'bg-surface text-ink shadow-card'
+          <div className="space-y-1.5">
+            {list.map((m: WhatsAppMessage, i) => {
+              const outbound = m.direction === 'outbound';
+              const day = dayLabel(m.sentAt);
+              const newDay = i === 0 || dayLabel(list[i - 1].sentAt) !== day;
+              return (
+                <Fragment key={m.id}>
+                  {newDay && (
+                    <div className="flex justify-center py-2">
+                      <span className="rounded-sm border border-line bg-surface px-2 py-px text-2xs font-medium text-ink-subtle">{day}</span>
+                    </div>
                   )}
-                >
-                  <p className="whitespace-pre-wrap break-words">{m.body || `[${m.type}]`}</p>
-                  <p
-                    className={cn(
-                      'mt-1 flex items-center justify-end gap-1 text-[10px]',
-                      outbound ? 'text-white/70' : 'text-ink-faint'
-                    )}
-                  >
-                    {formatDateTime(m.sentAt).split(', ')[1] ?? formatDateTime(m.sentAt)}
-                    {outbound && <TickIcon status={m.status} />}
-                  </p>
-                  {m.error && <p className="mt-1 text-[10px] text-danger-200">{m.error}</p>}
-                </div>
-              </div>
-            );
-          })
+                  <div className={cn('flex', outbound ? 'justify-end' : 'justify-start')}>
+                    <div className={cn('flex max-w-[78%] flex-col', outbound ? 'items-end' : 'items-start')}>
+                      <div
+                        className={cn(
+                          'rounded-xl px-3 py-1.5 text-[13px] leading-5',
+                          outbound ? 'rounded-br-sm bg-brand-600 text-white' : 'rounded-bl-sm border border-line bg-surface text-ink'
+                        )}
+                      >
+                        <p className="whitespace-pre-wrap break-words">{m.body || `[${m.type}]`}</p>
+                        <p
+                          className={cn(
+                            'mt-0.5 flex items-center justify-end gap-1 text-2xs tabular-nums',
+                            outbound ? 'text-white/70' : 'text-ink-faint'
+                          )}
+                        >
+                          {formatTime(m.sentAt)}
+                          {outbound && <TickIcon status={m.status} />}
+                        </p>
+                      </div>
+                      {m.error && (
+                        <p className="mt-1 flex items-start gap-1 text-2xs text-danger-600">
+                          <AlertTriangle size={11} className="mt-px shrink-0" />
+                          {m.error}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </Fragment>
+              );
+            })}
+          </div>
         )}
-        <div ref={bottomRef} />
       </div>
 
       <div className="border-t border-line p-3">
         {conversation && !conversation.canReply ? (
-          <>
-            <p className="mb-2 flex items-start gap-1.5 text-xs text-warning-700">
+          <div className="space-y-2">
+            <p className="flex items-start gap-1.5 rounded-lg bg-warning-50 px-2.5 py-1.5 text-xs text-warning-700">
               <Info size={13} className="mt-0.5 shrink-0" />
               The 24-hour window has closed. WhatsApp only allows an approved template until the customer writes again.
             </p>
@@ -390,10 +543,11 @@ function Thread({
                 Send Template
               </Button>
             </div>
-          </>
+          </div>
         ) : (
-          <div className="flex items-end gap-2">
+          <div className="rounded-lg border border-line-strong bg-surface transition-colors duration-100 focus-within:border-brand-600">
             <textarea
+              aria-label="Message"
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
@@ -402,17 +556,28 @@ function Thread({
                   void send();
                 }
               }}
-              placeholder="Type a message"
+              placeholder="Type a WhatsApp message"
               rows={2}
-              className="flex-1 resize-none rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus-ring"
+              className="block w-full resize-none bg-transparent px-3 pt-2 text-[13px] text-ink placeholder:text-ink-faint focus:outline-none"
             />
-            <Button variant="primary" size="icon" aria-label="Send" isLoading={sending} onClick={send} disabled={!draft.trim()}>
-              <Send size={15} />
-            </Button>
+            <div className="flex items-center justify-between gap-2 pb-1.5 pl-3 pr-1.5">
+              <span className="hidden text-2xs text-ink-faint sm:inline">Enter to send · Shift + Enter for a new line</span>
+              <Button
+                variant="primary"
+                size="sm"
+                className="ml-auto"
+                leftIcon={<Send size={13} />}
+                isLoading={sending}
+                onClick={send}
+                disabled={!draft.trim()}
+              >
+                Send
+              </Button>
+            </div>
           </div>
         )}
       </div>
-    </Card>
+    </section>
   );
 }
 
@@ -429,78 +594,89 @@ function LeadPanel({ conversationId, onChanged }: { conversationId: string; onCh
     [conversation?.leadId]
   );
 
-  if (!conversation) return <Card><p className="text-sm text-ink-faint">Loading...</p></Card>;
-
   return (
-    <Card className="max-h-[calc(100vh-13rem)] overflow-y-auto">
-      <div className="mb-4">
-        <p className="text-base font-semibold text-ink">{conversation.leadName ?? conversation.contactName ?? 'Unknown contact'}</p>
-        {conversation.leadStatus && (
-          <div className="mt-1.5">
-            <StatusBadge kind="leadStatus" status={conversation.leadStatus} />
-          </div>
-        )}
-      </div>
-
-      <dl className="space-y-3 text-sm">
-        <Field label="Phone" value={conversation.contactPhone} />
-        {lead?.email && <Field label="Email" value={lead.email} />}
-        {lead?.city && <Field label="City" value={lead.city} />}
-        {lead?.company && <Field label="Company" value={lead.company} />}
-        {lead?.source && <Field label="Source" value={lead.source} />}
-        <div className="flex flex-col gap-1.5 border-b border-line pb-2.5">
-          <dt className="text-ink-muted">Assignee</dt>
-          <Select
-            aria-label="Assignee"
-            value={conversation.assignedUserId ?? ''}
-            onChange={async (e) => {
-              await updateConversation(conversation.id, { assignedUserId: e.target.value });
-              setReloadKey((k) => k + 1);
-              onChanged();
-            }}
-            options={[{ value: '', label: 'Unassigned' }, ...assignableUsers().map((u) => ({ value: u.id, label: u.name }))]}
-          />
+    <aside aria-label="Lead" className="min-h-0 overflow-y-auto border-t border-line lg:border-l lg:border-t-0">
+      {!conversation ? (
+        <div className="space-y-2 p-4">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-3 w-32" />
         </div>
-        {conversation.assignedUserId && (
-          <Field label="Owner" value={userDisplayName(conversation.assignedUserId)} />
-        )}
-        {lead?.notes && <Field label="Notes" value={lead.notes} />}
-      </dl>
+      ) : (
+        <>
+          <div className="border-b border-line px-4 py-3">
+            <p className="text-2xs font-semibold uppercase tracking-wider text-ink-faint">{conversation.leadId ? 'Lead' : 'Contact'}</p>
+            {conversation.leadId ? (
+              <button
+                type="button"
+                onClick={() => navigate(`/crm/leads/${conversation.leadId}`)}
+                className="mt-1 block max-w-full truncate rounded text-left text-[13px] font-semibold text-ink hover:text-brand-700 focus-ring"
+              >
+                {conversation.leadName ?? conversation.contactName ?? 'Unknown contact'}
+              </button>
+            ) : (
+              <p className="mt-1 truncate text-[13px] font-semibold text-ink">{conversation.contactName ?? 'Unknown contact'}</p>
+            )}
+            {(conversation.leadStatus || conversation.intervened) && (
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                {conversation.leadStatus && <StatusBadge kind="leadStatus" status={conversation.leadStatus} />}
+                {conversation.intervened && <Badge tone="info">Intervened</Badge>}
+              </div>
+            )}
+          </div>
 
-      {conversation.leadId && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="mt-4 w-full"
-          leftIcon={<User size={13} />}
-          onClick={() => navigate(`/crm/leads/${conversation.leadId}`)}
-        >
-          Open full lead
-        </Button>
-      )}
+          <dl className="divide-y divide-line px-4 text-xs">
+            <Field label="Phone" value={conversation.contactPhone} />
+            {lead?.email && <Field label="Email" value={lead.email} />}
+            {lead?.city && <Field label="City" value={lead.city} />}
+            {lead?.company && <Field label="Company" value={lead.company} />}
+            {lead?.source && <Field label="Source" value={lead.source} />}
+          </dl>
 
-      {!conversation.leadId && (
-        <p className="mt-4 flex items-start gap-1.5 text-xs text-ink-faint">
-          <Info size={12} className="mt-0.5 shrink-0" />
-          This thread is not linked to a lead. Turn on "Create a lead from an unknown number" for this WhatsApp number
-          in Settings → WhatsApp.
-        </p>
-      )}
+          <div className="space-y-1 border-t border-line px-4 py-3">
+            <label htmlFor="conv-assignee" className="text-2xs font-semibold uppercase tracking-wider text-ink-faint">
+              Assignee
+            </label>
+            <Select
+              id="conv-assignee"
+              value={conversation.assignedUserId ?? ''}
+              onChange={async (e) => {
+                await updateConversation(conversation.id, { assignedUserId: e.target.value });
+                setReloadKey((k) => k + 1);
+                onChanged();
+              }}
+              options={[{ value: '', label: 'Unassigned' }, ...assignableUsers().map((u) => ({ value: u.id, label: u.name }))]}
+            />
+          </div>
 
-      {conversation.intervened && (
-        <p className="mt-3 text-xs text-ink-faint">
-          <Badge tone="info">Intervened</Badge> — someone from the team has replied here.
-        </p>
+          {lead?.notes && (
+            <div className="border-t border-line px-4 py-3">
+              <p className="text-2xs font-semibold uppercase tracking-wider text-ink-faint">Notes</p>
+              <p className="mt-1 whitespace-pre-wrap break-words text-xs text-ink-muted">{lead.notes}</p>
+            </div>
+          )}
+
+          {!conversation.leadId && (
+            <p className="mx-4 my-3 flex items-start gap-1.5 rounded-lg bg-surface-subtle px-2.5 py-2 text-xs text-ink-subtle">
+              <Info size={12} className="mt-0.5 shrink-0" />
+              This thread is not linked to a lead. Turn on "Create a lead from an unknown number" for this WhatsApp number
+              in Settings → WhatsApp.
+            </p>
+          )}
+
+          {conversation.intervened && (
+            <p className="mx-4 my-3 text-2xs text-ink-faint">Someone from the team has replied in this thread.</p>
+          )}
+        </>
       )}
-    </Card>
+    </aside>
   );
 }
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-3 border-b border-line pb-2.5">
-      <dt className="shrink-0 text-ink-muted">{label}</dt>
-      <dd className="break-words text-right font-medium text-ink">{value}</dd>
+    <div className="flex items-start justify-between gap-3 py-2">
+      <dt className="shrink-0 text-ink-subtle">{label}</dt>
+      <dd className="min-w-0 break-words text-right font-medium tabular-nums text-ink">{value}</dd>
     </div>
   );
 }

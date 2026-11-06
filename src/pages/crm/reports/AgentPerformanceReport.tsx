@@ -1,8 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Download, FileText } from 'lucide-react';
-import { Card } from '../../../components/ui/Card';
-import { Button } from '../../../components/ui/Button';
+import { ChevronRight } from 'lucide-react';
 import { Avatar } from '../../../components/ui/Avatar';
 import { DataTable, type DataTableColumn } from '../../../components/tables/DataTable';
 import { Drawer } from '../../../components/ui/Drawer';
@@ -16,13 +14,20 @@ import {
 import { exportToCsv } from '../../../services/reportService';
 import { exportReportPdf } from '../../../services/reportExport';
 import { formatCurrency, formatDate } from '../../../utils/format';
+import {
+  ChartFrame, GroupedBarChart, LegendSwatch, RateBar, ReportChartCard, ReportTableCard, ReportToolbar, fmtCount, fmtPct, rateColumn, shareOf,
+} from './ReportCenterParts';
+
+/** More agents than this and the chart shows the busiest ones; the table always has everyone. */
+const CHART_LIMIT = 12;
 
 export function AgentPerformanceReport() {
   const [range, setRange] = useState<DateRange>(() => initialRangeForPreset());
   const [openAgent, setOpenAgent] = useState<AgentPerformanceRow | null>(null);
   const params = useMemo(() => ({ from: range.from, to: range.to }), [range]);
   const { data, isLoading, error } = useAsync(() => getAgentPerformanceReport(params), [JSON.stringify(params)]);
-  const rows = data ?? [];
+  const rows = useMemo(() => [...(data ?? [])].sort((a, b) => b.total - a.total), [data]);
+  const totals = rows.reduce((a, r) => ({ total: a.total + r.total, won: a.won + r.won }), { total: 0, won: 0 });
 
   const columns: DataTableColumn<AgentPerformanceRow>[] = [
     {
@@ -35,54 +40,50 @@ export function AgentPerformanceReport() {
         </span>
       ),
     },
-    { key: 'total', header: 'Total Leads', align: 'right', render: (r) => r.total },
-    { key: 'won', header: 'Won', align: 'right', render: (r) => r.won },
-    { key: 'lost', header: 'Lost', align: 'right', render: (r) => r.lost },
-    { key: 'conversionRate', header: 'Conversion', align: 'right', render: (r) => `${r.conversionRate}%` },
-    { key: 'wonValue', header: 'Won Value', align: 'right', render: (r) => formatCurrency(r.wonValue) },
-    { key: 'open', header: '', align: 'right', render: () => <ChevronRight size={15} className="text-ink-faint" /> },
+    { key: 'total', header: 'Leads', align: 'right', render: (r) => <span className="tabular-nums">{fmtCount(r.total)}</span> },
+    { key: 'won', header: 'Won', align: 'right', render: (r) => <span className="font-medium tabular-nums">{fmtCount(r.won)}</span> },
+    { key: 'lost', header: 'Lost', align: 'right', render: (r) => <span className="tabular-nums text-ink-muted">{fmtCount(r.lost)}</span> },
+    { key: 'conversionRate', header: 'Conversion', ...rateColumn, render: (r) => <RateBar value={r.conversionRate} /> },
+    { key: 'wonValue', header: 'Won value', align: 'right', render: (r) => <span className="tabular-nums">{formatCurrency(r.wonValue)}</span> },
+    { key: 'open', header: '', align: 'right', width: '2rem', render: () => <ChevronRight size={15} className="text-ink-faint" /> },
   ];
 
   return (
     <div className="flex flex-col gap-4">
-      <Card padded={false}>
-        <div className="flex flex-col gap-3 border-b border-line p-4 lg:flex-row lg:items-center lg:justify-between">
-          <DateRangeFilter value={range} onChange={setRange} />
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              leftIcon={<Download size={13} />}
-              disabled={rows.length === 0}
-              onClick={() =>
-                exportToCsv(
-                  'agent-performance-report.csv',
-                  rows.map((r) => ({ Agent: r.name, 'Total Leads': r.total, Won: r.won, Lost: r.lost, 'Conversion %': r.conversionRate, 'Won Value': r.wonValue }))
-                )
-              }
-            >
-              Export CSV
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              leftIcon={<FileText size={13} />}
-              disabled={rows.length === 0}
-              onClick={() =>
-                exportReportPdf({
-                  filename: 'agent-performance-report.pdf',
-                  title: 'Agent Performance Report',
-                  subtitle: `${range.from ?? 'All time'} to ${range.to ?? 'today'}`,
-                  columns: ['Agent', 'Total', 'Won', 'Lost', 'Conversion %', 'Won Value'],
-                  rows: rows.map((r) => [r.name, r.total, r.won, r.lost, `${r.conversionRate}%`, formatCurrency(r.wonValue)]),
-                })
-              }
-            >
-              Export PDF
-            </Button>
-          </div>
-        </div>
+      <ReportToolbar
+        meta={data ? `${rows.length} agents` : undefined}
+        exportDisabled={rows.length === 0}
+        onExportCsv={() =>
+          exportToCsv(
+            'agent-performance-report.csv',
+            rows.map((r) => ({ Agent: r.name, 'Total Leads': r.total, Won: r.won, Lost: r.lost, 'Conversion %': r.conversionRate, 'Won Value': r.wonValue }))
+          )
+        }
+        onExportPdf={() =>
+          exportReportPdf({
+            filename: 'agent-performance-report.pdf',
+            title: 'Agent Performance Report',
+            subtitle: `${range.from ?? 'All time'} to ${range.to ?? 'today'}`,
+            columns: ['Agent', 'Total', 'Won', 'Lost', 'Conversion %', 'Won Value'],
+            rows: rows.map((r) => [r.name, r.total, r.won, r.lost, `${r.conversionRate}%`, formatCurrency(r.wonValue)]),
+          })
+        }
+      >
+        <DateRangeFilter value={range} onChange={setRange} />
+      </ReportToolbar>
 
+      <ReportChartCard
+        title="Leads vs won by agent"
+        subtitle={rows.length > CHART_LIMIT ? `Who turns assigned leads into bookings. The ${CHART_LIMIT} agents with the most leads.` : 'Who turns assigned leads into bookings.'}
+        legend={<><LegendSwatch tone="muted" label="Leads" /><LegendSwatch tone="brand" label="Won" /></>}
+        meta={totals.total ? <>team {fmtPct(shareOf(totals.won, totals.total))}</> : undefined}
+      >
+        <ChartFrame isLoading={isLoading} isEmpty={rows.length === 0} emptyText="No assigned leads in this range." height={260}>
+          <GroupedBarChart data={rows.slice(0, CHART_LIMIT).map((r) => ({ label: r.name, whole: r.total, part: r.won }))} wholeLabel="Leads" partLabel="Won" />
+        </ChartFrame>
+      </ReportChartCard>
+
+      <ReportTableCard title="By agent" meta="Click a row for the leads behind it">
         <DataTable
           columns={columns}
           rows={rows}
@@ -92,7 +93,7 @@ export function AgentPerformanceReport() {
           onRowClick={(r) => setOpenAgent(r)}
           emptyTitle="No assigned leads in this range"
         />
-      </Card>
+      </ReportTableCard>
 
       {openAgent && <AgentLeadsDrawer agent={openAgent} range={range} onClose={() => setOpenAgent(null)} />}
     </div>

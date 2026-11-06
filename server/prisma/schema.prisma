@@ -2188,6 +2188,9 @@ model OrganizationSettings {
   /// Show money as points everywhere in the panel: 1 rupee is `pointsPerRupee` points.
   pointsEnabled  Boolean  @default(false)
   pointsPerRupee Float    @default(10)
+  /// Anthropic API key for the assistants, encrypted with ENCRYPTION_KEY. ANTHROPIC_API_KEY in the
+  /// environment takes precedence when both are set.
+  anthropicApiKey String?
   updatedAt      DateTime @updatedAt
 }
 
@@ -3251,6 +3254,9 @@ model AssistantConversation {
   id        String             @id @default(cuid())
   userId    String
   title     String             @default("New chat")
+  /// Which assistant the chat belongs to: "general" (the panel assistant) or "crm" (the CRM analyst
+  /// on CRM Overview), so each keeps its own history.
+  kind      String             @default("general")
   /// A write the assistant wants to make and is waiting for a person to approve:
   /// { writes: [{ id, name, input, summary }], reads: [tool_result blocks already produced] }.
   pending   Json?

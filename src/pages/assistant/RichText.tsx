@@ -1,8 +1,16 @@
 import { Fragment, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 
-/** Inline: **bold** and `code`. Nothing else, and nothing is ever injected as HTML. */
+const LINK = /^\[([^\]]+)\]\((\/[^)\s]*)\)$/;
+
+/**
+ * Inline: **bold**, `code` and links into the panel ([Ravi Shah](/crm/leads/abc)). Only paths that
+ * start with "/" become links — an outside URL stays plain text — and nothing is ever injected as HTML.
+ */
 function inline(text: string): ReactNode[] {
-  return text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).filter(Boolean).map((part, i) => {
+  return text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\(\/[^)\s]*\))/g).filter(Boolean).map((part, i) => {
+    const link = LINK.exec(part);
+    if (link) return <Link key={i} to={link[2]} className="font-medium text-brand-700 underline decoration-brand-300 underline-offset-2 hover:decoration-brand-700">{link[1]}</Link>;
     if (part.startsWith('**') && part.endsWith('**')) return <strong key={i} className="font-semibold text-ink">{part.slice(2, -2)}</strong>;
     if (part.startsWith('`') && part.endsWith('`')) return <code key={i} className="rounded bg-surface-muted px-1 py-0.5 text-[0.85em]">{part.slice(1, -1)}</code>;
     return <Fragment key={i}>{part}</Fragment>;
@@ -19,6 +27,12 @@ export function RichText({ text }: { text: string }) {
   for (let i = 0; i < lines.length; ) {
     const line = lines[i];
     if (!line.trim()) { i += 1; continue; }
+    const heading = /^\s*#{1,4}\s+(.*)$/.exec(line);
+    if (heading) {
+      nodes.push(<p key={nodes.length} className="mb-1 mt-3 text-[13px] font-semibold text-ink first:mt-0">{inline(heading[1])}</p>);
+      i += 1;
+      continue;
+    }
     if (line.includes('|') && i + 1 < lines.length && isRule(lines[i + 1])) {
       const head = cells(line);
       const rows: string[][] = [];
@@ -45,7 +59,7 @@ export function RichText({ text }: { text: string }) {
       continue;
     }
     const para: string[] = [];
-    while (i < lines.length && lines[i].trim() && !bullet.test(lines[i]) && !numbered.test(lines[i]) && !(lines[i].includes('|') && i + 1 < lines.length && isRule(lines[i + 1]))) { para.push(lines[i]); i += 1; }
+    while (i < lines.length && lines[i].trim() && !/^\s*#{1,4}\s+/.test(lines[i]) && !bullet.test(lines[i]) && !numbered.test(lines[i]) && !(lines[i].includes('|') && i + 1 < lines.length && isRule(lines[i + 1]))) { para.push(lines[i]); i += 1; }
     nodes.push(<p key={nodes.length} className="my-1.5 first:mt-0 last:mb-0">{inline(para.join(' '))}</p>);
   }
   return <>{nodes}</>;

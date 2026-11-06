@@ -1,7 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Download, FileText } from 'lucide-react';
-import { Card } from '../../../components/ui/Card';
-import { Button } from '../../../components/ui/Button';
 import { Select } from '../../../components/ui/Select';
 import { Badge } from '../../../components/ui/Badge';
 import { DataTable, type DataTableColumn } from '../../../components/tables/DataTable';
@@ -10,11 +7,16 @@ import { usePipelineReferenceData } from '../../../hooks/usePipelineReferenceDat
 import { getPipelineBottlenecks, type BottleneckStage } from '../../../services/reportCenterService';
 import { exportToCsv } from '../../../services/reportService';
 import { exportReportPdf } from '../../../services/reportExport';
+import {
+  ChartFrame, HBarChart, LegendSwatch, RateBar, ReportChartCard, ReportTableCard, ReportToolbar, fmtCount, rateColumn, shareOf,
+} from './ReportCenterParts';
 
 /** Flags a stage as a bottleneck once leads sit there noticeably longer than average across the pipeline. */
 function isBottleneck(days: number, average: number): boolean {
   return average > 0 && days > average * 1.5 && days > 2;
 }
+
+const fmtDays = (d: number) => `${Number.isInteger(d) ? d : d.toFixed(1)}d`;
 
 export function PipelineBottlenecksReport() {
   const { pipelines, defaultPipeline } = usePipelineReferenceData();
@@ -27,6 +29,9 @@ export function PipelineBottlenecksReport() {
   const stages = data?.stages ?? [];
   const withLeads = stages.filter((s) => s.leadsInStage > 0);
   const average = withLeads.length > 0 ? withLeads.reduce((sum, s) => sum + s.avgDaysInStage, 0) / withLeads.length : 0;
+  const openLeads = stages.reduce((a, s) => a + s.leadsInStage, 0);
+  const busiest = Math.max(0, ...stages.map((s) => s.leadsInStage));
+  const flagged = withLeads.filter((s) => isBottleneck(s.avgDaysInStage, average));
 
   const columns: DataTableColumn<BottleneckStage>[] = [
     {
@@ -34,13 +39,14 @@ export function PipelineBottlenecksReport() {
       header: 'Stage',
       render: (r) => (
         <span className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: r.color }} />
+          <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: r.color }} />
           <span className="font-medium text-ink">{r.stage}</span>
         </span>
       ),
     },
-    { key: 'leadsInStage', header: 'Leads Currently Here', align: 'right', render: (r) => r.leadsInStage },
-    { key: 'avgDaysInStage', header: 'Avg. Days In Stage', align: 'right', render: (r) => `${r.avgDaysInStage}d` },
+    { key: 'leadsInStage', header: 'Open leads here', align: 'right', render: (r) => <span className="tabular-nums">{fmtCount(r.leadsInStage)}</span> },
+    { key: 'share', header: 'Share of open leads', ...rateColumn, render: (r) => <RateBar value={shareOf(r.leadsInStage, openLeads)} max={shareOf(busiest, openLeads)} tone="muted" /> },
+    { key: 'avgDaysInStage', header: 'Avg. days in stage', align: 'right', render: (r) => <span className="font-medium tabular-nums">{r.leadsInStage ? fmtDays(r.avgDaysInStage) : '—'}</span> },
     {
       key: 'flag',
       header: 'Flag',
@@ -51,51 +57,54 @@ export function PipelineBottlenecksReport() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Card padded={false}>
-        <div className="flex flex-col gap-3 border-b border-line p-4 lg:flex-row lg:items-center lg:justify-between">
-          <Select
-            aria-label="Pipeline"
-            value={effectivePipelineId}
-            onChange={(e) => setPipelineId(e.target.value)}
-            options={pipelines.map((p) => ({ value: p.id, label: p.name }))}
-            wrapperClassName="w-52"
+      <ReportToolbar
+        meta={data ? `${fmtCount(openLeads)} open leads` : undefined}
+        exportDisabled={stages.length === 0}
+        onExportCsv={() => exportToCsv('pipeline-bottlenecks-report.csv', stages.map((s) => ({ Stage: s.stage, 'Leads In Stage': s.leadsInStage, 'Avg Days': s.avgDaysInStage })))}
+        onExportPdf={() =>
+          exportReportPdf({
+            filename: 'pipeline-bottlenecks-report.pdf',
+            title: 'Pipeline Bottlenecks Report',
+            subtitle: data?.pipelineName ? `Pipeline: ${data.pipelineName}` : undefined,
+            columns: ['Stage', 'Leads In Stage', 'Avg Days In Stage'],
+            rows: stages.map((s) => [s.stage, s.leadsInStage, `${s.avgDaysInStage}d`]),
+          })
+        }
+      >
+        <Select
+          aria-label="Pipeline"
+          value={effectivePipelineId}
+          onChange={(e) => setPipelineId(e.target.value)}
+          options={pipelines.map((p) => ({ value: p.id, label: p.name }))}
+          wrapperClassName="w-52"
+        />
+      </ReportToolbar>
+
+      <ReportChartCard
+        title="Average days in stage"
+        subtitle={
+          average > 0
+            ? <>Where open leads wait longest. Red marks a stage at 1.5× or more of this pipeline's own average ({fmtDays(Math.round(average * 10) / 10)}).</>
+            : 'Where open leads wait longest.'
+        }
+        legend={flagged.length ? <><LegendSwatch tone="brand" label="Within pace" /><LegendSwatch tone="danger" label={`Bottleneck (${flagged.length})`} /></> : undefined}
+        footnote="Time a currently-open lead has spent in its stage, averaged per stage. Judged against the pipeline's own pace, not a fixed number of days, since every pipeline moves differently."
+      >
+        <ChartFrame isLoading={isLoading} isEmpty={!!error || withLeads.length === 0} emptyText={error ? error.message : 'Nothing is sitting in this pipeline right now.'} height={220}>
+          <HBarChart
+            format={fmtDays}
+            rows={withLeads.map((s) => ({
+              key: s.stageId,
+              label: s.stage,
+              sub: `${fmtCount(s.leadsInStage)} open`,
+              value: s.avgDaysInStage,
+              tone: isBottleneck(s.avgDaysInStage, average) ? 'danger' : 'brand',
+            }))}
           />
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              leftIcon={<Download size={13} />}
-              disabled={stages.length === 0}
-              onClick={() => exportToCsv('pipeline-bottlenecks-report.csv', stages.map((s) => ({ Stage: s.stage, 'Leads In Stage': s.leadsInStage, 'Avg Days': s.avgDaysInStage })))}
-            >
-              Export CSV
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              leftIcon={<FileText size={13} />}
-              disabled={stages.length === 0}
-              onClick={() =>
-                exportReportPdf({
-                  filename: 'pipeline-bottlenecks-report.pdf',
-                  title: 'Pipeline Bottlenecks Report',
-                  subtitle: data?.pipelineName ? `Pipeline: ${data.pipelineName}` : undefined,
-                  columns: ['Stage', 'Leads In Stage', 'Avg Days In Stage'],
-                  rows: stages.map((s) => [s.stage, s.leadsInStage, `${s.avgDaysInStage}d`]),
-                })
-              }
-            >
-              Export PDF
-            </Button>
-          </div>
-        </div>
+        </ChartFrame>
+      </ReportChartCard>
 
-        <p className="border-b border-line bg-surface-subtle px-4 py-2.5 text-xs text-ink-muted">
-          Average time a currently-open lead has spent in each stage, sorted slowest first. A stage is flagged when it runs at
-          least 1.5× the pipeline's own average — not against a fixed number of days, since every pipeline moves at a
-          different pace.
-        </p>
-
+      <ReportTableCard title="By stage" meta="Slowest first">
         <DataTable
           columns={columns}
           rows={stages}
@@ -105,7 +114,7 @@ export function PipelineBottlenecksReport() {
           emptyTitle="No open leads"
           emptyDescription="Nothing is currently sitting in this pipeline's stages."
         />
-      </Card>
+      </ReportTableCard>
     </div>
   );
 }

@@ -2,7 +2,11 @@ import { Router } from 'express';
 import type { CommissionType, Prisma } from '@prisma/client';
 import { prisma } from '../../prisma';
 import { writeAudit } from '../../services/audit';
+import Anthropic from '@anthropic-ai/sdk';
 import { hashPassword, type AuthedRequest } from '../../services/auth';
+import { keyHint, resolveKey, saveKey } from '../../services/anthropicKey';
+import { CRM_AGENT_MODEL } from '../../services/crmAgent';
+import { requireFullAccess } from './auth';
 
 export const adminSettingsRouter = Router();
 
@@ -13,13 +17,60 @@ export const adminSettingsRouter = Router();
  */
 
 // ---------------------------------------------------------------------------
+// AI Assistant — the Anthropic API key both assistants use
+// ---------------------------------------------------------------------------
+
+adminSettingsRouter.get('/ai', requireFullAccess, async (_req, res, next) => {
+  try {
+    const { key, source } = await resolveKey();
+    res.json({ configured: !!key, source, hint: keyHint(key), model: CRM_AGENT_MODEL });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Saves a key after checking it with Anthropic, so a typo is caught here and not mid-question. */
+adminSettingsRouter.put('/ai', requireFullAccess, async (req: AuthedRequest, res, next) => {
+  try {
+    const apiKey = String(req.body?.apiKey ?? '').trim();
+    if (!/^sk-ant-[A-Za-z0-9_-]{20,}$/.test(apiKey)) return res.status(400).json({ error: 'That does not look like an Anthropic API key (it starts with sk-ant-).' });
+    try {
+      await new Anthropic({ apiKey, maxRetries: 0, timeout: 15_000 }).models.retrieve(CRM_AGENT_MODEL);
+    } catch (e) {
+      if (e instanceof Anthropic.AuthenticationError) return res.status(400).json({ error: 'Anthropic refused this key. Copy it again from console.anthropic.com.' });
+      if (e instanceof Anthropic.PermissionDeniedError || e instanceof Anthropic.NotFoundError) return res.status(400).json({ error: `This key cannot use ${CRM_AGENT_MODEL}. Check the key's workspace in the Anthropic Console.` });
+      if (e instanceof Anthropic.APIError) return res.status(502).json({ error: `Could not check the key with Anthropic (${e.status ?? 'network'}). Try again.` });
+      throw e;
+    }
+    await saveKey(apiKey);
+    await writeAudit(req, { module: 'Settings', action: 'Saved the AI assistant key', recordId: 'ai', recordLabel: 'AI Assistant' });
+    const { key, source } = await resolveKey();
+    res.json({ configured: !!key, source, hint: keyHint(key), model: CRM_AGENT_MODEL });
+  } catch (err) {
+    next(err);
+  }
+});
+
+adminSettingsRouter.delete('/ai', requireFullAccess, async (req: AuthedRequest, res, next) => {
+  try {
+    await saveKey(null);
+    await writeAudit(req, { module: 'Settings', action: 'Removed the AI assistant key', recordId: 'ai', recordLabel: 'AI Assistant' });
+    const { key, source } = await resolveKey();
+    res.json({ configured: !!key, source, hint: keyHint(key), model: CRM_AGENT_MODEL });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Organization & notification preferences
 // ---------------------------------------------------------------------------
 
 adminSettingsRouter.get('/organization', async (_req, res, next) => {
   try {
     const row = await prisma.organizationSettings.upsert({ where: { id: 'singleton' }, update: {}, create: { id: 'singleton' } });
-    const { id: _id, updatedAt: _u, ...settings } = row;
+    // The API key never leaves the server, not even encrypted.
+    const { id: _id, updatedAt: _u, anthropicApiKey: _key, ...settings } = row;
     res.json(settings);
   } catch (err) {
     next(err);
@@ -50,7 +101,8 @@ adminSettingsRouter.patch('/organization', async (req: AuthedRequest, res, next)
       recordId: 'organization',
       recordLabel: 'Organization',
     });
-    const { id: _id, updatedAt: _u, ...settings } = row;
+    // The API key never leaves the server, not even encrypted.
+    const { id: _id, updatedAt: _u, anthropicApiKey: _key, ...settings } = row;
     res.json(settings);
   } catch (err) {
     next(err);

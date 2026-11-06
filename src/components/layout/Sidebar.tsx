@@ -177,7 +177,7 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className={cn('hidden shrink-0 transition-[width] duration-200 md:block', sidebarCollapsed ? 'w-16' : 'w-[232px]')}>
+      <aside className={cn('hidden shrink-0 print:!hidden transition-[width] duration-200 md:block', sidebarCollapsed ? 'w-16' : 'w-[232px]')}>
         <div className="fixed inset-y-0 z-30 w-[inherit]" style={{ width: sidebarCollapsed ? 64 : 232 }}>
           {content}
         </div>

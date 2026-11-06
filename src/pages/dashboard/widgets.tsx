@@ -7,14 +7,14 @@ export function Panel({ className, children }: { className?: string; children: R
   return <section className={cn('flex flex-col rounded-xl border border-line bg-surface', className)}>{children}</section>;
 }
 
-export function PanelHeader({ title, meta, action }: { title: string; meta?: ReactNode; action?: ReactNode }) {
+export function PanelHeader({ title, meta, action, ask }: { title: string; meta?: ReactNode; action?: ReactNode; ask?: ReactNode }) {
   return (
     <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5">
       <div className="flex min-w-0 items-baseline gap-2">
         <h2 className="shrink-0 font-sans text-[13px] font-semibold tracking-normal text-ink">{title}</h2>
         {meta && <span className="truncate text-xs text-ink-subtle">{meta}</span>}
       </div>
-      {action}
+      {(ask || action) && <span className="flex shrink-0 items-center gap-1.5">{ask}{action}</span>}
     </header>
   );
 }

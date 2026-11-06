@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Archive, Bot, Download, Filter, GitBranch, MailPlus, MoonStar, Plus, Star, Tag as TagIcon, Trash2, Upload, UserCog, X, Zap } from 'lucide-react';
+import { AlertTriangle, Archive, Bot, Download, Filter, GitBranch, MailPlus, MoonStar, Plus, Star, Tag as TagIcon, Trash2, Upload, UserCog, X, Zap } from 'lucide-react';
 import { ArchivedLeadsModal } from '../../components/leads/ArchivedLeadsModal';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
+import { FilterChips } from '../../components/ui/FilterChips';
 import { TemperatureBadge } from '../../components/leads/TemperatureBadge';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
@@ -19,6 +20,7 @@ import { LeadSourceBadge } from '../../components/leads/LeadSourceBadge';
 import { useAsync } from '../../hooks/useAsync';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 import {
   listLeads, listAssignableUsers, listSourceOptions, LEAD_TEMPERATURE_OPTIONS, toggleStar, deleteLead,
   bulkAssign, bulkChangeStatus, bulkChangePriority, bulkChangeSource, bulkAddTag, bulkRemoveTag, bulkMoveStage, bulkDelete,
@@ -34,17 +36,66 @@ import { enrollLeadsInSdrAgent, listSdrAgents } from '../../services/aiSdrServic
 import { enrollLeadsInSequence, listEmailSequences } from '../../services/emailSequenceService';
 import { usePipelineReferenceData } from '../../hooks/usePipelineReferenceData';
 import { exportToCsv } from '../../services/reportService';
-import { formatDate, formatTime, leadFullName } from '../../utils/format';
+import { formatDateTime, formatTime, leadFullName } from '../../utils/format';
 import type { Automation, EmailSequence, Lead, LeadPriority, LeadSource, LeadStatus, LeadTemperature } from '../../types';
 
 /** The server caps a page at 100, so the picker must not offer more. */
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
+/** "05 Nov" this year, "05 Nov 2025" otherwise: the year only where it tells you something. */
+function shortDate(iso: string) {
+  const d = new Date(iso);
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', ...(sameYear ? {} : { year: 'numeric' }) });
+}
+
+/** Whole calendar days from today to `iso`, in the viewer's own timezone: -2 is two days ago, 0 is today. */
+function daysFromToday(iso: string) {
+  const d = new Date(iso);
+  const t = new Date();
+  const a = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const b = new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime();
+  return Math.round((a - b) / 86_400_000);
+}
+
+/** The next follow-up as urgency: a missed day reads red, today amber, anything later is just its date. */
+function NextFollowUp({ iso }: { iso: string }) {
+  const days = daysFromToday(iso);
+  const exact = formatDateTime(iso);
+  if (days < 0) {
+    return (
+      <span title={`Was due ${exact}`} className="inline-flex items-center gap-1 whitespace-nowrap rounded-sm bg-danger-50 px-1.5 py-px text-xs font-medium tabular-nums text-danger-700">
+        <AlertTriangle size={11} aria-hidden="true" />
+        {-days}d overdue
+      </span>
+    );
+  }
+  if (days === 0) {
+    return (
+      <span title={exact} className="inline-flex items-center whitespace-nowrap rounded-sm bg-warning-50 px-1.5 py-px text-xs font-medium tabular-nums text-warning-700">
+        Today, {formatTime(iso)}
+      </span>
+    );
+  }
+  return <span title={exact} className="whitespace-nowrap tabular-nums">{shortDate(iso)}</span>;
+}
+
+/** The fields the quick-filter chips own. Picking a chip sets all three, so no stale one lingers. */
+interface QuickView {
+  key: string;
+  label: string;
+  status: LeadStatus | 'all';
+  temperature: LeadTemperature | 'none' | 'all';
+  assignedUserId: string;
+  starred?: boolean;
+}
+
 export function LeadList() {
   const navigate = useNavigate();
   // The Team Leaders and Hierarchy pages link here with `?assignedUserId=` to show one person's leads.
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
+  const { session } = useAuth();
   const { pipelines, tags, stageById, stagesForPipeline } = usePipelineReferenceData();
 
   const [page, setPage] = useState(1);
@@ -54,19 +105,19 @@ export function LeadList() {
     return PAGE_SIZE_OPTIONS.includes(saved) ? saved : 10;
   });
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<LeadStatus | 'all'>('all');
+  const [status, setStatus] = useState<LeadStatus | 'all'>((searchParams.get('status') as LeadStatus | null) || 'all');
   const [priority, setPriority] = useState<LeadPriority | 'all'>('all');
-  const [temperature, setTemperature] = useState<LeadTemperature | 'none' | 'all'>('all');
+  const [temperature, setTemperature] = useState<LeadTemperature | 'none' | 'all'>((searchParams.get('temperature') as LeadTemperature | null) || 'all');
   const [source, setSource] = useState(searchParams.get('source') || 'all');
-  const [pipelineId, setPipelineId] = useState('all');
+  const [pipelineId, setPipelineId] = useState(searchParams.get('pipelineId') || 'all');
   const [stageId, setStageId] = useState(searchParams.get('stageId') || 'all');
   const [assignedUserId, setAssignedUserId] = useState(searchParams.get('assignedUserId') || 'all');
   const [starredOnly, setStarredOnly] = useState(false);
   const [campaignName, setCampaignName] = useState('all');
   const [adName, setAdName] = useState('all');
-  const [formName, setFormName] = useState('all');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [formName, setFormName] = useState(searchParams.get('formName') || 'all');
+  const [dateFrom, setDateFrom] = useState(searchParams.get('dateFrom') || '');
+  const [dateTo, setDateTo] = useState(searchParams.get('dateTo') || '');
   const [lastActivityFrom, setLastActivityFrom] = useState('');
   const [lastActivityTo, setLastActivityTo] = useState('');
   const [sortBy, setSortBy] = useState('createdAt');
@@ -117,6 +168,72 @@ export function LeadList() {
 
   const stagesForSelectedPipeline = pipelineId !== 'all' ? stagesForPipeline(pipelineId) : [];
 
+  // Quick views. Each one is a preset over the same status / temperature / owner state the filter
+  // drawer edits, so the drawer, the pills and the URL always describe the same list.
+  const myId = session?.id;
+  const canSeeUnassigned = mayUnassignLeads();
+  const quickViews = useMemo<QuickView[]>(() => [
+    { key: 'all', label: 'All', status: 'all', temperature: 'all', assignedUserId: 'all' },
+    ...(myId ? [{ key: 'mine', label: 'My leads', status: 'all' as const, temperature: 'all' as const, assignedUserId: myId }] : []),
+    { key: 'hot', label: 'Hot', status: 'all', temperature: 'hot', assignedUserId: 'all' },
+    { key: 'won', label: 'Won', status: 'won', temperature: 'all', assignedUserId: 'all' },
+    // Only where the drawer offers it too: someone who cannot unassign never sees unassigned leads.
+    ...(canSeeUnassigned ? [{ key: 'unassigned', label: 'Unassigned', status: 'all' as const, temperature: 'all' as const, assignedUserId: 'none' }] : []),
+    { key: 'starred', label: 'Starred', status: 'all', temperature: 'all', assignedUserId: 'all', starred: true },
+  ], [myId, canSeeUnassigned]);
+
+  // A filter set by hand that matches no preset lights no chip, rather than the nearest one.
+  const activeQuickView =
+    quickViews.find((v) => v.status === status && v.temperature === temperature && v.assignedUserId === assignedUserId && !!v.starred === starredOnly)?.key ?? '';
+
+  const applyQuickView = (key: string) => {
+    const view = quickViews.find((v) => v.key === key);
+    if (!view) return;
+    setStatus(view.status);
+    setTemperature(view.temperature);
+    setAssignedUserId(view.assignedUserId);
+    setStarredOnly(!!view.starred);
+    setPage(1);
+  };
+
+  // Each chip's count is what clicking it would show: the other filters (search, source, dates…)
+  // still apply, only the chip's own fields change. One `pageSize=1` request per chip, for the total.
+  const chipBaseParams: LeadListParams = {
+    search: debouncedSearch, priority, source: params.source, pipelineId, stageId, campaignName, adName, formName,
+    dateFrom: params.dateFrom, dateTo: params.dateTo, lastActivityFrom: params.lastActivityFrom, lastActivityTo: params.lastActivityTo,
+  };
+  const { data: quickCounts } = useAsync(
+    () =>
+      Promise.all(
+        quickViews.map((v) =>
+          listLeads({ ...chipBaseParams, status: v.status, temperature: v.temperature, assignedUserId: v.assignedUserId, starred: v.starred || undefined, page: 1, pageSize: 1 }).then((r) => r.total)
+        )
+      )
+        .then((totals) => Object.fromEntries(quickViews.map((v, i) => [v.key, totals[i]])) as Record<string, number>)
+        // The chips work without their counts; a failed count is not worth an error on the page.
+        .catch(() => undefined),
+    [JSON.stringify(chipBaseParams), quickViews, reloadKey]
+  );
+
+  // The filters the page reads from the URL are written back to it, so a reload, the back button
+  // or a copied link lands on the same list. Replace, not push: a filter change is not a new page.
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    const put = (k: string, v: string) => (v && v !== 'all' ? next.set(k, v) : next.delete(k));
+    put('status', status);
+    put('temperature', temperature);
+    put('source', source);
+    put('pipelineId', pipelineId);
+    put('stageId', stageId);
+    put('assignedUserId', assignedUserId);
+    put('formName', formName);
+    put('dateFrom', dateFrom);
+    put('dateTo', dateTo);
+    if (next.toString() !== searchParams.toString()) setSearchParams(next, { replace: true });
+    // State drives the URL here, never the other way round, so the URL itself is not a dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, temperature, source, pipelineId, stageId, assignedUserId, formName, dateFrom, dateTo]);
+
   const hasActiveFilters = useMemo(
     () => !!(search || status !== 'all' || priority !== 'all' || temperature !== 'all' || source !== 'all' || pipelineId !== 'all' || stageId !== 'all' || assignedUserId !== 'all' || starredOnly || campaignName !== 'all' || adName !== 'all' || formName !== 'all' || dateFrom || dateTo || lastActivityFrom || lastActivityTo),
     [search, status, priority, temperature, source, pipelineId, stageId, assignedUserId, starredOnly, campaignName, adName, formName, dateFrom, dateTo, lastActivityFrom, lastActivityTo]
@@ -126,6 +243,10 @@ export function LeadList() {
     setSearch('');
     setStatus('all');
     setPriority('all');
+    setTemperature('all');
+    setCampaignName('all');
+    setAdName('all');
+    setFormName('all');
     setSource('all');
     setPipelineId('all');
     setStageId('all');
@@ -139,13 +260,13 @@ export function LeadList() {
   };
 
   const activeFilterChips = [
-    status !== 'all' && { key: 'status', label: `Status: ${status}`, clear: () => setStatus('all') },
-    priority !== 'all' && { key: 'priority', label: `Priority: ${priority}`, clear: () => setPriority('all') },
-    temperature !== 'all' && { key: 'temperature', label: `Temperature: ${temperature === 'none' ? 'not rated' : temperature}`, clear: () => setTemperature('all') },
+    status !== 'all' && { key: 'status', label: `Status: ${LEAD_STATUS_OPTIONS.find((o) => o.value === status)?.label ?? status}`, clear: () => setStatus('all') },
+    priority !== 'all' && { key: 'priority', label: `Priority: ${LEAD_PRIORITY_OPTIONS.find((o) => o.value === priority)?.label ?? priority}`, clear: () => setPriority('all') },
+    temperature !== 'all' && { key: 'temperature', label: `Temperature: ${LEAD_TEMPERATURE_OPTIONS.find((o) => o.value === temperature)?.label ?? temperature}`, clear: () => setTemperature('all') },
     source !== 'all' && { key: 'source', label: `Source: ${listSourceOptions().find((s) => s.value === source)?.label ?? source}`, clear: () => setSource('all') },
     pipelineId !== 'all' && { key: 'pipeline', label: `Pipeline: ${pipelines.find((p) => p.id === pipelineId)?.name}`, clear: () => { setPipelineId('all'); setStageId('all'); } },
     stageId !== 'all' && { key: 'stage', label: `Stage: ${stageById(stageId)?.name}`, clear: () => setStageId('all') },
-    assignedUserId !== 'all' && { key: 'assignee', label: `Assigned: ${assignedUserId === 'none' ? 'Unassigned' : assignableUsers.find((u) => u.id === assignedUserId)?.name ?? '…'}`, clear: () => setAssignedUserId('all') },
+    assignedUserId !== 'all' && { key: 'assignee', label: `Assigned: ${assignedUserId === 'none' ? 'Unassigned' : assignableUsers.find((u) => u.id === assignedUserId)?.name ?? (assignedUserId === myId ? 'Me' : '…')}`, clear: () => setAssignedUserId('all') },
     starredOnly && { key: 'starred', label: 'Starred only', clear: () => setStarredOnly(false) },
     campaignName !== 'all' && { key: 'campaign', label: `Campaign: ${campaignName}`, clear: () => setCampaignName('all') },
     adName !== 'all' && { key: 'ad', label: `Ad: ${adName}`, clear: () => setAdName('all') },
@@ -357,7 +478,7 @@ export function LeadList() {
                 <MoonStar size={12} className="text-shell-400" aria-label="Received outside business hours" />
               )}
             </p>
-            <p className="text-xs text-ink-faint">{l.phone}</p>
+            <p className="text-xs tabular-nums text-ink-faint">{l.phone}</p>
           </Link>
         </div>
       ),
@@ -365,38 +486,46 @@ export function LeadList() {
     { key: 'source', header: 'Source', render: (l) => <LeadSourceBadge source={l.source} otherSource={l.otherSource} /> },
     { key: 'status', header: 'Status', render: (l) => <StatusBadge kind="leadStatus" status={l.status} /> },
     { key: 'priority', header: 'Priority', render: (l) => <StatusBadge kind="leadPriority" status={l.priority} dot={false} /> },
-    { key: 'temperature', header: 'Temperature', render: (l) => <TemperatureBadge value={l.temperature} /> },
+    { key: 'temperature', header: 'Temp', render: (l) => <span className="whitespace-nowrap"><TemperatureBadge value={l.temperature} /></span> },
     {
       key: 'stage',
       header: 'Stage',
       render: (l) => {
         const stage = l.pipelineStageId ? stageById(l.pipelineStageId) : undefined;
         return stage ? (
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-muted">
-            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: stage.color }} />
+          <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-ink-muted">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: stage.color }} />
             {stage.name}
           </span>
         ) : (
-          <span className="text-xs text-ink-faint">Unassigned</span>
+          <span className="whitespace-nowrap text-xs text-ink-faint">No stage</span>
         );
       },
     },
     {
       key: 'assignedTo',
-      header: 'Assigned To',
+      header: 'Owner',
       render: (l) => {
         const user = assignableUsers.find((u) => u.id === l.assignedUserId);
-        return user ? user.name : l.assignedTo ? <span className="text-ink-faint">{l.assignedTo}</span> : <span className="text-ink-faint">Unassigned</span>;
+        if (user) {
+          return (
+            <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+              <Avatar name={user.name} size="xs" />
+              {user.name}
+            </span>
+          );
+        }
+        return <span className="whitespace-nowrap text-ink-faint">{l.assignedTo || 'Unassigned'}</span>;
       },
     },
-    { key: 'nextFollowUpAt', header: 'Next Follow-up', sortable: true, render: (l) => (l.nextFollowUpAt ? formatDate(l.nextFollowUpAt) : '—') },
+    { key: 'nextFollowUpAt', header: 'Next follow-up', sortable: true, render: (l) => (l.nextFollowUpAt ? <NextFollowUp iso={l.nextFollowUpAt} /> : <span className="text-ink-faint">—</span>) },
     {
       key: 'createdAt',
       header: 'Created',
       sortable: true,
       render: (l) => (
-        <span className="whitespace-nowrap">
-          {formatDate(l.createdAt)}
+        <span className="whitespace-nowrap tabular-nums">
+          {shortDate(l.createdAt)}
           <span className="block text-xs text-ink-faint">{formatTime(l.createdAt)}</span>
         </span>
       ),
@@ -406,8 +535,8 @@ export function LeadList() {
       header: 'Last Activity',
       render: (l) =>
         l.lastActivity ? (
-          <span className="whitespace-nowrap" title={l.lastActivity.description}>
-            {formatDate(l.lastActivity.at)}
+          <span className="whitespace-nowrap tabular-nums" title={l.lastActivity.description}>
+            {shortDate(l.lastActivity.at)}
             <span className="block text-xs text-ink-faint">{formatTime(l.lastActivity.at)}</span>
           </span>
         ) : (
@@ -534,26 +663,40 @@ export function LeadList() {
         <FilterBar
           search={search}
           onSearchChange={(v) => { setSearch(v); setPage(1); }}
-          searchPlaceholder="Search by name, phone, email or lead ID..."
+          searchPlaceholder="Search name, phone, email or ID"
           onReset={resetFilters}
           hasActiveFilters={hasActiveFilters}
           actions={
             <Button variant="outline" leftIcon={<Filter size={14} />} onClick={() => setFiltersOpen(true)}>
-              Filters {hasActiveFilters && `(${activeFilterChips.length})`}
+              Filters
+              {activeFilterChips.length > 0 && (
+                <span className="rounded-sm bg-brand-50 px-1 text-2xs font-semibold tabular-nums text-brand-700">{activeFilterChips.length}</span>
+              )}
             </Button>
           }
-        />
+        >
+          <span className="mx-1 hidden h-5 w-px bg-line sm:block" aria-hidden="true" />
+          <FilterChips
+            label="Quick views"
+            items={quickViews.map((v) => ({ key: v.key, label: v.label, count: quickCounts?.[v.key] }))}
+            value={activeQuickView}
+            onChange={applyQuickView}
+          />
+        </FilterBar>
 
         {activeFilterChips.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-2.5">
+          <div className="flex flex-wrap items-center gap-1.5 border-b border-line bg-surface-subtle px-3 py-2">
+            <span className="mr-0.5 text-2xs font-semibold uppercase tracking-wider text-ink-faint">Filtered by</span>
             {activeFilterChips.map((chip) => (
               <button
                 key={chip.key}
+                type="button"
                 onClick={() => { chip.clear(); setPage(1); }}
-                className="flex items-center gap-1 rounded-full bg-surface-muted px-2.5 py-1 text-xs font-medium text-ink-muted hover:bg-line-DEFAULT"
+                aria-label={`Remove filter ${chip.label}`}
+                className="inline-flex h-6 items-center gap-1 rounded-md border border-line bg-surface pl-2 pr-1.5 text-xs font-medium text-ink-muted transition-colors duration-100 hover:border-line-strong hover:text-ink focus-ring"
               >
                 {chip.label}
-                <X size={11} />
+                <X size={11} className="text-ink-faint" />
               </button>
             ))}
           </div>
@@ -659,6 +802,8 @@ export function LeadList() {
             options={[
               { value: 'all', label: 'Anyone' },
               ...(mayUnassignLeads() ? [{ value: 'none', label: 'Unassigned' }] : []),
+              // "My leads" sets the signed-in account, which may not be in the assignee list.
+              ...(myId && !assignableUsers.some((u) => u.id === myId) ? [{ value: myId, label: 'Me' }] : []),
               ...assignableUsers.map((u) => ({ value: u.id, label: u.name })),
             ]}
           />

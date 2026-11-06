@@ -111,6 +111,79 @@ callsRouter.get('/', async (req, res, next) => {
   }
 });
 
+/**
+ * Dialled, Connected and Talk time between two instants — the partner app's calling summary.
+ *
+ * "Dialled" is a call the person placed; "Connected" is one of those the customer answered, and
+ * talk time is theirs. Counted per person across the viewer's own team (or just `userId`, when
+ * it is somebody the viewer may see), most calls first. A full-scope viewer also gets the
+ * outgoing calls the provider logged against an extension nobody is mapped to.
+ */
+callsRouter.get('/stats', async (req, res, next) => {
+  try {
+    const scope = await scopeOf(req);
+    const to = req.query.to ? new Date(String(req.query.to)) : new Date();
+    const from = req.query.from ? new Date(String(req.query.from)) : new Date(to.getTime() - 86_400_000);
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) {
+      return res.status(400).json({ error: '`from` and `to` must be ISO dates, with `from` first.' });
+    }
+    const userId = req.query.userId ? String(req.query.userId) : null;
+    if (userId && scope.kind !== 'all' && !scope.userIds.includes(userId)) {
+      return res.status(403).json({ error: 'That person is not in your team.' });
+    }
+
+    const window: Prisma.CallLogWhereInput = { direction: 'outgoing', startedAt: { gte: from, lte: to } };
+    const people = scope.kind === 'all' ? undefined : scope.userIds;
+    const byAgent = await prisma.callLog.groupBy({
+      by: ['agentUserId', 'status'],
+      where: { ...window, agentUserId: userId ? userId : people ? { in: people } : { not: null } },
+      _count: { _all: true },
+      _sum: { durationSeconds: true },
+    });
+
+    const numbers = new Map<string, { dialled: number; connected: number; talkSeconds: number }>();
+    for (const row of byAgent) {
+      const n = numbers.get(row.agentUserId!) ?? { dialled: 0, connected: 0, talkSeconds: 0 };
+      n.dialled += row._count._all;
+      if (row.status === 'completed') {
+        n.connected += row._count._all;
+        n.talkSeconds += row._sum.durationSeconds ?? 0;
+      }
+      numbers.set(row.agentUserId!, n);
+    }
+    const names = new Map(
+      (await prisma.user.findMany({ where: { id: { in: [...numbers.keys()] } }, select: { id: true, name: true } })).map((u) => [u.id, u.name])
+    );
+    const list = [...numbers.entries()]
+      .map(([id, n]) => ({ userId: id, name: names.get(id) ?? 'Unknown', ...n }))
+      .sort((a, b) => b.dialled - a.dialled || b.connected - a.connected);
+    const totals = list.reduce((t, p) => ({ dialled: t.dialled + p.dialled, connected: t.connected + p.connected, talkSeconds: t.talkSeconds + p.talkSeconds }), { dialled: 0, connected: 0, talkSeconds: 0 });
+
+    let unlinked: { dialled: number; connected: number; talkSeconds: number } | null = null;
+    if (scope.kind === 'all' && !userId) {
+      const rows = await prisma.callLog.groupBy({
+        by: ['status'],
+        where: { ...window, agentUserId: null },
+        _count: { _all: true },
+        _sum: { durationSeconds: true },
+      });
+      unlinked = rows.reduce(
+        (u, r) => ({
+          dialled: u.dialled + r._count._all,
+          connected: u.connected + (r.status === 'completed' ? r._count._all : 0),
+          talkSeconds: u.talkSeconds + (r.status === 'completed' ? r._sum.durationSeconds ?? 0 : 0),
+        }),
+        { dialled: 0, connected: 0, talkSeconds: 0 }
+      );
+      if (unlinked.dialled === 0) unlinked = null;
+    }
+
+    res.json({ from: from.toISOString(), to: to.toISOString(), totals, people: list, unlinked });
+  } catch (err) {
+    next(err);
+  }
+});
+
 callsRouter.get('/:id', async (req, res, next) => {
   try {
     const scope = await scopeOf(req);

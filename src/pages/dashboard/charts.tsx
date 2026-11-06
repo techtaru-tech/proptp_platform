@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, LabelList, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ComposedChart, LabelList, Line, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AXIS_TICK } from '../../components/charts/chartColors';
 import { cn } from '../../utils/cn';
 import { compactMoney } from './dashboardMath';
@@ -77,7 +77,7 @@ export interface Slice { name: string; value: number; tone: string; to?: string 
 export function Ring({ slices, centre, caption, format = String }: { slices: Slice[]; centre: string; caption: string; format?: (v: number) => string }) {
   const total = slices.reduce((a, s) => a + s.value, 0);
   return (
-    <div className="flex items-center gap-5">
+    <div className="flex flex-wrap items-center justify-center gap-5">
       <div className="relative h-[136px] w-[136px] shrink-0">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -91,7 +91,7 @@ export function Ring({ slices, centre, caption, format = String }: { slices: Sli
           <span className="text-2xs text-ink-subtle">{caption}</span>
         </div>
       </div>
-      <ul className="min-w-0 flex-1 space-y-1.5">
+      <ul className="min-w-[10rem] flex-1 space-y-1.5">
         {slices.map((s) => {
           const row = (
             <>
@@ -176,5 +176,112 @@ export function SplitBar({ parts }: { parts: { name: string; value: number; tone
         ))}
       </ul>
     </div>
+  );
+}
+
+/** Bars for the main count, a line for the subset that matters (new leads, and how many were won). */
+export function TrendCombo({
+  data, height = 240, barLabel, lineLabel, interval = 0,
+}: {
+  data: { label: string; bar: number; line: number; title?: string }[];
+  height?: number;
+  barLabel: string;
+  lineLabel: string;
+  interval?: number;
+}) {
+  const avg = data.length ? data.reduce((a, d) => a + d.bar, 0) / data.length : 0;
+  return (
+    <div style={{ height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart data={data} margin={{ top: 10, right: 4, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="2 4" vertical={false} />
+          <XAxis dataKey="label" tick={AXIS_TICK} axisLine={false} tickLine={false} interval={interval} minTickGap={6} />
+          <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} width={28} allowDecimals={false} />
+          <Tooltip
+            labelFormatter={(l, p) => p?.[0]?.payload?.title ?? l}
+            formatter={(v, name) => [Number(v), name === 'bar' ? barLabel : lineLabel]}
+          />
+          <Bar dataKey="bar" maxBarSize={18} radius={[3, 3, 0, 0]} isAnimationActive={false}>
+            {data.map((d, i) => <Cell key={i} className={d.bar >= avg * 1.5 && d.bar > 0 ? 'fill-brand-500' : 'fill-brand-200'} />)}
+          </Bar>
+          <Line dataKey="line" type="monotone" stroke="var(--c-accent-500)" className="[&_path]:stroke-accent-500" strokeWidth={2} dot={false} activeDot={{ r: 3 }} isAnimationActive={false} />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const hourLabel = (h: number) => (h === 0 ? '12a' : h < 12 ? `${h}a` : h === 12 ? '12p' : `${h - 12}p`);
+
+/** Weekday by hour, darker where more arrived. The busiest slot is named under it. */
+export function Heatmap({ grid, unit }: { grid: number[][]; unit: string }) {
+  const max = Math.max(1, ...grid.flat());
+  let peak = { d: 0, h: 0, n: 0 };
+  grid.forEach((row, d) => row.forEach((n, h) => { if (n > peak.n) peak = { d, h, n }; }));
+  return (
+    <div>
+      <div className="overflow-x-auto">
+        <div className="grid min-w-[560px] grid-cols-[2.25rem_repeat(24,minmax(0,1fr))] gap-[3px] text-2xs text-ink-subtle">
+          <span />
+          {Array.from({ length: 24 }, (_, h) => <span key={h} className="text-center tabular-nums">{h % 3 === 0 ? hourLabel(h) : ''}</span>)}
+          {grid.map((row, d) => (
+            <div key={d} className="contents">
+              <span className="flex items-center">{DAYS[d]}</span>
+              {row.map((n, h) => (
+                <span
+                  key={h}
+                  title={`${DAYS[d]} ${hourLabel(h)}–${hourLabel((h + 1) % 24)}: ${n} ${unit}`}
+                  className="aspect-square rounded-[3px] border border-line/60"
+                  style={{ background: n ? `color-mix(in oklab, var(--c-brand-600) ${Math.round(15 + (n / max) * 85)}%, transparent)` : 'var(--c-surface-subtle)' }}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-subtle">
+        <span>{peak.n ? <>Busiest: <span className="font-medium text-ink">{DAYS[peak.d]}, {hourLabel(peak.h)}–{hourLabel((peak.h + 1) % 24)}</span> ({peak.n} {unit})</> : `No ${unit} yet`}</span>
+        <span className="flex items-center gap-1.5">
+          Fewer
+          {[15, 40, 65, 100].map((p) => <span key={p} className="h-2.5 w-2.5 rounded-[2px]" style={{ background: `color-mix(in oklab, var(--c-brand-600) ${p}%, transparent)` }} />)}
+          More
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** Each step as a bar of everyone who reached it, with the share lost on the way from the step before. */
+export function Funnel({ steps }: { steps: { name: string; reached: number; to?: string }[] }) {
+  const top = Math.max(1, steps[0]?.reached ?? 1);
+  return (
+    <ol className="space-y-1">
+      {steps.map((s, i) => {
+        const prev = steps[i - 1]?.reached;
+        const kept = prev ? (s.reached / prev) * 100 : 100;
+        const body = (
+          <div className="grid grid-cols-[minmax(0,8.5rem)_1fr_3rem] items-center gap-3 rounded px-1 py-1 text-[13px] hover:bg-surface-subtle">
+            <span className="truncate text-ink-muted">{s.name}</span>
+            <span className="relative h-6 rounded-sm bg-surface-muted">
+              <span className="absolute inset-y-0 left-0 flex items-center rounded-sm bg-brand-600/85 pl-2 text-2xs font-medium text-white" style={{ width: `${Math.max(2, (s.reached / top) * 100)}%` }}>
+                {(s.reached / top) * 100 >= 14 ? `${((s.reached / top) * 100).toFixed(0)}%` : ''}
+              </span>
+            </span>
+            <span className="text-right font-medium tabular-nums text-ink">{s.reached}</span>
+          </div>
+        );
+        return (
+          <li key={s.name}>
+            {i > 0 && (
+              <p className={cn('pl-[9.25rem] text-2xs tabular-nums', kept < 50 ? 'text-danger-600' : 'text-ink-faint')}>
+                ↓ {kept.toFixed(0)}% carried on · {Math.max(0, (prev ?? 0) - s.reached)} dropped
+              </p>
+            )}
+            {s.to ? <Link to={s.to} className="block rounded focus-ring">{body}</Link> : body}
+          </li>
+        );
+      })}
+    </ol>
   );
 }

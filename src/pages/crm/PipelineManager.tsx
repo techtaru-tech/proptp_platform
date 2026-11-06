@@ -18,6 +18,7 @@ import {
   updatePipeline,
   deletePipeline,
   listStages,
+  listAllStages,
   createStage,
   updateStage,
   deleteStage,
@@ -26,7 +27,13 @@ import {
 } from '../../services/pipelineService';
 import type { PipelineStage } from '../../types';
 
-const STAGE_COLORS = ['#6366f1', '#3b82f6', '#0ea5e9', '#22c55e', '#f59e0b', '#ec4899', '#8b5cf6', '#ef4444', '#64748b'];
+/*
+ * The Propto palette: open stages take these in order (green, indigo, blue, amber, violet, cyan,
+ * rose), a won stage is mint and a lost stage is red, so every stage reads differently on the
+ * Kanban board. Lower case, because that is how colours are stored.
+ */
+const OPEN_STAGE_COLORS = ['#18ad74', '#6179ef', '#4b91e9', '#f4b35e', '#7856ee', '#2aa7c9', '#c8569a'];
+const STAGE_COLORS = [...OPEN_STAGE_COLORS, '#24c58e', '#e5484d'];
 
 export function PipelineManager() {
   const { toast } = useToast();
@@ -39,6 +46,8 @@ export function PipelineManager() {
   const [creating, setCreating] = useState(false);
 
   const [editTarget, setEditTarget] = useState<PipelineWithCounts | null>(null);
+  // Re-read after the stage editor closes, so the colour strip shows any colour just changed.
+  const { data: allStages } = useAsync(() => listAllStages(), [reloadKey, editTarget === null]);
   const [deleteTarget, setDeleteTarget] = useState<PipelineWithCounts | null>(null);
   const [deleteError, setDeleteError] = useState('');
 
@@ -108,6 +117,7 @@ export function PipelineManager() {
                 action={p.isDefault && <Badge tone="success">Default</Badge>}
               />
               {p.description && <p className="mb-3 text-sm text-ink-muted">{p.description}</p>}
+              <StageStrip stages={(allStages ?? []).filter((st) => st.pipelineId === p.id)} />
               <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3.5">
                 {!p.isDefault && (
                   <Button variant="outline" size="sm" leftIcon={<Star size={13} />} onClick={() => handleSetDefault(p)}>
@@ -210,7 +220,7 @@ function PipelineEditDrawer({ pipeline, onClose }: { pipeline: PipelineWithCount
   };
 
   const handleAddStage = async () => {
-    await createStage(pipeline.id, { name: `Stage ${(stages?.length ?? 0) + 1}`, color: STAGE_COLORS[(stages?.length ?? 0) % STAGE_COLORS.length] });
+    await createStage(pipeline.id, { name: `Stage ${(stages?.length ?? 0) + 1}`, color: OPEN_STAGE_COLORS[(stages?.length ?? 0) % OPEN_STAGE_COLORS.length] });
     refetchStages();
   };
 
@@ -366,6 +376,26 @@ function StageRow({
           Lost stage
         </label>
       </div>
+    </div>
+  );
+}
+
+/** The pipeline's stages as one row of coloured segments; hover a segment for its name. */
+function StageStrip({ stages }: { stages: PipelineStage[] }) {
+  if (stages.length === 0) return null;
+  const ordered = [...stages].sort((a, b) => a.sortOrder - b.sortOrder);
+  return (
+    <div className="mb-3.5">
+      <div className="flex gap-[3px]" aria-hidden="true">
+        {ordered.map((st) => <span key={st.id} title={st.name} className="h-2 flex-1 rounded-full" style={{ backgroundColor: st.color }} />)}
+      </div>
+      <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+        {ordered.map((st) => (
+          <li key={st.id} className="flex items-center gap-1.5 text-xs text-ink-muted">
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: st.color }} />{st.name}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

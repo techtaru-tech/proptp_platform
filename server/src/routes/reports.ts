@@ -3,7 +3,11 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '../prisma';
 import { followUpScopeWhere, inLeadScope, leadScopeWhere, scopeOf, visibleLeadIds } from '../services/hierarchy';
 
+import { crmOverview } from '../services/crmOverview';
+
 export const reportsRouter = Router();
+
+reportsRouter.get('/crm-overview', crmOverview);
 
 function startOfDay(d: Date): Date {
   const c = new Date(d);
@@ -691,7 +695,8 @@ reportsRouter.get('/telecallers', async (req, res, next) => {
 
     const rows = people.map((p) => {
       const mine = calls.filter((c) => c.agentUserId === p.id);
-      const connected = mine.filter((c) => c.status === 'answered');
+      // DeepCall reports a picked-up call as `answered`; calls logged by hand or imported say `completed`.
+      const connected = mine.filter((c) => c.status === 'answered' || c.status === 'completed');
       const v = visits.filter((x) => x.hostId === p.id);
       const row = {
         userId: p.id, name: p.name, role: p.role, onLeave: onLeave.has(p.id),

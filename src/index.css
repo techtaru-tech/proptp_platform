@@ -55,8 +55,12 @@ body {
   }
 }
 
-* {
-  border-color: var(--c-line);
+/* The default hairline colour. Inside the base layer, so any border-<colour> utility on an element
+   (line-strong inputs, brand active states, the sidebar's white/10 rules) still wins over it. */
+@layer base {
+  *, ::before, ::after {
+    border-color: var(--c-line);
+  }
 }
 
 ::selection {

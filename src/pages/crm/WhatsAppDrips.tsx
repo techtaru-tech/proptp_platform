@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, Pause, Pencil, Play, Plus, Trash2, Users } from 'lucide-react';
+import { CheckCircle2, Layers, MessageCircle, Pause, Pencil, Play, PlayCircle, Plus, Trash2, Users } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
+import { StatCard } from '../../components/ui/StatCard';
+import { FilterChips } from '../../components/ui/FilterChips';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { SearchInput } from '../../components/ui/SearchInput';
 import { ConfirmationDialog } from '../../components/ui/ConfirmationDialog';
 import { DataTable, type DataTableColumn } from '../../components/tables/DataTable';
@@ -12,21 +15,40 @@ import { useAsync } from '../../hooks/useAsync';
 import { useToast } from '../../context/ToastContext';
 import { deleteDrip, DRIP_STATUS_OPTIONS, DRIP_STATUS_TONE, listDrips, runDueDripSteps, setDripStatus } from '../../services/whatsappDripService';
 import { formatDate } from '../../utils/format';
-import type { WhatsAppDrip } from '../../types';
+import { cn } from '../../utils/cn';
+import type { WhatsAppDrip, WhatsAppDripStatus } from '../../types';
+
+/** A count in a table cell; zero recedes so the rows with activity stand out. */
+function Count({ value }: { value: number }) {
+  return <span className={cn('tabular-nums', value === 0 ? 'text-ink-faint' : 'text-ink')}>{value}</span>;
+}
 
 export function WhatsAppDrips() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [reloadKey, setReloadKey] = useState(0);
   const [search, setSearch] = useState('');
+  const [status, setStatus] = useState<'all' | WhatsAppDripStatus>('all');
   const [deleteTarget, setDeleteTarget] = useState<WhatsAppDrip | null>(null);
   const [running, setRunning] = useState(false);
 
   const { data: drips, isLoading } = useAsync(() => listDrips(), [reloadKey]);
   const reload = () => setReloadKey((k) => k + 1);
 
+  const all = drips ?? [];
   const term = search.trim().toLowerCase();
-  const rows = (drips ?? []).filter((d) => !term || d.name.toLowerCase().includes(term) || (d.description ?? '').toLowerCase().includes(term));
+  const rows = all.filter(
+    (d) =>
+      (status === 'all' || d.status === status) &&
+      (!term || d.name.toLowerCase().includes(term) || (d.description ?? '').toLowerCase().includes(term))
+  );
+
+  const countBy = (st: WhatsAppDripStatus) => all.filter((d) => d.status === st).length;
+  const sum = (pick: (d: WhatsAppDrip) => number) => all.reduce((n, d) => n + pick(d), 0);
+  const live = countBy('active');
+  const inProgress = sum((d) => d.activeEnrollments);
+  const completed = sum((d) => d.completedEnrollments);
+  const stopped = sum((d) => d.stoppedEnrollments);
 
   const toggle = async (drip: WhatsAppDrip) => {
     const next = drip.status === 'active' ? 'paused' : 'active';
@@ -42,26 +64,43 @@ export function WhatsAppDrips() {
   const columns: DataTableColumn<WhatsAppDrip>[] = [
     {
       key: 'name',
-      header: 'Name',
+      header: 'Campaign',
       render: (d) => (
-        <div>
-          <p className="font-medium text-ink">{d.name}</p>
-          {d.description && <p className="max-w-md truncate text-xs text-ink-faint">{d.description}</p>}
+        <div className="min-w-0">
+          <p className="text-[13px] font-medium text-ink">{d.name}</p>
+          {d.description && <p className="max-w-md truncate text-xs text-ink-subtle">{d.description}</p>}
         </div>
       ),
     },
-    { key: 'status', header: 'Status', render: (d) => <Badge tone={DRIP_STATUS_TONE[d.status]}>{DRIP_STATUS_OPTIONS.find((o) => o.value === d.status)?.label}</Badge> },
-    { key: 'steps', header: 'Steps', align: 'center', render: (d) => d.stepCount },
-    { key: 'active', header: 'Active', align: 'center', render: (d) => d.activeEnrollments },
-    { key: 'completed', header: 'Completed', align: 'center', render: (d) => d.completedEnrollments },
-    { key: 'stopped', header: 'Stopped', align: 'center', render: (d) => d.stoppedEnrollments },
-    { key: 'createdAt', header: 'Created', render: (d) => formatDate(d.createdAt) },
     {
-      key: 'actions',
-      header: 'Actions',
+      key: 'status',
+      header: 'Status',
+      render: (d) => (
+        <Badge tone={DRIP_STATUS_TONE[d.status]} dot>
+          {DRIP_STATUS_OPTIONS.find((o) => o.value === d.status)?.label}
+        </Badge>
+      ),
+    },
+    {
+      key: 'steps',
+      header: 'Steps',
       align: 'right',
       render: (d) => (
-        <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+        <span className="tabular-nums text-ink-muted">
+          {d.stepCount} <span className="text-ink-faint">{d.stepCount === 1 ? 'template' : 'templates'}</span>
+        </span>
+      ),
+    },
+    { key: 'active', header: 'In progress', align: 'right', render: (d) => <Count value={d.activeEnrollments} /> },
+    { key: 'completed', header: 'Completed', align: 'right', render: (d) => <Count value={d.completedEnrollments} /> },
+    { key: 'stopped', header: 'Stopped', align: 'right', render: (d) => <Count value={d.stoppedEnrollments} /> },
+    { key: 'createdAt', header: 'Created', render: (d) => <span className="tabular-nums text-ink-muted">{formatDate(d.createdAt)}</span> },
+    {
+      key: 'actions',
+      header: '',
+      align: 'right',
+      render: (d) => (
+        <div className="flex justify-end gap-0.5" onClick={(e) => e.stopPropagation()}>
           <Button variant="ghost" size="sm" leftIcon={d.status === 'active' ? <Pause size={13} /> : <Play size={13} />} onClick={() => toggle(d)}>
             {d.status === 'active' ? 'Pause' : 'Start'}
           </Button>
@@ -71,7 +110,7 @@ export function WhatsAppDrips() {
           <Button variant="ghost" size="sm" leftIcon={<Pencil size={13} />} onClick={() => navigate(`/crm/whatsapp-drips/${d.id}/edit`)}>
             Edit
           </Button>
-          <Button variant="ghost" size="sm" className="text-danger-600" leftIcon={<Trash2 size={13} />} onClick={() => setDeleteTarget(d)}>
+          <Button variant="ghost" size="sm" className="text-danger-600 hover:text-danger-700" leftIcon={<Trash2 size={13} />} onClick={() => setDeleteTarget(d)}>
             Delete
           </Button>
         </div>
@@ -86,7 +125,7 @@ export function WhatsAppDrips() {
         description="A timed series of approved WhatsApp templates. Leads are enrolled once, steps go out on schedule, and a campaign stops for a lead who replies or is won."
         breadcrumb={[{ label: 'CRM', to: '/crm' }, { label: 'WhatsApp Drips' }]}
         actions={
-          <div className="flex gap-2">
+          <>
             <Button
               variant="outline"
               leftIcon={<Play size={14} />}
@@ -107,24 +146,71 @@ export function WhatsAppDrips() {
             <Button variant="primary" leftIcon={<Plus size={14} />} onClick={() => navigate('/crm/whatsapp-drips/new')}>
               New Drip Campaign
             </Button>
-          </div>
+          </>
         }
       />
 
-      <Card padded={false}>
-        <div className="flex justify-end border-b border-line p-3">
-          <SearchInput value={search} onChange={setSearch} placeholder="Search campaigns..." className="sm:w-72" />
-        </div>
-        <DataTable
-          columns={columns}
-          rows={rows}
-          rowKey={(d) => d.id}
-          isLoading={isLoading}
-          onRowClick={(d) => navigate(`/crm/whatsapp-drips/${d.id}`)}
-          emptyTitle="No drip campaigns"
-          emptyDescription="Create a campaign from your approved templates, then enrol leads into it."
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard
+          label="Drip campaigns"
+          value={isLoading ? '…' : all.length}
+          icon={Layers}
+          tone="shell"
+          footer={`${countBy('paused')} paused · ${countBy('draft')} draft`}
         />
-      </Card>
+        <StatCard label="Live" value={isLoading ? '…' : live} icon={PlayCircle} tone={live > 0 ? 'success' : 'neutral'} footer="Only Active campaigns send" />
+        <StatCard label="Leads in progress" value={isLoading ? '…' : inProgress} icon={Users} tone="info" footer="Enrolled, steps still to go" />
+        <StatCard label="Completed" value={isLoading ? '…' : completed} icon={CheckCircle2} tone="brand" footer={`${stopped} stopped early`} />
+      </div>
+
+      {!isLoading && all.length === 0 ? (
+        <Card padded={false}>
+          <EmptyState
+            icon={MessageCircle}
+            title="No drip campaigns yet"
+            description="Build a campaign from your approved templates — for example a brochure on day 0, a site-visit invite on day 2 — then enrol leads into it."
+            action={
+              <Button variant="primary" size="sm" leftIcon={<Plus size={13} />} onClick={() => navigate('/crm/whatsapp-drips/new')}>
+                Create first drip
+              </Button>
+            }
+          />
+        </Card>
+      ) : (
+        <Card padded={false}>
+          <div className="flex flex-col gap-2 border-b border-line px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+            <FilterChips
+              label="Status"
+              value={status}
+              onChange={(v) => setStatus(v as typeof status)}
+              items={[
+                { key: 'all', label: 'All', count: all.length },
+                ...(['active', 'paused', 'draft'] as const).map((v) => ({
+                  key: v,
+                  label: DRIP_STATUS_OPTIONS.find((o) => o.value === v)?.label ?? v,
+                  count: countBy(v),
+                })),
+              ]}
+            />
+            <SearchInput value={search} onChange={setSearch} placeholder="Search campaigns..." className="sm:w-64" />
+          </div>
+          <DataTable
+            columns={columns}
+            rows={rows}
+            rowKey={(d) => d.id}
+            isLoading={isLoading}
+            onRowClick={(d) => navigate(`/crm/whatsapp-drips/${d.id}`)}
+            rowHref={(d) => `/crm/whatsapp-drips/${d.id}`}
+            emptyTitle="No campaigns match"
+            emptyDescription="Try another status or search term."
+          />
+        </Card>
+      )}
+
+      <p className="mt-3 flex items-start gap-1.5 text-2xs text-ink-faint">
+        <MessageCircle size={11} className="mt-[3px] shrink-0" />
+        Due steps are picked up automatically once a minute. Every step is a template approved on your WhatsApp number — create them under Notifications → WhatsApp Templates.
+      </p>
 
       <ConfirmationDialog
         isOpen={!!deleteTarget}
@@ -141,11 +227,6 @@ export function WhatsAppDrips() {
         confirmLabel="Delete campaign"
         variant="danger"
       />
-
-      <p className="mt-4 flex items-center gap-1.5 text-xs text-ink-faint">
-        <MessageCircle size={12} />
-        Due steps are picked up automatically once a minute. Every step is a template approved on your WhatsApp number — create them under Notifications → WhatsApp Templates.
-      </p>
     </div>
   );
 }

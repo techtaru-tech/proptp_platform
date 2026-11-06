@@ -11,7 +11,7 @@ const BASE = `http://127.0.0.1:${process.env.PORT || 4300}/api`;
 
 export class ToolError extends Error {}
 
-async function call(auth: string, method: string, path: string, body?: unknown) {
+export async function call(auth: string, method: string, path: string, body?: unknown) {
   const res = await fetch(BASE + path, { method, headers: { 'content-type': 'application/json', authorization: auth }, body: body === undefined ? undefined : JSON.stringify(body) });
   const text = await res.text();
   let data: any;
@@ -22,18 +22,18 @@ async function call(auth: string, method: string, path: string, body?: unknown) 
 
 const MAX_CHARS = 14_000;
 /** A result the model can read: JSON, and never so long it drowns the conversation. */
-const out = (data: unknown) => {
+export const out = (data: unknown, max = MAX_CHARS) => {
   const s = JSON.stringify(data);
-  return s.length <= MAX_CHARS ? s : s.slice(0, MAX_CHARS) + ' …[cut: ask for fewer rows or a narrower search]';
+  return s.length <= max ? s : s.slice(0, max) + ' …[cut: ask for fewer rows or a narrower search]';
 };
-const take = <T,>(rows: T[] | undefined, n: unknown, dflt = 15, max = 30) => (rows ?? []).slice(0, Math.min(max, Math.max(1, Number(n) || dflt)));
+export const take = <T,>(rows: T[] | undefined, n: unknown, dflt = 15, max = 30) => (rows ?? []).slice(0, Math.min(max, Math.max(1, Number(n) || dflt)));
 const leadName = (l: any) => `${l.firstName ?? ''} ${l.lastName ?? ''}`.trim();
-const leadRow = (l: any) => ({
+export const leadRow = (l: any) => ({
   id: l.id, name: leadName(l), phone: l.phone, status: l.status, stage: l.stage?.name ?? l.stageName ?? null, source: l.originalSource ?? l.source, temperature: l.temperature ?? null,
   assigned_to: l.assignedUserName ?? l.assignedTo ?? l.assignedUser?.name ?? null, assigned_user_id: l.assignedUserId ?? null, next_follow_up: l.nextFollowUpAt ?? null, created: l.createdAt,
 });
 
-type Def = {
+export type Def = {
   name: string;
   description: string;
   input_schema: Anthropic.Tool['input_schema'];
@@ -46,7 +46,7 @@ type Def = {
   describe?: (auth: string, input: any) => Promise<string>;
 };
 
-const obj = (properties: Record<string, unknown>, required: string[] = []) => ({ type: 'object' as const, properties: properties as never, required, additionalProperties: false });
+export const obj = (properties: Record<string, unknown>, required: string[] = []) => ({ type: 'object' as const, properties: properties as never, required, additionalProperties: false });
 
 export const TOOLS: Def[] = [
   {

@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../prisma';
 import { toolByName, toolSpecs, ToolError } from './assistantTools';
+import { anthropicClient, resolveKey } from './anthropicKey';
 
 /**
  * The panel's chat assistant: Claude, given the tools in assistantTools.ts, working as whoever is
@@ -14,11 +15,11 @@ const MAX_ROUNDS = 10;
 
 export type Llm = (req: { system: string; messages: Anthropic.MessageParam[]; tools: Anthropic.Tool[] }) => Promise<Anthropic.Message>;
 
-let client: Anthropic | null = null;
-export const isConfigured = () => !!process.env.ANTHROPIC_API_KEY;
+export const isConfigured = async () => !!(await resolveKey()).key;
 
 const defaultLlm: Llm = async ({ system, messages, tools }) => {
-  client ??= new Anthropic();
+  const client = await anthropicClient();
+  if (!client) throw new AssistantError('The assistant is not set up yet. Add an Anthropic API key in Settings > AI Assistant.', 503);
   return client.messages.create({
     model: ASSISTANT_MODEL,
     max_tokens: 16000,
@@ -110,13 +111,13 @@ async function loop(conversationId: string, auth: string) {
 }
 
 export async function sendMessage(userId: string, auth: string, conversationId: string | null, text: string) {
-  if (!isConfigured() && llm === defaultLlm) throw new AssistantError('The assistant is not set up yet. Add ANTHROPIC_API_KEY to the server settings.', 503);
+  if (!(await isConfigured()) && llm === defaultLlm) throw new AssistantError('The assistant is not set up yet. Add an Anthropic API key in Settings > AI Assistant.', 503);
   const clean = text.trim();
   if (!clean) throw new AssistantError('Write a message first.', 400);
   let conv = conversationId ? await prisma.assistantConversation.findFirst({ where: { id: conversationId, userId } }) : null;
   if (conversationId && !conv) throw new AssistantError('That chat was not found.', 404);
   if (conv?.pending) throw new AssistantError('Approve or reject the change the assistant proposed before sending more.', 409);
-  conv ??= await prisma.assistantConversation.create({ data: { userId, title: clean.slice(0, 60) } });
+  conv ??= await prisma.assistantConversation.create({ data: { userId, kind: 'general', title: clean.slice(0, 60) } });
   await save(conv.id, 'user', [{ type: 'text', text: clean }]);
   await loop(conv.id, auth);
   return conv.id;

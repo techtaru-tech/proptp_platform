@@ -82,8 +82,8 @@ export function AssistantLauncher() {
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
-  // The full Assistant page already is the assistant.
-  if (!can('assistant') || pathname.startsWith('/assistant')) return null;
+  // The full Assistant page already is the assistant, and CRM Overview has its own analyst.
+  if (!can('assistant') || pathname.startsWith('/assistant') || pathname === '/crm') return null;
 
   const moveTo = (x: number, y: number, persist: boolean) => {
     const next = { fx: clamp01((x - MARGIN) / freeW), fy: clamp01((y - MARGIN) / freeH) };
@@ -195,7 +195,7 @@ export function AssistantLauncher() {
         aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown Home"
         title="Ask Propto Assistant — drag to move it"
         className={cn(
-          'group fixed z-40 flex select-none items-center justify-center rounded-full bg-brand-600 text-white ring-1 ring-inset ring-white/20',
+          'group fixed z-40 flex select-none print:hidden items-center justify-center rounded-full bg-brand-600 text-white ring-1 ring-inset ring-white/20',
           'shadow-[0_8px_24px_-8px_rgba(14,127,81,0.65),0_2px_6px_rgba(16,24,40,0.18)] transition-colors duration-150 hover:bg-brand-700 focus-ring',
           dragging ? 'cursor-grabbing' : 'cursor-grab'
         )}

@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Copy, DownloadCloud, Edit2, KeyRound, Link2, Play, Plus, RefreshCw, ShieldCheck, ExternalLink, Info, Trash2 } from 'lucide-react';
+import { useMemo, useState, type ReactNode } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { AlertTriangle, Copy, DownloadCloud, Edit2, KeyRound, Link2, Play, Plus, RefreshCw, ShieldCheck, ExternalLink, Info, Trash2 } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
-import { Card, CardHeader } from '../../components/ui/Card';
+import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
 import { Input } from '../../components/ui/Input';
@@ -12,6 +12,7 @@ import { Modal } from '../../components/ui/Modal';
 import { ConfirmationDialog } from '../../components/ui/ConfirmationDialog';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Toggle } from '../../components/ui/Toggle';
+import { FilterChips } from '../../components/ui/FilterChips';
 import { CardSkeleton } from '../../components/ui/LoadingSkeleton';
 import { DataTable, type DataTableColumn } from '../../components/tables/DataTable';
 import { LeadSourceBadge } from '../../components/leads/LeadSourceBadge';
@@ -31,13 +32,26 @@ import {
 import { formatDateTime, formatRelativeTime } from '../../utils/format';
 import { OAUTH_CAPABLE_SOURCES, type IntegrationActivityEntry, type LeadSourceConnection } from '../../types';
 
-const STATUS_OPTIONS: { value: IntegrationActivityEntry['status'] | 'all'; label: string }[] = [
-  { value: 'all', label: 'All Statuses' },
-  { value: 'processed', label: 'Processed' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'failed', label: 'Failed' },
-  { value: 'invalid_signature', label: 'Invalid Signature' },
+const STATUS_CHIPS: { key: IntegrationActivityEntry['status'] | 'all'; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'processed', label: 'Processed' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'failed', label: 'Failed' },
+  { key: 'invalid_signature', label: 'Invalid signature' },
 ];
+
+/** How many of the newest webhook receipts the cards' 30-day lead counts are summed from. */
+const RECEIPT_WINDOW = 500;
+
+/** One label/value line on a connection card. */
+function Fact({ label, title, children }: { label: string; title?: string; children: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <dt className="shrink-0 text-ink-subtle">{label}</dt>
+      <dd className="min-w-0 truncate text-right text-ink" title={title}>{children}</dd>
+    </div>
+  );
+}
 
 function connectionToEditValues(c: LeadSourceConnection): ConnectionFormValues {
   return {
@@ -63,6 +77,27 @@ export function Integrations() {
 
   const activityParams: ActivityListParams = { page: 1, pageSize: 30, connectionId: connectionFilter, status: statusFilter, sortBy: 'receivedAt', sortDir: 'desc' };
   const { data: activity, isLoading: activityLoading } = useAsync(() => listIntegrationActivity(activityParams), [JSON.stringify(activityParams), reloadKey]);
+
+  /*
+   * Leads each connection brought in over the last 30 days, summed from its webhook receipts.
+   * Read from the newest receipts; if those run out before reaching 30 days back, the figure is
+   * a floor and is shown with a "+".
+   */
+  const { data: receipts } = useAsync(
+    () => listIntegrationActivity({ page: 1, pageSize: RECEIPT_WINDOW, connectionId: 'all', status: 'all', sortBy: 'receivedAt', sortDir: 'desc' }),
+    [reloadKey]
+  );
+  const leads30 = useMemo(() => {
+    const since = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const byConnection = new Map<string, number>();
+    for (const r of receipts?.items ?? []) {
+      if (new Date(r.receivedAt).getTime() < since) continue;
+      byConnection.set(r.connectionId, (byConnection.get(r.connectionId) ?? 0) + (r.leadsCreated ?? 0));
+    }
+    const oldest = receipts?.items[receipts.items.length - 1];
+    const complete = !!receipts && (receipts.total <= receipts.items.length || (!!oldest && new Date(oldest.receivedAt).getTime() < since));
+    return { byConnection, complete, loaded: !!receipts };
+  }, [receipts]);
 
   const [editTarget, setEditTarget] = useState<LeadSourceConnection | null>(null);
   const [editValues, setEditValues] = useState<ConnectionFormValues | null>(null);
@@ -152,14 +187,52 @@ export function Integrations() {
     }
   };
 
+  const connectionName = (id: string) => connections?.find((c) => c.id === id)?.name;
   const activityColumns: DataTableColumn<IntegrationActivityEntry>[] = [
-    { key: 'source', header: 'Source', render: (a) => <LeadSourceBadge source={a.source} /> },
+    {
+      key: 'receivedAt',
+      header: 'Received',
+      render: (a) => <span className="whitespace-nowrap tabular-nums text-ink-muted" title={formatDateTime(a.receivedAt)}>{formatRelativeTime(a.receivedAt)}</span>,
+    },
+    {
+      key: 'source',
+      header: 'Connection',
+      render: (a) => (
+        <span className="flex items-center gap-2">
+          <LeadSourceBadge source={a.source} />
+          {connectionName(a.connectionId) && <span className="truncate text-xs text-ink-subtle">{connectionName(a.connectionId)}</span>}
+        </span>
+      ),
+    },
     { key: 'status', header: 'Status', render: (a) => <StatusBadge kind="integrationActivity" status={a.status} /> },
-    { key: 'leadsCreated', header: 'Leads Created', align: 'right', render: (a) => a.leadsCreated },
-    { key: 'error', header: 'Error', render: (a) => (a.errorMessage ? <span className="text-danger-600">{a.errorMessage}</span> : '—') },
-    { key: 'receivedAt', header: 'Received', render: (a) => formatDateTime(a.receivedAt) },
-    { key: 'processedAt', header: 'Processed', render: (a) => (a.processedAt ? formatDateTime(a.processedAt) : '—') },
+    {
+      key: 'leadsCreated',
+      header: 'Leads',
+      align: 'right',
+      render: (a) =>
+        a.leadId && a.leadsCreated > 0 ? (
+          <Link to={`/crm/leads/${a.leadId}`} className="rounded font-medium tabular-nums text-brand-700 hover:underline focus-ring">
+            {a.leadsCreated}
+          </Link>
+        ) : (
+          <span className={a.leadsCreated ? 'font-medium tabular-nums' : 'tabular-nums text-ink-faint'}>{a.leadsCreated}</span>
+        ),
+    },
+    {
+      key: 'error',
+      header: 'Error',
+      render: (a) => (a.errorMessage ? <span className="text-xs text-danger-700">{a.errorMessage}</span> : <span className="text-ink-faint">—</span>),
+    },
+    {
+      key: 'processedAt',
+      header: 'Processed',
+      render: (a) =>
+        a.processedAt ? <span className="whitespace-nowrap tabular-nums text-ink-muted">{formatDateTime(a.processedAt)}</span> : <span className="text-ink-faint">—</span>,
+    },
   ];
+
+  const activeCount = (connections ?? []).filter((c) => c.active).length;
+  const attentionCount = (connections ?? []).filter((c) => c.status === 'error' || !!c.lastError).length;
 
   return (
     <div>
@@ -174,22 +247,21 @@ export function Integrations() {
         }
       />
 
-      <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-info-100 bg-info-50 px-4 py-3 text-sm text-info-700">
-        <Info size={16} className="mt-0.5 shrink-0" />
+      <div className="mb-4 flex items-start gap-2 rounded-lg border border-line bg-surface-subtle px-3 py-2 text-xs leading-5 text-ink-muted">
+        <Info size={13} className="mt-[3px] shrink-0 text-info-600" aria-hidden="true" />
         <p>
-          Credentials, access tokens and webhook secrets are stored encrypted on the backend and are never exposed here. Meta
-          connections verify against the Graph API and receive at <code>/api/webhook/meta</code>; every other source ingests
-          through its own tokenised webhook URL below — paste that URL into the platform, then use <strong>Send test payload</strong>{' '}
-          to confirm the fields map correctly.
+          Credentials and tokens are stored encrypted and never shown here. Meta verifies against the Graph API and receives at{' '}
+          <code className="text-ink">/api/webhook/meta</code>; every other source posts to its own webhook URL. Copy it from a card, paste it into
+          the platform, then run <span className="font-medium text-ink">Test payload</span> to check the fields map correctly.
         </p>
       </div>
 
       <Tabs
         items={[
-          { key: 'connections', label: 'Connections' },
+          { key: 'connections', label: 'Connections', badge: connections?.length },
           // Only worth a tab once there is a Meta connection whose forms can be mapped.
           ...(metaConnection ? [{ key: 'mapping', label: 'Field Mapping' }] : []),
-          { key: 'activity', label: 'Activity Log' },
+          { key: 'activity', label: 'Activity Log', badge: activity?.total },
         ]}
       >
         {(activeKey) => (
@@ -216,14 +288,19 @@ export function Integrations() {
                   />
                 </Card>
               ) : (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <>
+                <p className="mb-2.5 text-xs tabular-nums text-ink-subtle">
+                  {activeCount} of {connections.length} active
+                  {attentionCount > 0 && <span className="text-danger-700"> · {attentionCount} {attentionCount === 1 ? 'needs' : 'need'} attention</span>}
+                </p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {connections.map((connection) => {
                     const oauthCapable = OAUTH_CAPABLE_SOURCES.includes(connection.source);
                     return (
-                      <Card key={connection.id}>
+                      <Card key={connection.id} className="flex h-full flex-col">
                         <div className="mb-3 flex items-start justify-between gap-2">
-                          <div>
-                            <p className="text-sm font-semibold text-ink">{connection.name}</p>
+                          <div className="min-w-0">
+                            <p className="truncate text-[13px] font-semibold text-ink" title={connection.name}>{connection.name}</p>
                             <div className="mt-1">
                               <LeadSourceBadge source={connection.source} />
                             </div>
@@ -231,30 +308,48 @@ export function Integrations() {
                           <StatusBadge kind="integrationStatus" status={connection.status} />
                         </div>
 
-                        <dl className="space-y-2 text-sm">
+                        <dl className="space-y-1.5 text-[13px]">
                           {connection.connectedAccountLabel && (
-                            <div className="flex items-center justify-between gap-2">
-                              <dt className="text-ink-muted">Account</dt>
-                              <dd className="text-right font-medium text-ink">{connection.connectedAccountLabel}</dd>
-                            </div>
+                            <Fact label="Account" title={connection.connectedAccountLabel}>{connection.connectedAccountLabel}</Fact>
                           )}
-                          <div className="flex items-center justify-between gap-2">
-                            <dt className="text-ink-muted">Last Received</dt>
-                            <dd className="text-right font-medium text-ink">{connection.lastReceivedAt ? formatRelativeTime(connection.lastReceivedAt) : 'Never'}</dd>
-                          </div>
-                          <div className="flex items-center justify-between gap-2">
-                            <dt className="text-ink-muted">Webhook Token</dt>
-                            <dd className="text-right font-mono text-xs text-ink-faint">{connection.webhookTokenMasked}</dd>
-                          </div>
-                          {connection.lastError && (
-                            <div className="flex items-start justify-between gap-2">
-                              <dt className="shrink-0 text-ink-muted">Last Error</dt>
-                              <dd className="text-right text-danger-600">{connection.lastError}</dd>
-                            </div>
+                          {leads30.loaded && (
+                            <Fact label="Leads, last 30 days">
+                              <span className="font-medium tabular-nums">
+                                {leads30.byConnection.get(connection.id) ?? 0}
+                                {!leads30.complete && '+'}
+                              </span>
+                            </Fact>
                           )}
+                          <Fact label="Last received" title={connection.lastReceivedAt ? formatDateTime(connection.lastReceivedAt) : undefined}>
+                            {connection.lastReceivedAt ? formatRelativeTime(connection.lastReceivedAt) : <span className="text-ink-faint">Never</span>}
+                          </Fact>
+                          <div className="flex items-center justify-between gap-3">
+                            <dt className="shrink-0 text-ink-subtle">Webhook</dt>
+                            <dd className="flex min-w-0 items-center gap-0.5">
+                              <span className="truncate font-mono text-xs text-ink-faint">{connection.webhookTokenMasked}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyWebhookUrl(connection.webhookUrl)}
+                                aria-label={`Copy the webhook URL for ${connection.name}`}
+                                title="Copy webhook URL"
+                                className="rounded p-1 text-ink-faint transition-colors duration-100 hover:bg-surface-muted hover:text-ink focus-ring"
+                              >
+                                <Copy size={12} />
+                              </button>
+                            </dd>
+                          </div>
                         </dl>
 
-                        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-3.5">
+                        {connection.lastError && (
+                          <p className="mt-3 flex items-start gap-1.5 rounded-md bg-danger-50 px-2.5 py-1.5 text-xs text-danger-700">
+                            <AlertTriangle size={12} className="mt-0.5 shrink-0" aria-hidden="true" />
+                            <span>{connection.lastError}</span>
+                          </p>
+                        )}
+
+                        {/* Controls sit at the foot of every card, so a row of cards lines up. */}
+                        <div className="mt-auto pt-4">
+                        <div className="flex items-center gap-2 border-t border-line pt-3">
                           <Toggle
                             checked={connection.active}
                             onChange={() => handleToggleActive(connection.id)}
@@ -262,8 +357,14 @@ export function Integrations() {
                             showLabel={false}
                           />
                           <span className="text-xs text-ink-muted">{connection.active ? 'Active' : 'Inactive'}</span>
+                          <Button variant="ghost" size="sm" leftIcon={<Edit2 size={12} />} className="ml-auto" onClick={() => openEdit(connection)}>
+                            Edit
+                          </Button>
+                          <Button variant="ghost" size="sm" leftIcon={<Trash2 size={12} />} className="text-danger-600" onClick={() => setDeleteTarget(connection)}>
+                            Delete
+                          </Button>
                         </div>
-                        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                        <div className="mt-2.5 flex flex-wrap items-center gap-1">
                           <Button variant="outline" size="sm" leftIcon={<ShieldCheck size={12} />} onClick={() => handleTest(connection)} isLoading={testingId === connection.id}>
                             Test
                           </Button>
@@ -295,35 +396,45 @@ export function Integrations() {
                               Import Past Leads
                             </Button>
                           )}
-                          <Button variant="ghost" size="sm" leftIcon={<Edit2 size={12} />} onClick={() => openEdit(connection)}>
-                            Edit
-                          </Button>
-                          <Button variant="ghost" size="sm" leftIcon={<Trash2 size={12} />} className="ml-auto text-danger-600" onClick={() => setDeleteTarget(connection)}>
-                            Delete
-                          </Button>
+                        </div>
                         </div>
                       </Card>
                     );
                   })}
                 </div>
+                </>
               ))}
 
             {activeKey === 'activity' && (
               <Card padded={false}>
-                <div className="flex flex-wrap items-center gap-2.5 border-b border-line p-4">
-                  <Select
-                    value={connectionFilter}
-                    onChange={(e) => setConnectionFilter(e.target.value)}
-                    options={[{ value: 'all', label: 'All Connections' }, ...(connections ?? []).map((c) => ({ value: c.id, label: c.name }))]}
-                    wrapperClassName="w-56"
-                  />
-                  <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as IntegrationActivityEntry['status'] | 'all')} options={STATUS_OPTIONS} wrapperClassName="w-44" />
-                  <Button variant="ghost" size="sm" leftIcon={<RefreshCw size={13} />} onClick={() => setReloadKey((k) => k + 1)} className="ml-auto">
+                <div className="flex items-start justify-between gap-3 border-b border-line px-4 py-2.5">
+                  <div className="min-w-0">
+                    <h3 className="text-[13px] font-semibold text-ink">Webhook activity</h3>
+                    <p className="mt-0.5 text-xs text-ink-subtle">Every inbound webhook receipt across all connections. Failed receipts are not retried.</p>
+                  </div>
+                  <Button variant="ghost" size="sm" leftIcon={<RefreshCw size={13} />} onClick={() => setReloadKey((k) => k + 1)}>
                     Refresh
                   </Button>
                 </div>
-                <div className="px-5 pt-4">
-                  <CardHeader title="Webhook Activity" subtitle="Every inbound webhook receipt across all connections — no retry mechanism exists in the current system." />
+                <div className="flex flex-col gap-2 border-b border-line px-3 py-2.5 lg:flex-row lg:items-center">
+                  <Select
+                    aria-label="Connection"
+                    value={connectionFilter}
+                    onChange={(e) => setConnectionFilter(e.target.value)}
+                    options={[{ value: 'all', label: 'All Connections' }, ...(connections ?? []).map((c) => ({ value: c.id, label: c.name }))]}
+                    wrapperClassName="w-full sm:w-56"
+                  />
+                  <FilterChips
+                    label="Receipt status"
+                    items={STATUS_CHIPS}
+                    value={statusFilter}
+                    onChange={(k) => setStatusFilter(k as IntegrationActivityEntry['status'] | 'all')}
+                  />
+                  {activity && (
+                    <span className="text-xs tabular-nums text-ink-faint lg:ml-auto">
+                      {activity.total > activity.items.length ? `Latest ${activity.items.length} of ${activity.total}` : `${activity.total} ${activity.total === 1 ? 'receipt' : 'receipts'}`}
+                    </span>
+                  )}
                 </div>
                 <DataTable
                   columns={activityColumns}

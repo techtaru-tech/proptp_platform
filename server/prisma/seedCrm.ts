@@ -33,6 +33,19 @@ const chance = (p: number) => rng() < p;
 const daysAgo = (n: number) => new Date(Date.now() - n * 86400000);
 const hoursAgo = (n: number) => new Date(Date.now() - n * 3600000);
 const daysAhead = (n: number) => new Date(Date.now() + n * 86400000);
+/**
+ * A lead's arrival time, n days ago: weighted to the hours people actually fill in forms (late
+ * morning and evening, IST), with a thin tail through the night — so the panel's "when leads
+ * arrive" heatmap looks like a real week rather than one bright column at seed time.
+ */
+const ARRIVAL_HOURS = [7, 9, 10, 10, 11, 11, 12, 12, 13, 14, 15, 16, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 23, 1];
+function arrivalTime(n: number): Date {
+  const day = new Date(Date.now() - n * 86400000);
+  const ist = new Date(day.getTime() + 330 * 60000);
+  ist.setUTCHours(pick(ARRIVAL_HOURS), randInt(0, 59), randInt(0, 59), 0);
+  const at = new Date(ist.getTime() - 330 * 60000);
+  return at.getTime() > Date.now() ? new Date(Date.now() - randInt(5, 180) * 60000) : at;
+}
 
 const FIRST = ['Rohit', 'Sakshi', 'Imran', 'Tanvi', 'Yash', 'Aarti', 'Naveen', 'Payal', 'Harsh', 'Juhi',
   'Kunal', 'Sonal', 'Mohit', 'Rekha', 'Abhay', 'Nisha', 'Varun', 'Geeta', 'Siddharth', 'Bhavna',
@@ -199,7 +212,7 @@ export async function seedCrm(
     const firstName = pick(FIRST);
     const lastName = pick(LAST);
     const source = pick(SOURCES);
-    const createdAt = daysAgo(randInt(0, 120));
+    const createdAt = arrivalTime(randInt(0, 120));
     const owner = pick(owners);
 
     // Status drives the stage, the money fields and the history below, so it is decided first.

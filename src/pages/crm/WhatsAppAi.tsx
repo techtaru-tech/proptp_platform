@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, Bot, Mic, Pencil, Plus, Send, Trash2, UserRound } from 'lucide-react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { AlertTriangle, BookOpen, Bot, Lock, Mic, Pencil, Plus, RefreshCw, Send, Trash2, UserRound } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -16,7 +16,8 @@ import { useToast } from '../../context/ToastContext';
 import {
   addKnowledge, deleteKnowledge, getAiSettings, listAiReplies, listKnowledge, saveAiSettings, tryAssistant, updateKnowledge,
 } from '../../services/whatsappAiService';
-import { formatDateTime } from '../../utils/format';
+import { formatDate, formatDateTime } from '../../utils/format';
+import { cn } from '../../utils/cn';
 import type {
   WhatsAppAiReplyRow, WhatsAppAiSettings, WhatsAppAiTestResult, WhatsAppKnowledgeEntry,
 } from '../../types';
@@ -53,18 +54,37 @@ export function WhatsAppAi() {
         description="Answers any message — typed or a voice note — using your knowledge base and the customer's own record. Keyword auto-replies still go first."
         breadcrumb={[{ label: 'CRM', to: '/crm' }, { label: 'WhatsApp AI' }]}
       />
-      <div className="flex flex-col gap-5">
-        <SettingsCard settings={settings} onSaved={setSettings} />
-        <TryItCard />
-        <KnowledgeCard entries={knowledge} onChanged={load} />
-        <RepliesCard replies={replies} onRefresh={load} />
+      {/* Settings and what it knows on the left; trying it and what it said on the right. */}
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_24rem] 2xl:grid-cols-[minmax(0,1fr)_28rem]">
+        <div className="flex min-w-0 flex-col gap-4">
+          <SettingsCard settings={settings} onSaved={setSettings} knowledgeInUse={knowledge.filter((k) => k.active).length} />
+          <KnowledgeCard entries={knowledge} onChanged={load} />
+        </div>
+        <div className="flex min-w-0 flex-col gap-4">
+          <TryItCard />
+          <RepliesCard replies={replies} onRefresh={load} />
+        </div>
       </div>
     </div>
   );
-
 }
 
-function SettingsCard({ settings, onSaved }: { settings: WhatsAppAiSettings; onSaved: (s: WhatsAppAiSettings) => void }) {
+/** One block of the settings card: what it is on the left, its fields on the right. */
+function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+  return (
+    <section className="grid grid-cols-1 gap-3 border-t border-line px-4 py-4 md:grid-cols-[11rem_minmax(0,1fr)] md:gap-6">
+      <div>
+        <h4 className="text-xs font-semibold text-ink">{title}</h4>
+        {description && <p className="mt-0.5 text-xs text-ink-subtle">{description}</p>}
+      </div>
+      <div className="min-w-0 space-y-3">{children}</div>
+    </section>
+  );
+}
+
+function SettingsCard({
+  settings, onSaved, knowledgeInUse,
+}: { settings: WhatsAppAiSettings; onSaved: (s: WhatsAppAiSettings) => void; knowledgeInUse: number }) {
   const { toast } = useToast();
   const [instructions, setInstructions] = useState(settings.instructions);
   const [model, setModel] = useState(settings.model);
@@ -89,31 +109,68 @@ function SettingsCard({ settings, onSaved }: { settings: WhatsAppAiSettings; onS
   };
 
   const canEnable = settings.hasAnthropicKey;
+  const savedModel = settings.models.find((m) => m.value === settings.model)?.label.split(' — ')[0] ?? settings.model;
 
   return (
-    <Card>
-      <CardHeader
-        title="Settings"
-        subtitle="Nothing is answered by the AI until you switch it on."
-        action={<Badge tone={settings.enabled ? 'success' : 'neutral'}>{settings.enabled ? 'On' : 'Off'}</Badge>}
-      />
-      <div className="space-y-4">
+    <Card padded={false} className="overflow-hidden">
+      {/* Status first: whether it is answering customers right now. */}
+      <div className="px-4 py-3.5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <span
+              className={cn(
+                'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border',
+                settings.enabled ? 'border-brand-200 bg-brand-50 text-brand-700' : 'border-line bg-surface-subtle text-ink-faint'
+              )}
+              aria-hidden="true"
+            >
+              <Bot size={16} />
+            </span>
+            <div className="min-w-0">
+              <h3 className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+                {settings.enabled ? 'The AI assistant is answering' : 'The AI assistant is off'}
+                <Badge tone={settings.enabled ? 'success' : 'neutral'} dot>
+                  {settings.enabled ? 'On' : 'Off'}
+                </Badge>
+              </h3>
+              <p className="mt-0.5 text-xs text-ink-subtle">
+                {settings.enabled
+                  ? 'Anything a keyword auto-reply does not cover — questions, long messages and voice notes — is answered by the AI and sent straight away.'
+                  : 'Nothing is answered by the AI until you switch it on.'}
+              </p>
+            </div>
+          </div>
+          <Toggle
+            label="Answer messages with the AI assistant"
+            showLabel={false}
+            checked={settings.enabled}
+            disabled={!canEnable && !settings.enabled}
+            onChange={(enabled) => save({ enabled }, enabled ? 'AI assistant is on' : 'AI assistant is off')}
+          />
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 pl-11">
+          <Badge tone={settings.hasAnthropicKey ? 'success' : 'warning'} dot>
+            {settings.hasAnthropicKey ? 'API key stored' : 'No API key'}
+          </Badge>
+          <Badge tone="neutral">{savedModel}</Badge>
+          <Badge tone="neutral">Up to {settings.maxRepliesPerHour} replies / chat / hour</Badge>
+          <Badge tone={settings.voiceEnabled ? 'info' : 'neutral'}>{settings.voiceEnabled ? 'Voice notes on' : 'Voice notes off'}</Badge>
+          <Badge tone={knowledgeInUse > 0 ? 'neutral' : 'warning'}>
+            {knowledgeInUse} knowledge {knowledgeInUse === 1 ? 'entry' : 'entries'} in use
+          </Badge>
+        </div>
+
         {!settings.hasAnthropicKey && (
-          <p className="flex items-start gap-2 rounded-lg border border-warning-100 bg-warning-50 px-3 py-2 text-sm text-warning-700">
-            <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+          <p className="mt-3 flex items-start gap-2 rounded-lg border border-warning-100 bg-warning-50 px-3 py-2 text-xs text-warning-700">
+            <AlertTriangle size={14} className="mt-px shrink-0" />
             Add your Anthropic API key below first — the assistant cannot answer without it.
           </p>
         )}
+      </div>
 
-        <Toggle
-          label="Answer messages with the AI assistant"
-          description="Anything a keyword auto-reply does not cover — questions, long messages and voice notes — is answered by the AI and sent straight away."
-          checked={settings.enabled}
-          disabled={!canEnable && !settings.enabled}
-          onChange={(enabled) => save({ enabled }, enabled ? 'AI assistant is on' : 'AI assistant is off')}
-        />
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <Section title="Connection" description="The key the assistant answers with, and the model it uses.">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Input
             label="Anthropic API key"
             type="password"
@@ -124,61 +181,78 @@ function SettingsCard({ settings, onSaved }: { settings: WhatsAppAiSettings; onS
             hint="Stored encrypted. Never shown again."
           />
           <Select label="Model" value={model} onChange={(e) => setModel(e.target.value)} options={settings.models} />
-          <Input label="Most AI replies per chat per hour" type="number" min={1} value={maxPerHour} onChange={(e) => setMaxPerHour(e.target.value)} hint="A cap on cost and on anyone trying to run it up." />
         </div>
+      </Section>
 
+      <Section title="Limits" description="A cap on cost and on anyone trying to run it up.">
+        <Input
+          label="Most AI replies per chat per hour"
+          type="number"
+          min={1}
+          value={maxPerHour}
+          onChange={(e) => setMaxPerHour(e.target.value)}
+          wrapperClassName="sm:max-w-[14rem]"
+        />
+      </Section>
+
+      <Section title="Business and tone" description="Who you are and the tone to use.">
         <Textarea
           label="About your business and how to talk"
-          rows={5}
+          rows={7}
           value={instructions}
           onChange={setInstructions}
-          hint="Who you are and the tone to use. Facts such as services and prices belong in the knowledge base below."
+          hint="Facts such as services and prices belong in the knowledge base below."
         />
+      </Section>
 
-        <div className="rounded-lg border border-line p-3.5">
-          <Toggle
-            label="Understand voice notes"
-            description="A voice note is turned into text by a speech-to-text service, then answered like any message. Needs its own key."
-            checked={settings.voiceEnabled}
-            onChange={(voiceEnabled) => save({ voiceEnabled }, voiceEnabled ? 'Voice notes on' : 'Voice notes off')}
+      <Section title="Voice notes" description="Optional. Uses its own speech-to-text key.">
+        <Toggle
+          label="Understand voice notes"
+          description="A voice note is turned into text by a speech-to-text service, then answered like any message. Needs its own key."
+          checked={settings.voiceEnabled}
+          onChange={(voiceEnabled) => save({ voiceEnabled }, voiceEnabled ? 'Voice notes on' : 'Voice notes off')}
+        />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Select
+            label="Speech-to-text service"
+            value={provider}
+            onChange={(e) => setProvider(e.target.value as 'groq' | 'openai')}
+            options={[
+              { value: 'groq', label: 'Groq (Whisper) — very cheap, has a free tier' },
+              { value: 'openai', label: 'OpenAI (Whisper) — about ₹0.5 per minute' },
+            ]}
           />
-          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Select
-              label="Speech-to-text service"
-              value={provider}
-              onChange={(e) => setProvider(e.target.value as 'groq' | 'openai')}
-              options={[
-                { value: 'groq', label: 'Groq (Whisper) — very cheap, has a free tier' },
-                { value: 'openai', label: 'OpenAI (Whisper) — about ₹0.5 per minute' },
-              ]}
-            />
-            <Input
-              label="Speech-to-text key"
-              type="password"
-              secret
-              value={transcriptionKey}
-              onChange={(e) => setTranscriptionKey(e.target.value)}
-              placeholder={settings.hasTranscriptionKey ? '•••••••• stored — type to replace' : provider === 'groq' ? 'gsk_…' : 'sk-…'}
-              hint={provider === 'groq' ? 'Get one at console.groq.com.' : 'Get one at platform.openai.com.'}
-            />
-          </div>
+          <Input
+            label="Speech-to-text key"
+            type="password"
+            secret
+            value={transcriptionKey}
+            onChange={(e) => setTranscriptionKey(e.target.value)}
+            placeholder={settings.hasTranscriptionKey ? '•••••••• stored — type to replace' : provider === 'groq' ? 'gsk_…' : 'sk-…'}
+            hint={provider === 'groq' ? 'Get one at console.groq.com.' : 'Get one at platform.openai.com.'}
+          />
         </div>
+      </Section>
 
-        <div className="flex justify-end">
-          <Button
-            variant="primary"
-            isLoading={saving}
-            onClick={() =>
-              save({
-                instructions, model, maxRepliesPerHour: Number(maxPerHour) || 20, transcriptionProvider: provider,
-                ...(anthropicKey.trim() ? { anthropicKey: anthropicKey.trim() } : {}),
-                ...(transcriptionKey.trim() ? { transcriptionKey: transcriptionKey.trim() } : {}),
-              })
-            }
-          >
-            Save settings
-          </Button>
-        </div>
+      <div className="flex flex-col gap-2 border-t border-line bg-surface-subtle px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+        <p className="flex items-center gap-1.5 text-2xs text-ink-subtle">
+          <Lock size={11} className="shrink-0" />
+          Keys are stored encrypted and never shown again. Leave a key field blank to keep the stored one.
+        </p>
+        <Button
+          variant="primary"
+          isLoading={saving}
+          className="shrink-0"
+          onClick={() =>
+            save({
+              instructions, model, maxRepliesPerHour: Number(maxPerHour) || 20, transcriptionProvider: provider,
+              ...(anthropicKey.trim() ? { anthropicKey: anthropicKey.trim() } : {}),
+              ...(transcriptionKey.trim() ? { transcriptionKey: transcriptionKey.trim() } : {}),
+            })
+          }
+        >
+          Save settings
+        </Button>
       </div>
     </Card>
   );
@@ -208,27 +282,32 @@ function TryItCard() {
     <Card>
       <CardHeader title="Try it" subtitle="See how the assistant would answer a message. Nothing is sent to anyone." />
       <div className="space-y-3">
-        <Textarea label="Customer message" rows={2} value={message} onChange={setMessage} placeholder="Mere clinic ke liye app banwana hai, patients appointment khud book kar sakein. Kitna lagega?" />
+        <Textarea label="Customer message" rows={3} value={message} onChange={setMessage} placeholder="Mere clinic ke liye app banwana hai, patients appointment khud book kar sakein. Kitna lagega?" />
         <Input label="Pretend it is from this number (optional)" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="9876543210" hint="If a lead has this number, the assistant also sees that lead's record." />
-        <Button variant="primary" leftIcon={<Send size={14} />} isLoading={busy} disabled={!message.trim()} onClick={run}>
+        <Button variant="primary" className="w-full" leftIcon={<Send size={14} />} isLoading={busy} disabled={!message.trim()} onClick={run}>
           Get the answer
         </Button>
 
         {result && (
-          <div className="space-y-2 rounded-lg border border-line bg-surface-subtle p-3">
-            <p className="whitespace-pre-wrap text-sm text-ink">{result.reply || '(No reply — it would only alert the team.)'}</p>
-            {result.handoff && (
-              <p className="flex items-center gap-1.5 text-xs text-warning-700">
-                <UserRound size={13} /> Would alert the team: {result.handoffReason ?? 'needs a person'}
-              </p>
-            )}
-            <p className="text-xs text-ink-faint">
-              {result.usage.input} in · {result.usage.output} out · {result.usage.cacheRead} cached tokens
-            </p>
-            <details className="text-xs text-ink-faint">
-              <summary className="cursor-pointer">The record it was shown</summary>
-              <pre className="mt-1 whitespace-pre-wrap">{result.record}</pre>
-            </details>
+          <div className="overflow-hidden rounded-lg border border-line">
+            <div className="flex items-center justify-between gap-2 border-b border-line bg-surface-subtle px-3 py-1.5">
+              <span className="text-2xs font-semibold uppercase tracking-wider text-ink-subtle">Would reply</span>
+              <span className="text-2xs tabular-nums text-ink-faint">
+                {result.usage.input} in · {result.usage.output} out · {result.usage.cacheRead} cached
+              </span>
+            </div>
+            <div className="space-y-2 px-3 py-2.5">
+              <p className="whitespace-pre-wrap text-[13px] text-ink">{result.reply || '(No reply — it would only alert the team.)'}</p>
+              {result.handoff && (
+                <p className="flex items-center gap-1.5 text-xs text-warning-700">
+                  <UserRound size={13} /> Would alert the team: {result.handoffReason ?? 'needs a person'}
+                </p>
+              )}
+              <details className="text-xs text-ink-subtle">
+                <summary className="cursor-pointer select-none hover:text-ink">The record it was shown</summary>
+                <pre className="mt-1.5 max-h-60 overflow-auto whitespace-pre-wrap rounded-md bg-surface-subtle p-2 font-mono text-2xs text-ink-muted">{result.record}</pre>
+              </details>
+            </div>
           </div>
         )}
       </div>
@@ -245,6 +324,7 @@ function KnowledgeCard({ entries, onChanged }: { entries: WhatsAppKnowledgeEntry
 
   const term = search.trim().toLowerCase();
   const shown = entries.filter((e) => !term || e.title.toLowerCase().includes(term) || e.content.toLowerCase().includes(term));
+  const hidden = entries.filter((e) => !e.active).length;
 
   const save = async () => {
     if (!editing) return;
@@ -264,35 +344,55 @@ function KnowledgeCard({ entries, onChanged }: { entries: WhatsAppKnowledgeEntry
   };
 
   return (
-    <Card>
-      <CardHeader
-        title={`Knowledge base (${entries.length})`}
-        subtitle="Everything the assistant is allowed to state as fact: services, offers, policies, answers to common questions. If it is not here, the assistant hands over to a person instead of guessing."
-        action={<Button variant="primary" size="sm" leftIcon={<Plus size={13} />} onClick={() => setEditing({ title: '', content: '', active: true })}>Add entry</Button>}
-      />
-      <div className="mb-3 max-w-sm">
-        <SearchInput value={search} onChange={setSearch} placeholder="Search the knowledge base…" />
+    <Card padded={false}>
+      <div className="flex items-start justify-between gap-3 px-4 pt-3.5">
+        <div className="min-w-0">
+          <h3 className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+            Knowledge base
+            <span className="rounded-sm bg-surface-muted px-1.5 text-2xs font-semibold tabular-nums text-ink-muted">{entries.length}</span>
+            {hidden > 0 && <span className="text-2xs font-normal text-ink-faint">{hidden} hidden from AI</span>}
+          </h3>
+          <p className="mt-0.5 text-xs text-ink-subtle">
+            Everything the assistant is allowed to state as fact: services, offers, policies, answers to common questions. If it is not here, the assistant hands over to a person instead of guessing.
+          </p>
+        </div>
+        <Button variant="primary" size="sm" className="shrink-0" leftIcon={<Plus size={13} />} onClick={() => setEditing({ title: '', content: '', active: true })}>
+          Add entry
+        </Button>
       </div>
+      {entries.length > 0 && (
+        <div className="px-4 pt-3">
+          <SearchInput value={search} onChange={setSearch} placeholder="Search the knowledge base…" className="sm:max-w-xs" />
+        </div>
+      )}
       {shown.length === 0 ? (
-        <p className="text-sm text-ink-faint">{entries.length === 0 ? 'Nothing here yet. Add what a customer might ask about.' : 'No entries match.'}</p>
+        <div className="px-4 py-8 text-center">
+          <BookOpen size={16} className="mx-auto text-ink-faint" aria-hidden="true" />
+          <p className="mt-2 text-xs text-ink-subtle">
+            {entries.length === 0 ? 'Nothing here yet. Add what a customer might ask about.' : 'No entries match.'}
+          </p>
+        </div>
       ) : (
-        <div className="space-y-2">
+        <ul className="mt-3 divide-y divide-line border-t border-line">
           {shown.map((e) => (
-            <div key={e.id} className="rounded-lg border border-line p-3">
+            <li key={e.id} className="group px-4 py-2.5">
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <p className="flex items-center gap-2 text-sm font-medium text-ink">
-                  {e.title}
-                  {!e.active && <Badge tone="neutral">Hidden from AI</Badge>}
-                </p>
-                <div className="flex gap-1">
+                <div className="min-w-0 flex-1">
+                  <p className="flex flex-wrap items-center gap-2 text-[13px] font-medium text-ink">
+                    {e.title}
+                    {!e.active && <Badge tone="neutral">Hidden from AI</Badge>}
+                  </p>
+                  <p className="mt-0.5 line-clamp-2 whitespace-pre-wrap text-xs text-ink-muted">{e.content}</p>
+                  <p className="mt-1 text-2xs tabular-nums text-ink-faint">Updated {formatDate(e.updatedAt)}</p>
+                </div>
+                <div className="flex shrink-0 gap-0.5">
                   <Button variant="ghost" size="sm" leftIcon={<Pencil size={13} />} onClick={() => setEditing({ id: e.id, title: e.title, content: e.content, active: e.active })}>Edit</Button>
-                  <Button variant="ghost" size="sm" className="text-danger-600" leftIcon={<Trash2 size={13} />} onClick={() => setToDelete(e)}>Delete</Button>
+                  <Button variant="ghost" size="sm" className="text-danger-600 hover:text-danger-700" leftIcon={<Trash2 size={13} />} onClick={() => setToDelete(e)}>Delete</Button>
                 </div>
               </div>
-              <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm text-ink-muted">{e.content}</p>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
 
       <Modal isOpen={!!editing} onClose={() => setEditing(null)} title={editing?.id ? 'Edit entry' : 'Add entry'} size="lg">
@@ -328,38 +428,78 @@ function KnowledgeCard({ entries, onChanged }: { entries: WhatsAppKnowledgeEntry
 }
 
 function RepliesCard({ replies, onRefresh }: { replies: WhatsAppAiReplyRow[]; onRefresh: () => Promise<void> }) {
+  const [refreshing, setRefreshing] = useState(false);
   return (
-    <Card>
-      <CardHeader
-        title="Recent AI answers"
-        subtitle="What it was asked, what it said, and what each answer cost. The full thread is in CRM → Conversations."
-        action={<Button variant="outline" size="sm" onClick={() => void onRefresh()}>Refresh</Button>}
-      />
+    <Card padded={false}>
+      <div className="flex items-start justify-between gap-3 px-4 py-3.5">
+        <div className="min-w-0">
+          <h3 className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+            Recent AI answers
+            {replies.length > 0 && (
+              <span className="rounded-sm bg-surface-muted px-1.5 text-2xs font-semibold tabular-nums text-ink-muted">{replies.length}</span>
+            )}
+          </h3>
+          <p className="mt-0.5 text-xs text-ink-subtle">What it was asked, what it said, and what each answer cost. The full thread is in CRM → Conversations.</p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="shrink-0"
+          leftIcon={<RefreshCw size={12} />}
+          isLoading={refreshing}
+          onClick={async () => {
+            setRefreshing(true);
+            try {
+              await onRefresh();
+            } finally {
+              setRefreshing(false);
+            }
+          }}
+        >
+          Refresh
+        </Button>
+      </div>
       {replies.length === 0 ? (
-        <p className="flex items-center gap-2 text-sm text-ink-faint"><Bot size={14} /> Nothing has been answered by the AI yet.</p>
+        <div className="border-t border-line px-4 py-8 text-center">
+          <Bot size={16} className="mx-auto text-ink-faint" aria-hidden="true" />
+          <p className="mt-2 text-xs text-ink-subtle">Nothing has been answered by the AI yet.</p>
+        </div>
       ) : (
-        <div className="space-y-2">
+        <ul className="max-h-[40rem] divide-y divide-line overflow-y-auto border-t border-line">
           {replies.map((r) => (
-            <div key={r.id} className="rounded-lg border border-line p-3 text-sm">
-              <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-                <span className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium text-ink">{r.contact}</span>
-                  {r.voice && <Badge tone="info"><Mic size={11} className="mr-1 inline" />Voice</Badge>}
+            <li key={r.id} className="px-4 py-2.5 text-xs">
+              <div className="mb-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+                  <span className="truncate text-[13px] font-medium text-ink">{r.contact}</span>
+                  {r.voice && (
+                    <Badge tone="info">
+                      <Mic size={11} />
+                      Voice
+                    </Badge>
+                  )}
                   {r.handoff && <Badge tone="warning">Alerted the team</Badge>}
                   {r.status === 'error' && <Badge tone="danger">Failed</Badge>}
                 </span>
-                <span className="text-xs text-ink-faint">{formatDateTime(r.createdAt)}</span>
+                <span className="text-2xs tabular-nums text-ink-faint">{formatDateTime(r.createdAt)}</span>
               </div>
-              <p className="text-ink-muted"><strong className="text-ink">Asked:</strong> {r.inbound || '—'}</p>
+              <p className="text-ink-muted">
+                <span className="font-medium text-ink-subtle">Asked · </span>
+                {r.inbound || '—'}
+              </p>
               {r.status === 'error' ? (
-                <p className="text-danger-600">{r.error}</p>
+                <p className="mt-0.5 text-danger-600">{r.error}</p>
               ) : (
-                <p className="whitespace-pre-wrap text-ink-muted"><strong className="text-ink">Answered:</strong> {r.reply || '(no message sent)'}</p>
+                <p className="mt-0.5 whitespace-pre-wrap text-ink">
+                  <span className="font-medium text-ink-subtle">Answered · </span>
+                  {r.reply || '(no message sent)'}
+                </p>
               )}
-              <p className="mt-1 text-xs text-ink-faint">{r.model} · {r.inputTokens} in · {r.outputTokens} out · {r.cacheReadTokens} cached</p>
-            </div>
+              <p className="mt-1 text-2xs tabular-nums text-ink-faint">
+                {r.model} · {r.inputTokens} in · {r.outputTokens} out · {r.cacheReadTokens} cached
+              </p>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </Card>
   );
