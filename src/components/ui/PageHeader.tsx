@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Breadcrumb, type BreadcrumbItem } from './Breadcrumb';
+import { PageStats } from '../overview/PageStats';
 
 interface PageHeaderProps {
   title: string;
@@ -10,6 +11,7 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, breadcrumb, actions }: PageHeaderProps) {
   return (
+    <>
     <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
         {breadcrumb && <div className="mb-1.5">
@@ -20,5 +22,8 @@ export function PageHeader({ title, description, breadcrumb, actions }: PageHead
       </div>
       {actions && <div className="flex shrink-0 flex-wrap items-center gap-2 print:hidden">{actions}</div>}
     </div>
+    {/* Inside a section (HRMS, Real Estate…) the page's headline numbers sit under its title. */}
+    <PageStats />
+    </>
   );
 }

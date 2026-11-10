@@ -4,6 +4,7 @@ import type { AuthedRequest } from '../services/auth';
 import { AssistantError } from '../services/assistant';
 import { resolveKey } from '../services/anthropicKey';
 import { sectionOverview } from '../services/moduleOverview';
+import { pageStats } from '../services/pageStats';
 import { MODULE_AGENT_MODEL, askModuleAgent, kindOf, moduleChatView, type AgentEvent } from '../services/moduleAgent';
 import { accessFor, isSection, type Access, type SectionKey } from '../services/sections';
 
@@ -28,6 +29,13 @@ async function openSection(req: SectionRequest, res: Response, next: NextFunctio
 }
 
 export const sectionOverviewRouter = Router();
+
+/** The KPI strip for an inner page (?path=/attendance/leave). Each page checks its own module. */
+sectionOverviewRouter.get('/page-stats', async (req: AuthedRequest, res, next) => {
+  try {
+    res.json({ kpis: await pageStats(String(req.query.path ?? ''), await accessFor(req.auth!.sub)) });
+  } catch (err) { next(err); }
+});
 
 sectionOverviewRouter.get('/:section', openSection, async (req: SectionRequest, res, next) => {
   try {

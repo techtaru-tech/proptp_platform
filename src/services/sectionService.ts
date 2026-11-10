@@ -98,3 +98,6 @@ export const SECTION_SUGGESTIONS: Record<SectionKey, string[]> = {
   reports: ['Is mahine ka business summary do', 'Compare this month\'s bookings with last month', 'Sabse zyada sales kis partner se aayi?', 'Aaj attendance kaisi hai?'],
   settings: ['Kaun se operations rules on hain aur kya karte hain?', 'Is hafte settings mein kisne kya badla?', 'Kis role ke paas kya access hai?', 'Kiska client access jaldi khatam ho raha hai?'],
 };
+
+/** The KPI strip at the top of an inner page; empty for pages that have none. */
+export const getPageStats = (path: string) => api.get<{ kpis: SectionKpi[] }>(`/overview/page-stats?path=${encodeURIComponent(path)}`);

@@ -6,12 +6,13 @@ import { Button } from '../../components/ui/Button';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { Skeleton } from '../../components/ui/LoadingSkeleton';
 import { SectionAssistant } from '../../components/overview/SectionAssistant';
+import { KpiStrip } from '../../components/overview/KpiStrip';
 import { useAsync } from '../../hooks/useAsync';
 import { getSectionOverview, type Fmt, type SectionAttention, type SectionChart, type SectionKey } from '../../services/sectionService';
 import { formatCurrency } from '../../utils/format';
 import { cn } from '../../utils/cn';
 import { NotFound } from '../NotFound';
-import { Panel, PanelHeader, Stat, ViewAll } from '../dashboard/widgets';
+import { Panel, PanelHeader, ViewAll } from '../dashboard/widgets';
 import { BarList, ColumnChart, Ring, SplitBar } from '../dashboard/charts';
 
 const SECTIONS: Record<SectionKey, { title: string; description: string }> = {
@@ -29,7 +30,8 @@ const label = (s: SectionKey) => SECTIONS[s].title.replace(' Overview', '');
 
 const fmt = (f?: Fmt) => (v: number) => (f === 'inr' ? formatCurrency(v) : f === 'pct' ? `${v}%` : v.toLocaleString('en-IN'));
 // Literal class names, so the build keeps them; one tone per slice, in Propto's own palette.
-const TONES = ['fill-brand-600 bg-brand-600', 'fill-accent-500 bg-accent-500', 'fill-shell-700 bg-shell-700', 'fill-blossom-500 bg-blossom-500', 'fill-info-500 bg-info-500', 'fill-danger-500 bg-danger-500'];
+const TONES = ['fill-brand-600 bg-brand-600', 'fill-accent-500 bg-accent-500', 'fill-shell-700 bg-shell-700', 'fill-info-500 bg-info-500', 'fill-blossom-500 bg-blossom-500', 'fill-danger-500 bg-danger-500'];
+const isWide = (c: SectionChart) => c.kind === 'stack' || c.kind === 'progress';
 const BAR_TONES = ['bg-brand-500', 'bg-shell-600', 'bg-accent-500', 'bg-blossom-500', 'bg-info-500'];
 
 /** Every section's Overview: KPIs, charts and what needs attention, with the section's assistant beside them. */
@@ -65,21 +67,11 @@ function Overview({ section }: { section: SectionKey }) {
         <Panel><ErrorState title="Couldn't load the overview" description={overview.error.message} onRetry={() => setReload((r) => r + 1)} /></Panel>
       ) : !o ? <OverviewSkeleton /> : (
         <>
-          {o.kpis.length > 0 && (
-            <div className={cn('grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-3 [&>*]:bg-surface', o.kpis.length >= 6 ? 'xl:grid-cols-6' : o.kpis.length === 5 ? 'xl:grid-cols-5' : 'xl:grid-cols-4')}>
-              {o.kpis.map((k) => (
-                <Stat
-                  key={k.label} label={k.label} to={k.to} meta={k.meta}
-                  tone={k.tone === 'danger' ? 'danger' : undefined}
-                  value={<span className={cn(k.tone === 'warn' && 'text-accent-700', k.tone === 'good' && 'text-brand-700')}>{fmt(k.format)(k.value)}</span>}
-                />
-              ))}
-            </div>
-          )}
+          <KpiStrip kpis={o.kpis} />
 
           <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:col-span-2">
-              {main.map((c, i) => <ChartPanel key={c.id} chart={c} wide={c.kind === 'stack' || c.kind === 'progress' || (main.length % 2 === 1 && i === 0)} />)}
+              {main.map((c) => <ChartPanel key={c.id} chart={c} wide={isWide(c) || (main.filter((x) => !isWide(x)).length % 2 === 1 && c === main.filter((x) => !isWide(x)).at(-1))} />)}
               <AttentionPanel rows={o.attention} onAsk={(q) => setHandOver(q)} wide />
             </div>
             <div className="space-y-4">

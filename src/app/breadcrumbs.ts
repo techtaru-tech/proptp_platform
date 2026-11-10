@@ -1,4 +1,4 @@
-import { NAV_ITEMS } from './navConfig';
+import { NAV_ITEMS, NAV_SECTIONS } from './navConfig';
 
 export interface CrumbInfo {
   sectionLabel: string;
@@ -11,6 +11,10 @@ function topSegment(path: string): string {
 
 /** Best-effort breadcrumb derived from the nav config for the persistent top header. */
 export function resolveBreadcrumb(pathname: string): CrumbInfo {
+  // A section's Overview (/overview/hrms) belongs to the section, not to any one item in it.
+  const overview = NAV_SECTIONS.find((s) => s.overview?.to === pathname);
+  if (overview) return { sectionLabel: overview.label, childLabel: 'Overview' };
+
   // Pass 1: exact match against a known child route (e.g. /attendance/today).
   // Prefer the longest matching `to` so a section-root child (e.g. CRM's
   // "Overview" at `/crm`) doesn't shadow more specific siblings like `/crm/leads`.

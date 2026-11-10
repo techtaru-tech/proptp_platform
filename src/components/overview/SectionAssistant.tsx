@@ -20,7 +20,15 @@ interface Turn { id: string; role: 'user' | 'assistant'; text: string; steps: St
  * HRMS one does HRMS), streams each lookup and then the answer, and keeps past chats. `question`
  * lets the page hand it a question from elsewhere, e.g. a "needs attention" row.
  */
-export function SectionAssistant({ section, label, question, onQuestionTaken }: { section: SectionKey; label: string; question?: string; onQuestionTaken?: () => void }) {
+export function SectionAssistant({ section, label, question, onQuestionTaken, page, onClose }: {
+  section: SectionKey;
+  label: string;
+  question?: string;
+  onQuestionTaken?: () => void;
+  /** Set when opened from an inner page: the page's name, and it renders as a drawer. */
+  page?: string;
+  onClose?: () => void;
+}) {
   const { toast } = useToast();
   const { isFullAccess } = usePermissions();
   const [configured, setConfigured] = useState<boolean | null>(null);
@@ -101,17 +109,26 @@ export function SectionAssistant({ section, label, question, onQuestionTaken }: 
   };
 
   const suggestions = SECTION_SUGGESTIONS[section];
+  const drawer = !!onClose;
+  useEffect(() => {
+    if (!drawer) return;
+    input.current?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !busy) onClose?.(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [drawer, busy, onClose]);
 
-  return (
-    <section aria-label={`${label} assistant`} className="flex h-[560px] flex-col overflow-hidden rounded-xl border border-brand-200 bg-gradient-to-b from-brand-50 to-surface to-40%">
+  const card = (
+    <section aria-label={`${label} assistant`} className={cn('flex flex-col overflow-hidden bg-gradient-to-b from-brand-50 to-surface to-40%', drawer ? 'h-full' : 'h-[560px] rounded-xl border border-brand-200')}>
       <header className="flex items-center gap-2 border-b border-brand-100 px-4 py-2.5">
         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white" aria-hidden="true"><Sparkles size={16} /></span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-ink">{label} Assistant</p>
-          <p className="truncate text-2xs text-ink-subtle">Answers about {label} only · live data · read-only</p>
+          <p className="truncate text-2xs text-ink-subtle">{page ? `On ${page} · ` : ''}Answers about {label} only · read-only</p>
         </div>
         <button type="button" onClick={openHistory} aria-pressed={showHistory} title="Past chats" aria-label="Past chats" className={cn('rounded-md p-1.5 hover:bg-surface-muted hover:text-ink focus-ring', showHistory ? 'bg-surface-muted text-ink' : 'text-ink-subtle')}><History size={15} /></button>
         <button type="button" onClick={fresh} disabled={busy} title="New chat" aria-label="New chat" className="rounded-md p-1.5 text-ink-subtle hover:bg-surface-muted hover:text-ink disabled:opacity-40 focus-ring"><Plus size={15} /></button>
+        {drawer && <button type="button" onClick={onClose} disabled={busy} title="Close (Esc)" aria-label="Close assistant" className="rounded-md p-1.5 text-ink-subtle hover:bg-surface-muted hover:text-ink disabled:opacity-40 focus-ring"><X size={16} /></button>}
       </header>
 
       {showHistory && (
@@ -197,5 +214,15 @@ export function SectionAssistant({ section, label, question, onQuestionTaken }: 
         </div>
       </form>
     </section>
+  );
+
+  if (!drawer) return card;
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-shell-950/20" onClick={() => !busy && onClose?.()} aria-hidden="true" />
+      <aside role="dialog" aria-label={`${label} assistant`} className="fixed inset-y-0 right-0 z-50 w-full border-l border-line bg-surface shadow-popover sm:w-[480px]">
+        {card}
+      </aside>
+    </>
   );
 }
