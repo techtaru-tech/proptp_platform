@@ -79,6 +79,7 @@ import { adminAuditRouter } from './routes/admin/audit';
 import { adminDemoDataRouter } from './routes/admin/demoData';
 import { clientAccessRouter } from './routes/admin/clientAccess';
 import { crmAgentRouter } from './routes/crmAgent';
+import { moduleAgentRouter, sectionOverviewRouter } from './routes/sections';
 import { startDemoRotation } from './services/demoRotation';
 import { adminUploadsRouter } from './routes/admin/uploads';
 
@@ -205,6 +206,8 @@ app.use('/api/vendor-portal', vendorPortalRouter);
 app.use('/api/sms', smsRouter);
 app.use('/api/assistant', assistantRouter);
 app.use('/api/crm-agent', crmAgentRouter);
+app.use('/api/overview', sectionOverviewRouter);
+app.use('/api/module-agent', moduleAgentRouter);
 app.use('/api/holidays', adminHolidaysRouter);
 app.use('/api/channel-partners', adminChannelPartnersRouter);
 app.use('/api/partner-portal', partnerPortalRouter);

@@ -10,6 +10,7 @@ import { Login } from './pages/auth/Login';
 import { Dashboard } from './pages/dashboard/Dashboard';
 
 import { CrmOverview } from './pages/crm/CrmOverview';
+import { SectionOverviewPage } from './pages/overview/SectionOverviewPage';
 import { LeadList } from './pages/crm/LeadList';
 import { AddLead } from './pages/crm/AddLead';
 import { ImportLeads } from './pages/crm/ImportLeads';
@@ -195,6 +196,7 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
 
                 <Route path="/crm" element={<CrmOverview />} />
+                <Route path="/overview/:section" element={<SectionOverviewPage />} />
                 <Route path="/crm/leads" element={<LeadList />} />
                 <Route path="/crm/leads/new" element={<AddLead />} />
                 <Route path="/crm/leads/import" element={<ImportLeads />} />

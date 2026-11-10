@@ -17,7 +17,7 @@ import { createSession, listSessions, revokeOtherSessions, revokeSession } from 
 import { generateRecoveryCodes, generateSecret, hashRecoveryCode, otpauthUri, verifyCode } from '../../services/totp';
 import { decrypt, encrypt } from '../../services/crypto';
 import { adminUser } from '../../services/adminMappers';
-import { isAlwaysAllowed, moduleForPath, resolveAccess } from '../../services/permissions';
+import { isAlwaysAllowed, isSelfChecked, moduleForPath, resolveAccess } from '../../services/permissions';
 import { resolveScope } from '../../services/hierarchy';
 
 /**
@@ -355,7 +355,7 @@ export function adminGuard(req: Request, res: Response, next: NextFunction) {
     // Session and upload endpoints stay open to every signed-in panel user; everything else is
     // matched to a module and checked against the user's panel role. Enforcing it here rather
     // than per-router means a new route is locked down by default instead of by remembering to.
-    if (isAlwaysAllowed(req.path)) return next();
+    if (isAlwaysAllowed(req.path) || isSelfChecked(req.path)) return next();
 
     try {
       const access = await resolveAccess(authed.auth!.sub);

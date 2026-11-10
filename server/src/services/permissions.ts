@@ -139,6 +139,16 @@ export function isAlwaysAllowed(path: string): boolean {
   return ALWAYS_ALLOWED.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }
 
+/**
+ * Paths that span several modules and check access themselves (routes/sections.ts): a section's
+ * Overview and its assistant open for anyone holding one of the section's modules.
+ */
+const SELF_CHECKED = ['/overview', '/module-agent'];
+
+export function isSelfChecked(path: string): boolean {
+  return SELF_CHECKED.some((prefix) => path.startsWith(`${prefix}/`));
+}
+
 export interface ResolvedAccess {
   isFullAccess: boolean;
   modules: ModuleKey[];

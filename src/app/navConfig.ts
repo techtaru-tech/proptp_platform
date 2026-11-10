@@ -329,6 +329,8 @@ export interface NavSection {
   icon: LucideIcon;
   /** Labels of the NAV_ITEMS that belong to this section, in display order. */
   items: string[];
+  /** The section's Overview page, listed first; shown to anyone holding one of `modules`. Mirrors server/src/services/sections.ts. */
+  overview?: { to: string; modules: ModuleKey[] };
 }
 
 /**
@@ -339,13 +341,16 @@ export interface NavSection {
 export const NAV_SECTIONS: NavSection[] = [
   { label: 'Dashboard', icon: LayoutDashboard, items: ['Dashboard'] },
   { label: 'CRM', icon: Target, items: ['CRM'] },
-  { label: 'HRMS', icon: UserCog, items: ['HRMS'] },
-  { label: 'Tasks', icon: ListChecks, items: ['Tasks'] },
-  { label: 'Real Estate', icon: Building2, items: ['Projects', 'Properties', 'Bookings', 'Investments / Deposits', 'Site Cameras'] },
-  { label: 'Finance', icon: Wallet, items: ['Payments / Transactions', 'Payouts / Earnings', 'Incentive Requests'] },
-  { label: 'Construction & Legal', icon: HardHat, items: ['Construction', 'Vendors & Material', 'Legal & Registry'] },
-  { label: 'People & Partners', icon: Users, items: ['Partners / Users', 'Teams / Referrals', 'Partner Portal', 'My Work'] },
-  { label: 'Support & Comms', icon: LifeBuoy, items: ['Support Tickets', 'Notifications', 'Assistant'] },
-  { label: 'Reports', icon: BarChart3, items: ['Reports / Exports'] },
-  { label: 'Settings', icon: Settings, items: ['Operations Rules', 'Settings'] },
+  { label: 'HRMS', icon: UserCog, items: ['HRMS'], overview: { to: '/overview/hrms', modules: ['attendance', 'payouts'] } },
+  { label: 'Tasks', icon: ListChecks, items: ['Tasks'], overview: { to: '/overview/tasks', modules: ['tasks'] } },
+  {
+    label: 'Real Estate', icon: Building2, items: ['Projects', 'Properties', 'Bookings', 'Investments / Deposits', 'Site Cameras'],
+    overview: { to: '/overview/real-estate', modules: ['projects', 'properties', 'bookings', 'investments', 'cameras'] },
+  },
+  { label: 'Finance', icon: Wallet, items: ['Payments / Transactions', 'Payouts / Earnings', 'Incentive Requests'], overview: { to: '/overview/finance', modules: ['payments', 'payouts', 'incentives'] } },
+  { label: 'Construction & Legal', icon: HardHat, items: ['Construction', 'Vendors & Material', 'Legal & Registry'], overview: { to: '/overview/construction-legal', modules: ['construction', 'vendors', 'legal'] } },
+  { label: 'People & Partners', icon: Users, items: ['Partners / Users', 'Teams / Referrals', 'Partner Portal', 'My Work'], overview: { to: '/overview/people', modules: ['partners', 'teams', 'partner_portal'] } },
+  { label: 'Support & Comms', icon: LifeBuoy, items: ['Support Tickets', 'Notifications', 'Assistant'], overview: { to: '/overview/support', modules: ['support', 'notifications', 'assistant'] } },
+  { label: 'Reports', icon: BarChart3, items: ['Reports / Exports'], overview: { to: '/overview/reports', modules: ['reports'] } },
+  { label: 'Settings', icon: Settings, items: ['Operations Rules', 'Settings'], overview: { to: '/overview/settings', modules: ['settings', 'ops_rules'] } },
 ];

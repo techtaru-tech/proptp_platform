@@ -38,15 +38,17 @@ function useAutoExpanded(pathname: string) {
 
 export function Sidebar() {
   const { sidebarCollapsed, toggleSidebar, mobileSidebarOpen, setMobileSidebarOpen } = useUI();
-  const { navItems } = usePermissions();
+  const { navItems, can } = usePermissions();
   const location = useLocation();
   const autoExpanded = useAutoExpanded(location.pathname);
   // Sections hold only the items this person may open, and drop out when none are left.
   const sections = NAV_SECTIONS.map((section) => ({
     ...section,
     items: section.items.map((label) => navItems.find((i) => i.label === label)).filter((i): i is NavItem => !!i),
+    overviewTo: section.overview?.modules.some(can) ? section.overview.to : undefined,
   })).filter((section) => section.items.length > 0);
-  const autoSection = sections.find((s) => s.items.some((i) => i.label === autoExpanded))?.label;
+  const onOverview = sections.find((s) => s.overviewTo === location.pathname)?.label;
+  const autoSection = onOverview ?? sections.find((s) => s.items.some((i) => i.label === autoExpanded))?.label;
   const [expandedSection, setExpandedSection] = useState<string | undefined>(undefined);
   const [expandedItem, setExpandedItem] = useState<string>('');
   // Follows the page until the person opens or closes a section themselves.
@@ -85,7 +87,7 @@ export function Sidebar() {
         {sections.map((section) => {
           const single = section.items.length === 1 ? section.items[0] : undefined;
           const isOpen = activeSection === section.label;
-          const isCurrent = autoExpanded !== undefined && section.items.some((i) => i.label === autoExpanded);
+          const isCurrent = onOverview === section.label || (!onOverview && autoExpanded !== undefined && section.items.some((i) => i.label === autoExpanded));
           const rowClass = (on: boolean) =>
             cn(
               'relative flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors duration-150 focus-ring',
@@ -94,7 +96,7 @@ export function Sidebar() {
             );
 
           // A section that is just one page (Dashboard, Reports with no children) is a plain link.
-          if (single && !single.children) {
+          if (single && !single.children && !section.overviewTo) {
             return (
               <NavLink
                 key={section.label}
@@ -127,8 +129,9 @@ export function Sidebar() {
 
               {isOpen && !sidebarCollapsed && (
                 <div className="mb-1 ml-[1.45rem] mt-px space-y-px border-l border-white/10 pl-2.5">
+                  {section.overviewTo && <ChildLink to={section.overviewTo} label="Overview" />}
                   {single
-                    ? single.children!.map((child) => <ChildLink key={child.to} to={child.to} label={child.label} />)
+                    ? (single.children ?? [single]).map((child) => <ChildLink key={child.to} to={child.to} label={child.label} />)
                     : section.items.map((item) =>
                         item.children ? (
                           <div key={item.label}>
